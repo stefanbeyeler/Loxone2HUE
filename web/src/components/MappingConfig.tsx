@@ -120,23 +120,53 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
     }
   };
 
-  const copyToClipboard = (text: string, fieldId: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(fieldId);
-    setTimeout(() => setCopiedField(null), 2000);
+  const copyToClipboard = async (text: string, fieldId: string) => {
+    try {
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback for non-secure contexts (HTTP)
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setCopiedField(fieldId);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
   };
 
   const CopyButton = ({ text, fieldId }: { text: string; fieldId: string }) => (
     <button
       type="button"
       onClick={() => copyToClipboard(text, fieldId)}
-      className="p-1 text-gray-500 hover:text-white transition-colors"
-      title="Kopieren"
+      className={`
+        px-2 py-1 rounded transition-all flex items-center gap-1 text-xs
+        ${copiedField === fieldId
+          ? 'bg-green-600 text-white'
+          : 'bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white'}
+      `}
+      title="In Zwischenablage kopieren"
     >
       {copiedField === fieldId ? (
-        <Check size={14} className="text-green-500" />
+        <>
+          <Check size={12} />
+          <span>Kopiert!</span>
+        </>
       ) : (
-        <Copy size={14} />
+        <>
+          <Copy size={12} />
+          <span>Kopieren</span>
+        </>
       )}
     </button>
   );
@@ -196,6 +226,7 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold text-white">Loxone Mappings</h2>
         <button
+          type="button"
           onClick={() => setShowAdd(true)}
           className="flex items-center gap-2 px-4 py-2 bg-hue-orange text-gray-900 rounded-lg hover:bg-orange-400 transition-colors"
         >
@@ -223,6 +254,7 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
           />
           <div className="grid grid-cols-2 gap-3">
             <select
+              title="HUE Ressourcentyp"
               value={formData.hue_type || 'light'}
               onChange={(e) => setFormData({ ...formData, hue_type: e.target.value, hue_id: '' })}
               className="bg-gray-700 text-white rounded-lg px-3 py-2"
@@ -232,6 +264,7 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
               <option value="scene">Szene</option>
             </select>
             <select
+              title="HUE Ressource"
               value={formData.hue_id || ''}
               onChange={(e) => setFormData({ ...formData, hue_id: e.target.value })}
               className="bg-gray-700 text-white rounded-lg px-3 py-2"
@@ -266,6 +299,7 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
           />
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={handleAdd}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500"
             >
@@ -273,6 +307,8 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
               Speichern
             </button>
             <button
+              type="button"
+              title="Abbrechen"
               onClick={() => {
                 setShowAdd(false);
                 setFormData({});
@@ -354,6 +390,7 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
                 />
                 <div className="flex gap-2">
                   <button
+                    type="button"
                     onClick={() => handleUpdate(mapping.id)}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500"
                   >
@@ -361,6 +398,8 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
                     Speichern
                   </button>
                   <button
+                    type="button"
+                    title="Abbrechen"
                     onClick={cancelEdit}
                     className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
                   >
