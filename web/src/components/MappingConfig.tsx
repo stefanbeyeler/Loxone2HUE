@@ -271,19 +271,19 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
             >
               <option value="">HUE Ressource wählen...</option>
               {formData.hue_type === 'group' &&
-                groups.map((g) => (
+                [...groups].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((g) => (
                   <option key={g.id} value={g.id}>
                     {g.name} ({g.type})
                   </option>
                 ))}
               {formData.hue_type === 'scene' &&
-                scenes.map((s) => (
+                [...scenes].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
                 ))}
               {formData.hue_type !== 'group' && formData.hue_type !== 'scene' &&
-                lights.map((l) => (
+                [...lights].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.name}
                   </option>
@@ -322,7 +322,7 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
       )}
 
       <div className="space-y-2">
-        {mappings.map((mapping) => (
+        {[...mappings].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((mapping) => (
           <div
             key={mapping.id}
             className={`bg-gray-800 rounded-xl p-4 ${!mapping.enabled ? 'opacity-50' : ''}`}
@@ -362,19 +362,19 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
                   >
                     <option value="">HUE Ressource wählen...</option>
                     {formData.hue_type === 'group' &&
-                      groups.map((g) => (
+                      [...groups].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((g) => (
                         <option key={g.id} value={g.id}>
                           {g.name} ({g.type})
                         </option>
                       ))}
                     {formData.hue_type === 'scene' &&
-                      scenes.map((s) => (
+                      [...scenes].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name}
                         </option>
                       ))}
                     {formData.hue_type !== 'group' && formData.hue_type !== 'scene' &&
-                      lights.map((l) => (
+                      [...lights].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((l) => (
                         <option key={l.id} value={l.id}>
                           {l.name}
                         </option>

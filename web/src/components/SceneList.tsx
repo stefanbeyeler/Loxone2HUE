@@ -13,7 +13,7 @@ export function SceneList({ scenes, groups, onActivateScene }: SceneListProps) {
     return group?.name || 'Unbekannt';
   };
 
-  // Group scenes by their parent group/room
+  // Group scenes by their parent group/room and sort
   const scenesByGroup = scenes.reduce((acc, scene) => {
     const groupId = scene.group_id || 'other';
     if (!acc[groupId]) {
@@ -23,7 +23,17 @@ export function SceneList({ scenes, groups, onActivateScene }: SceneListProps) {
     return acc;
   }, {} as Record<string, Scene[]>);
 
-  const groupIds = Object.keys(scenesByGroup);
+  // Sort scenes within each group
+  Object.keys(scenesByGroup).forEach((groupId) => {
+    scenesByGroup[groupId].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  });
+
+  // Sort group IDs by group name
+  const groupIds = Object.keys(scenesByGroup).sort((a, b) => {
+    const nameA = a === 'other' ? 'ZZZZZ' : getGroupName(a);
+    const nameB = b === 'other' ? 'ZZZZZ' : getGroupName(b);
+    return nameA.localeCompare(nameB, 'de');
+  });
 
   return (
     <div className="space-y-6">

@@ -40,9 +40,13 @@ export function DeviceList({
     );
   }
 
+  const sortedDevices = [...devices].sort((a, b) =>
+    a.name.localeCompare(b.name, 'de')
+  );
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {devices.map((device) => (
+      {sortedDevices.map((device) => (
         <DeviceCard
           key={device.id}
           device={device}

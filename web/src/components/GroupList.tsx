@@ -13,12 +13,18 @@ export function GroupList({ groups, scenes, onToggle, onActivateScene }: GroupLi
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   const getGroupScenes = (groupId: string) => {
-    return scenes.filter((scene) => scene.group_id === groupId);
+    return scenes
+      .filter((scene) => scene.group_id === groupId)
+      .sort((a, b) => a.name.localeCompare(b.name, 'de'));
   };
+
+  const sortedGroups = [...groups].sort((a, b) =>
+    a.name.localeCompare(b.name, 'de')
+  );
 
   return (
     <div className="space-y-4">
-      {groups.map((group) => {
+      {sortedGroups.map((group) => {
         const groupScenes = getGroupScenes(group.id);
         const isExpanded = expandedGroup === group.id;
 

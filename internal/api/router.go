@@ -78,6 +78,11 @@ func (s *Server) setupRoutes() {
 	// Health check
 	api.HandleFunc("/health", s.handlers.Health).Methods("GET")
 
+	// Swagger documentation
+	api.HandleFunc("/swagger.json", s.SwaggerSpec).Methods("GET")
+	api.HandleFunc("/swagger", s.SwaggerUI).Methods("GET")
+	api.HandleFunc("/swagger/", s.SwaggerUI).Methods("GET")
+
 	// WebSocket endpoint
 	s.router.HandleFunc("/ws", s.wsHub.HandleWebSocket)
 
