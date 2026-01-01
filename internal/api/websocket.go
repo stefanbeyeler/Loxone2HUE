@@ -1,0 +1,335 @@
+package api
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/rs/zerolog/log"
+	"github.com/sbeyeler/loxone2hue/internal/hue"
+	"github.com/sbeyeler/loxone2hue/internal/loxone"
+	"github.com/sbeyeler/loxone2hue/internal/models"
+)
+
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true // Allow all origins for development
+	},
+}
+
+// WebSocketHub manages WebSocket connections
+type WebSocketHub struct {
+	clients    map[*WebSocketClient]bool
+	broadcast  chan []byte
+	register   chan *WebSocketClient
+	unregister chan *WebSocketClient
+	mu         sync.RWMutex
+
+	hueClient      *hue.Client
+	mappingManager *loxone.MappingManager
+	commandParser  *loxone.CommandParser
+}
+
+// WebSocketClient represents a connected WebSocket client
+type WebSocketClient struct {
+	hub      *WebSocketHub
+	conn     *websocket.Conn
+	send     chan []byte
+	clientID string
+	isLoxone bool
+}
+
+// NewWebSocketHub creates a new WebSocket hub
+func NewWebSocketHub(hueClient *hue.Client, mappingManager *loxone.MappingManager) *WebSocketHub {
+	return &WebSocketHub{
+		clients:        make(map[*WebSocketClient]bool),
+		broadcast:      make(chan []byte, 256),
+		register:       make(chan *WebSocketClient),
+		unregister:     make(chan *WebSocketClient),
+		hueClient:      hueClient,
+		mappingManager: mappingManager,
+		commandParser:  loxone.NewCommandParser(),
+	}
+}
+
+// Run starts the hub's event loop
+func (h *WebSocketHub) Run(ctx context.Context) {
+	// Forward HUE events to WebSocket clients
+	go h.forwardHueEvents(ctx)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case client := <-h.register:
+			h.mu.Lock()
+			h.clients[client] = true
+			h.mu.Unlock()
+			log.Info().Str("client", client.clientID).Bool("loxone", client.isLoxone).Msg("Client connected")
+
+		case client := <-h.unregister:
+			h.mu.Lock()
+			if _, ok := h.clients[client]; ok {
+				delete(h.clients, client)
+				close(client.send)
+			}
+			h.mu.Unlock()
+			log.Info().Str("client", client.clientID).Msg("Client disconnected")
+
+		case message := <-h.broadcast:
+			h.mu.RLock()
+			for client := range h.clients {
+				select {
+				case client.send <- message:
+				default:
+					close(client.send)
+					delete(h.clients, client)
+				}
+			}
+			h.mu.RUnlock()
+		}
+	}
+}
+
+// forwardHueEvents forwards HUE events to connected clients
+func (h *WebSocketHub) forwardHueEvents(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case event := <-h.hueClient.Events():
+			// Convert to status message
+			status := models.LoxoneStatus{
+				Type:   "status",
+				Device: event.ID,
+				State:  event.Data,
+			}
+
+			data, err := json.Marshal(status)
+			if err != nil {
+				continue
+			}
+
+			h.broadcast <- data
+		}
+	}
+}
+
+// HandleWebSocket handles WebSocket upgrade requests
+func (h *WebSocketHub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Error().Err(err).Msg("WebSocket upgrade failed")
+		return
+	}
+
+	// Check if this is a Loxone connection
+	isLoxone := r.URL.Query().Get("type") == "loxone"
+	clientID := r.URL.Query().Get("id")
+	if clientID == "" {
+		clientID = conn.RemoteAddr().String()
+	}
+
+	client := &WebSocketClient{
+		hub:      h,
+		conn:     conn,
+		send:     make(chan []byte, 256),
+		clientID: clientID,
+		isLoxone: isLoxone,
+	}
+
+	h.register <- client
+
+	go client.writePump()
+	go client.readPump()
+}
+
+// BroadcastStatus sends a status update to all connected clients
+func (h *WebSocketHub) BroadcastStatus(deviceID string, state interface{}) {
+	status := models.LoxoneStatus{
+		Type:   "status",
+		Device: deviceID,
+		State:  state,
+	}
+
+	data, err := json.Marshal(status)
+	if err != nil {
+		return
+	}
+
+	h.broadcast <- data
+}
+
+// readPump reads messages from the WebSocket connection
+func (c *WebSocketClient) readPump() {
+	defer func() {
+		c.hub.unregister <- c
+		c.conn.Close()
+	}()
+
+	c.conn.SetReadLimit(maxMessageSize)
+	c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.conn.SetPongHandler(func(string) error {
+		c.conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+
+	for {
+		_, message, err := c.conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Error().Err(err).Msg("WebSocket read error")
+			}
+			break
+		}
+
+		c.handleMessage(message)
+	}
+}
+
+// handleMessage processes incoming messages
+func (c *WebSocketClient) handleMessage(message []byte) {
+	// Try to parse as JSON command first
+	cmd, err := c.hub.commandParser.ParseJSON(message)
+	if err != nil {
+		// Try text format
+		cmd, err = c.hub.commandParser.ParseText(string(message))
+		if err != nil {
+			log.Warn().Str("message", string(message)).Err(err).Msg("Failed to parse command")
+			c.sendError("invalid command format")
+			return
+		}
+	}
+
+	log.Debug().
+		Str("type", cmd.Type).
+		Str("target", cmd.Target).
+		Str("action", cmd.Action).
+		Msg("Received command")
+
+	// Resolve target to HUE resource
+	hueID, hueType, ok := c.hub.mappingManager.ResolveTarget(cmd.Target)
+	if !ok {
+		// Try using target directly as HUE ID
+		hueID = cmd.Target
+		hueType = "light"
+	}
+
+	switch cmd.Action {
+	case "set":
+		deviceCmd := c.hub.commandParser.ToDeviceCommand(cmd)
+		var err error
+
+		switch hueType {
+		case "light":
+			err = c.hub.hueClient.SetLightState(hueID, deviceCmd)
+		case "group":
+			err = c.hub.hueClient.SetGroupState(hueID, deviceCmd)
+		}
+
+		if err != nil {
+			log.Error().Err(err).Str("target", cmd.Target).Msg("Failed to execute command")
+			c.sendError(err.Error())
+			return
+		}
+
+		c.sendAck(cmd.Target)
+
+	case "scene":
+		sceneID, ok := cmd.Params["scene_id"].(string)
+		if !ok {
+			c.sendError("scene_id required")
+			return
+		}
+
+		if err := c.hub.hueClient.ActivateScene(sceneID); err != nil {
+			log.Error().Err(err).Str("scene", sceneID).Msg("Failed to activate scene")
+			c.sendError(err.Error())
+			return
+		}
+
+		c.sendAck(cmd.Target)
+
+	case "STATUS":
+		light, err := c.hub.hueClient.GetLight(hueID)
+		if err != nil {
+			c.sendError(err.Error())
+			return
+		}
+
+		status := models.LoxoneStatus{
+			Type:   "status",
+			Device: cmd.Target,
+			State:  light.State,
+		}
+
+		data, _ := json.Marshal(status)
+		c.send <- data
+	}
+}
+
+func (c *WebSocketClient) sendAck(target string) {
+	msg := map[string]interface{}{
+		"type":   "ack",
+		"target": target,
+	}
+	data, _ := json.Marshal(msg)
+	c.send <- data
+}
+
+func (c *WebSocketClient) sendError(message string) {
+	msg := map[string]interface{}{
+		"type":    "error",
+		"message": message,
+	}
+	data, _ := json.Marshal(msg)
+	c.send <- data
+}
+
+// writePump writes messages to the WebSocket connection
+func (c *WebSocketClient) writePump() {
+	ticker := time.NewTicker(pingPeriod)
+	defer func() {
+		ticker.Stop()
+		c.conn.Close()
+	}()
+
+	for {
+		select {
+		case message, ok := <-c.send:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if !ok {
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+
+			w, err := c.conn.NextWriter(websocket.TextMessage)
+			if err != nil {
+				return
+			}
+			w.Write(message)
+
+			if err := w.Close(); err != nil {
+				return
+			}
+
+		case <-ticker.C:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
+		}
+	}
+}
+
+const (
+	writeWait      = 10 * time.Second
+	pongWait       = 60 * time.Second
+	pingPeriod     = (pongWait * 9) / 10
+	maxMessageSize = 512 * 1024
+)

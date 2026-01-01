@@ -1,0 +1,19 @@
+services:
+  loxone2hue:
+    build: .
+    container_name: loxone2hue
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./configs:/app/configs
+    environment:
+      - TZ=Europe/Zurich
+    networks:
+      - loxone2hue
+    # For mDNS discovery, use host network
+    # network_mode: host
+
+networks:
+  loxone2hue:
+    driver: bridge

@@ -1,0 +1,28 @@
+# OS
+.DS_Store
+
+# Go
+gateway
+*.exe
+go.sum
+
+# Node
+node_modules/
+web/node_modules/
+web/dist/
+dist/
+
+# Config (contains secrets)
+configs/config.yaml
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Logs
+*.log
+
+# Coverage
+coverage/
