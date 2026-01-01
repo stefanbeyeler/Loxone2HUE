@@ -94,7 +94,7 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
       const scene = scenes.find((s) => s.id === hueId);
       if (scene) {
         const groupName = getGroupNameForScene(scene);
-        return groupName ? `${scene.name} (${groupName})` : scene.name;
+        return groupName ? `${groupName} - ${scene.name}` : scene.name;
       }
       return hueId;
     }
@@ -432,7 +432,7 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
               {formData.hue_type === 'scene' &&
                 getScenesWithGroupName().map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name}{s.groupName ? ` (${s.groupName})` : ''}
+                    {s.groupName ? `${s.groupName} - ${s.name}` : s.name}
                   </option>
                 ))}
               {formData.hue_type !== 'group' && formData.hue_type !== 'scene' &&
@@ -523,7 +523,7 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
                     {formData.hue_type === 'scene' &&
                       getScenesWithGroupName().map((s) => (
                         <option key={s.id} value={s.id}>
-                          {s.name}{s.groupName ? ` (${s.groupName})` : ''}
+                          {s.groupName ? `${s.groupName} - ${s.name}` : s.name}
                         </option>
                       ))}
                     {formData.hue_type !== 'group' && formData.hue_type !== 'scene' &&
