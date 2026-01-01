@@ -99,3 +99,53 @@ func (m *MappingManager) ResolveTarget(target string) (hueID, hueType string, ok
 	}
 	return "", "", false
 }
+
+// ResolveMood resolves a mood number for a target to HUE resource info
+// Looks for mapping with LoxoneID pattern: <target>_mood_<number>
+// If mood is 0, returns the group/light mapping for turning off
+func (m *MappingManager) ResolveMood(target string, moodNumber int) (hueID, hueType string, ok bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	// For mood 0 (off), look for the base target mapping (group or light)
+	if moodNumber == 0 {
+		if mapping, exists := m.mappings[target]; exists && mapping.Enabled {
+			// Only return if it's a group or light (not a scene)
+			if mapping.HueType == "group" || mapping.HueType == "light" {
+				return mapping.HueID, mapping.HueType, true
+			}
+		}
+		return "", "", false
+	}
+
+	// For mood > 0, look for scene mapping: <target>_mood_<number>
+	moodKey := target + "_mood_" + itoa(moodNumber)
+	if mapping, exists := m.mappings[moodKey]; exists && mapping.Enabled {
+		return mapping.HueID, mapping.HueType, true
+	}
+
+	return "", "", false
+}
+
+// itoa converts int to string (simple implementation to avoid import)
+func itoa(i int) string {
+	if i == 0 {
+		return "0"
+	}
+	neg := i < 0
+	if neg {
+		i = -i
+	}
+	var b [20]byte
+	bp := len(b) - 1
+	for i > 0 {
+		b[bp] = byte('0' + i%10)
+		bp--
+		i /= 10
+	}
+	if neg {
+		b[bp] = '-'
+		bp--
+	}
+	return string(b[bp+1:])
+}

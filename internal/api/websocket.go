@@ -204,7 +204,64 @@ func (h *WebSocketHub) handleHTTPCommand(w http.ResponseWriter, r *http.Request,
 			json.NewEncoder(w).Encode(map[string]string{"error": "scene_id required"})
 			return
 		}
-		execErr = h.hueClient.ActivateScene(sceneID)
+		// Resolve scene mapping to HUE scene ID
+		resolvedHueID, resolvedHueType, resolved := h.mappingManager.ResolveTarget(sceneID)
+		if resolved && resolvedHueType == "scene" {
+			hueID = resolvedHueID
+			hueType = resolvedHueType
+			execErr = h.hueClient.ActivateScene(resolvedHueID)
+		} else {
+			// Try using sceneID directly as HUE scene ID
+			hueID = sceneID
+			hueType = "scene"
+			execErr = h.hueClient.ActivateScene(sceneID)
+		}
+
+	case "mood":
+		moodNum, ok := cmd.Params["mood_number"].(int)
+		if !ok {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "mood_number required"})
+			return
+		}
+
+		// Resolve mood mapping
+		moodHueID, moodHueType, resolved := h.mappingManager.ResolveMood(cmd.Target, moodNum)
+		if !resolved {
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error":       "no mapping found for mood",
+				"target":      cmd.Target,
+				"mood_number": string(rune('0' + moodNum)),
+			})
+			return
+		}
+
+		hueID = moodHueID
+		hueType = moodHueType
+
+		if moodNum == 0 {
+			// Mood 0 = turn off the group/light
+			off := false
+			offCmd := models.DeviceCommand{On: &off}
+			switch moodHueType {
+			case "light":
+				execErr = h.hueClient.SetLightState(moodHueID, offCmd)
+			case "group":
+				execErr = h.hueClient.SetGroupState(moodHueID, offCmd)
+			}
+		} else {
+			// Mood > 0 = activate scene
+			if moodHueType == "scene" {
+				execErr = h.hueClient.ActivateScene(moodHueID)
+			} else {
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(map[string]string{
+					"error": "mood mapping must be a scene",
+				})
+				return
+			}
+		}
 
 	default:
 		w.WriteHeader(http.StatusBadRequest)
@@ -326,10 +383,67 @@ func (c *WebSocketClient) handleMessage(message []byte) {
 			return
 		}
 
-		if err := c.hub.hueClient.ActivateScene(sceneID); err != nil {
-			log.Error().Err(err).Str("scene", sceneID).Msg("Failed to activate scene")
-			c.sendError(err.Error())
+		// Resolve scene mapping to HUE scene ID
+		resolvedHueID, resolvedHueType, resolved := c.hub.mappingManager.ResolveTarget(sceneID)
+		if resolved && resolvedHueType == "scene" {
+			if err := c.hub.hueClient.ActivateScene(resolvedHueID); err != nil {
+				log.Error().Err(err).Str("scene", resolvedHueID).Msg("Failed to activate scene")
+				c.sendError(err.Error())
+				return
+			}
+		} else {
+			// Try using sceneID directly as HUE scene ID
+			if err := c.hub.hueClient.ActivateScene(sceneID); err != nil {
+				log.Error().Err(err).Str("scene", sceneID).Msg("Failed to activate scene")
+				c.sendError(err.Error())
+				return
+			}
+		}
+
+		c.sendAck(cmd.Target)
+
+	case "mood":
+		moodNum, ok := cmd.Params["mood_number"].(int)
+		if !ok {
+			c.sendError("mood_number required")
 			return
+		}
+
+		// Resolve mood mapping
+		moodHueID, moodHueType, resolved := c.hub.mappingManager.ResolveMood(cmd.Target, moodNum)
+		if !resolved {
+			c.sendError("no mapping found for mood")
+			return
+		}
+
+		if moodNum == 0 {
+			// Mood 0 = turn off the group/light
+			off := false
+			offCmd := models.DeviceCommand{On: &off}
+			var err error
+			switch moodHueType {
+			case "light":
+				err = c.hub.hueClient.SetLightState(moodHueID, offCmd)
+			case "group":
+				err = c.hub.hueClient.SetGroupState(moodHueID, offCmd)
+			}
+			if err != nil {
+				log.Error().Err(err).Str("target", cmd.Target).Int("mood", moodNum).Msg("Failed to turn off")
+				c.sendError(err.Error())
+				return
+			}
+		} else {
+			// Mood > 0 = activate scene
+			if moodHueType == "scene" {
+				if err := c.hub.hueClient.ActivateScene(moodHueID); err != nil {
+					log.Error().Err(err).Str("scene", moodHueID).Int("mood", moodNum).Msg("Failed to activate mood scene")
+					c.sendError(err.Error())
+					return
+				}
+			} else {
+				c.sendError("mood mapping must be a scene")
+				return
+			}
 		}
 
 		c.sendAck(cmd.Target)

@@ -36,13 +36,56 @@ func (p *CommandParser) ParseJSON(data []byte) (*models.LoxoneCommand, error) {
 //   - SET light_1 CT 3000
 //   - SET group_1 SCENE relax
 //   - GET light_1 STATUS
+//   - SCENE <scene_mapping_id>       - Activate a scene by mapping ID
+//   - MOOD <target> <mood_number>    - Activate scene for mood number (0=off)
 func (p *CommandParser) ParseText(text string) (*models.LoxoneCommand, error) {
 	parts := strings.Fields(text)
-	if len(parts) < 3 {
+	if len(parts) < 2 {
 		return nil, fmt.Errorf("invalid command format: %s", text)
 	}
 
 	cmdType := strings.ToUpper(parts[0])
+
+	// Handle SCENE command (only 2 parts needed)
+	if cmdType == "SCENE" {
+		if len(parts) < 2 {
+			return nil, fmt.Errorf("scene mapping ID required")
+		}
+		return &models.LoxoneCommand{
+			Type:   "command",
+			Target: parts[1],
+			Action: "scene",
+			Params: map[string]interface{}{
+				"scene_id": parts[1],
+			},
+		}, nil
+	}
+
+	// Handle MOOD command: MOOD <target> <mood_number>
+	if cmdType == "MOOD" {
+		if len(parts) < 3 {
+			return nil, fmt.Errorf("mood command requires target and mood number")
+		}
+		target := parts[1]
+		moodNum, err := strconv.Atoi(parts[2])
+		if err != nil {
+			return nil, fmt.Errorf("invalid mood number: %s", parts[2])
+		}
+		return &models.LoxoneCommand{
+			Type:   "command",
+			Target: target,
+			Action: "mood",
+			Params: map[string]interface{}{
+				"mood_number": moodNum,
+			},
+		}, nil
+	}
+
+	// Other commands need at least 3 parts
+	if len(parts) < 3 {
+		return nil, fmt.Errorf("invalid command format: %s", text)
+	}
+
 	target := parts[1]
 	action := strings.ToUpper(parts[2])
 

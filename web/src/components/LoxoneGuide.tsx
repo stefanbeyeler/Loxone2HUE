@@ -180,6 +180,33 @@ export function LoxoneGuide() {
                 </div>
               </div>
 
+              {/* Lichtsteuerungs-Baustein */}
+              <div className="bg-gray-900 rounded-lg p-4 border-2 border-hue-orange/50">
+                <h5 className="font-medium text-hue-orange mb-2">Lichtsteuerungs-Baustein (MOOD)</h5>
+                <p className="text-sm text-gray-400 mb-3">
+                  Für den Loxone Lichtsteuerungs-Baustein verwendest du den MOOD-Befehl.
+                  Der AQ-Ausgang (Stimmungsnummer) wird automatisch übergeben.
+                </p>
+                <div className="text-sm">
+                  <span className="text-gray-400">Befehl (Analog, AQ → Virtueller Ausgang):</span>
+                  <code className="block bg-gray-800 px-3 py-2 rounded mt-1 font-mono">
+                    /ws?cmd=MOOD wohnzimmer &lt;v&gt;
+                  </code>
+                  <p className="text-xs text-gray-500 mt-2">
+                    &lt;v&gt; = Stimmungsnummer (0=Aus, 1=Mood 1, 2=Mood 2, ...)
+                  </p>
+                </div>
+                <div className="mt-3 p-3 bg-blue-900/30 border border-blue-500/30 rounded">
+                  <h6 className="text-xs font-medium text-blue-400 mb-2">Benötigte Mappings:</h6>
+                  <ul className="text-xs text-blue-300 space-y-1">
+                    <li><code className="bg-blue-900/50 px-1 rounded">wohnzimmer</code> → Gruppe (für Mood 0 = Aus)</li>
+                    <li><code className="bg-blue-900/50 px-1 rounded">wohnzimmer_mood_1</code> → Szene (Mood 1)</li>
+                    <li><code className="bg-blue-900/50 px-1 rounded">wohnzimmer_mood_2</code> → Szene (Mood 2)</li>
+                    <li>... weitere Moods nach Bedarf</li>
+                  </ul>
+                </div>
+              </div>
+
               {/* Farbtemperatur */}
               <div className="bg-gray-900 rounded-lg p-4">
                 <h5 className="font-medium text-hue-orange mb-2">Farbtemperatur (Analog 2000-6500K)</h5>
@@ -267,6 +294,11 @@ export function LoxoneGuide() {
                 <td className="py-3 pr-4 font-mono text-hue-orange">SCENE &lt;id&gt;</td>
                 <td className="py-3 pr-4">Szene aktivieren</td>
                 <td className="py-3 font-mono text-xs">SCENE sz_relax</td>
+              </tr>
+              <tr className="border-b border-gray-700/50 bg-hue-orange/10">
+                <td className="py-3 pr-4 font-mono text-hue-orange">MOOD &lt;id&gt; &lt;nr&gt;</td>
+                <td className="py-3 pr-4">Stimmung aktivieren (Lichtsteuerung)</td>
+                <td className="py-3 font-mono text-xs">MOOD wohnzimmer 1</td>
               </tr>
               <tr>
                 <td className="py-3 pr-4 font-mono text-hue-orange">GET &lt;id&gt; STATUS</td>
