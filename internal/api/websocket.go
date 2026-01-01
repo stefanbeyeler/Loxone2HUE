@@ -120,8 +120,15 @@ func (h *WebSocketHub) forwardHueEvents(ctx context.Context) {
 	}
 }
 
-// HandleWebSocket handles WebSocket upgrade requests
+// HandleWebSocket handles WebSocket upgrade requests and HTTP command requests
 func (h *WebSocketHub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	// Check if this is an HTTP command request (for testing via browser)
+	cmd := r.URL.Query().Get("cmd")
+	if cmd != "" {
+		h.handleHTTPCommand(w, r, cmd)
+		return
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Error().Err(err).Msg("WebSocket upgrade failed")
@@ -147,6 +154,78 @@ func (h *WebSocketHub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	go client.writePump()
 	go client.readPump()
+}
+
+// handleHTTPCommand processes HTTP command requests (for testing and Loxone virtual outputs)
+func (h *WebSocketHub) handleHTTPCommand(w http.ResponseWriter, r *http.Request, cmdStr string) {
+	w.Header().Set("Content-Type", "application/json")
+
+	// Parse the command
+	cmd, err := h.commandParser.ParseText(cmdStr)
+	if err != nil {
+		log.Warn().Str("command", cmdStr).Err(err).Msg("Failed to parse HTTP command")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "invalid command format: " + err.Error()})
+		return
+	}
+
+	log.Debug().
+		Str("type", cmd.Type).
+		Str("target", cmd.Target).
+		Str("action", cmd.Action).
+		Interface("params", cmd.Params).
+		Msg("Received HTTP command")
+
+	// Resolve target to HUE resource
+	hueID, hueType, ok := h.mappingManager.ResolveTarget(cmd.Target)
+	if !ok {
+		// Try using target directly as HUE ID
+		hueID = cmd.Target
+		hueType = "light"
+	}
+
+	var execErr error
+
+	switch cmd.Action {
+	case "set":
+		deviceCmd := h.commandParser.ToDeviceCommand(cmd)
+
+		switch hueType {
+		case "light":
+			execErr = h.hueClient.SetLightState(hueID, deviceCmd)
+		case "group":
+			execErr = h.hueClient.SetGroupState(hueID, deviceCmd)
+		}
+
+	case "scene":
+		sceneID, ok := cmd.Params["scene_id"].(string)
+		if !ok {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "scene_id required"})
+			return
+		}
+		execErr = h.hueClient.ActivateScene(sceneID)
+
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "unsupported action: " + cmd.Action})
+		return
+	}
+
+	if execErr != nil {
+		log.Error().Err(execErr).Str("target", cmd.Target).Msg("Failed to execute HTTP command")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": execErr.Error()})
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  "ok",
+		"target":  cmd.Target,
+		"action":  cmd.Action,
+		"hue_id":  hueID,
+		"hue_type": hueType,
+	})
 }
 
 // BroadcastStatus sends a status update to all connected clients

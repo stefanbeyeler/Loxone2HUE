@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Mapping, Light, Group, Scene } from '../types';
 import * as api from '../services/api';
-import { Link2, Plus, Trash2, Edit2, Save, X, Lightbulb, Home, Play, Copy, Check, Terminal } from 'lucide-react';
+import { Link2, Plus, Trash2, Edit2, Save, X, Lightbulb, Home, Play, Copy, Check, Terminal, ExternalLink } from 'lucide-react';
 
 interface MappingConfigProps {
   lights: Light[];
@@ -170,6 +170,40 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
       )}
     </button>
   );
+
+  const getBaseUrl = () => {
+    return `${window.location.protocol}//${window.location.host}`;
+  };
+
+  const getTestUrls = (mapping: Mapping) => {
+    const baseUrl = getBaseUrl();
+    const loxoneId = mapping.loxone_id;
+    const isScene = mapping.hue_type === 'scene';
+
+    if (isScene) {
+      return [
+        {
+          label: 'Szene aktivieren',
+          url: `${baseUrl}/ws?cmd=SCENE ${loxoneId}`,
+        }
+      ];
+    }
+
+    return [
+      {
+        label: 'Einschalten',
+        url: `${baseUrl}/ws?cmd=SET ${loxoneId} ON`,
+      },
+      {
+        label: 'Ausschalten',
+        url: `${baseUrl}/ws?cmd=SET ${loxoneId} OFF`,
+      },
+      {
+        label: 'Helligkeit 50%',
+        url: `${baseUrl}/ws?cmd=SET ${loxoneId} BRI 50`,
+      }
+    ];
+  };
 
   const getLoxoneGuide = (mapping: Mapping) => {
     const loxoneId = mapping.loxone_id;
@@ -481,6 +515,40 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
                       <p className="text-xs text-blue-300">
                         <strong>Hinweis:</strong> {getLoxoneGuide(mapping).note}
                       </p>
+                    </div>
+
+                    {/* Test URLs */}
+                    <div className="mt-4 border-t border-gray-700 pt-3">
+                      <div className="flex items-center gap-2 mb-3">
+                        <ExternalLink size={16} className="text-green-500" />
+                        <h4 className="text-sm font-medium text-white">Test URLs</h4>
+                        <span className="text-xs text-gray-500">(zum Testen im Browser)</span>
+                      </div>
+                      <div className="space-y-2">
+                        {getTestUrls(mapping).map((test, idx) => (
+                          <div key={idx} className="bg-gray-900 rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs text-gray-400">{test.label}</span>
+                              <div className="flex gap-2">
+                                <CopyButton text={test.url} fieldId={`${mapping.id}-test-${idx}`} />
+                                <a
+                                  href={test.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-2 py-1 rounded bg-green-700 text-white hover:bg-green-600 transition-colors flex items-center gap-1 text-xs"
+                                  title="Im Browser öffnen"
+                                >
+                                  <ExternalLink size={12} />
+                                  <span>Testen</span>
+                                </a>
+                              </div>
+                            </div>
+                            <code className="block text-sm text-green-400 font-mono break-all">
+                              {test.url}
+                            </code>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 )}
