@@ -92,7 +92,11 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
     }
     if (hueType === 'scene') {
       const scene = scenes.find((s) => s.id === hueId);
-      return scene?.name || hueId;
+      if (scene) {
+        const groupName = getGroupNameForScene(scene);
+        return groupName ? `${scene.name} (${groupName})` : scene.name;
+      }
+      return hueId;
     }
     const light = lights.find((l) => l.id === hueId);
     return light?.name || hueId;
@@ -118,6 +122,25 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
       default:
         return 'Licht';
     }
+  };
+
+  const getGroupNameForScene = (scene: Scene) => {
+    const group = groups.find((g) => g.id === scene.group_id);
+    return group?.name || '';
+  };
+
+  const getScenesWithGroupName = () => {
+    return [...scenes]
+      .map((s) => ({
+        ...s,
+        groupName: getGroupNameForScene(s),
+      }))
+      .sort((a, b) => {
+        // Zuerst nach Gruppenname sortieren, dann nach Szenenname
+        const groupCompare = a.groupName.localeCompare(b.groupName, 'de');
+        if (groupCompare !== 0) return groupCompare;
+        return a.name.localeCompare(b.name, 'de');
+      });
   };
 
   const copyToClipboard = async (text: string, fieldId: string) => {
@@ -178,9 +201,9 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
   const getTestUrls = (mapping: Mapping) => {
     const baseUrl = getBaseUrl();
     const loxoneId = mapping.loxone_id;
-    const isScene = mapping.hue_type === 'scene';
+    const hueType = mapping.hue_type;
 
-    if (isScene) {
+    if (hueType === 'scene') {
       return [
         {
           label: 'Szene aktivieren',
@@ -189,6 +212,48 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
       ];
     }
 
+    // Check if this is a mood mapping (pattern: *_mood_*)
+    const isMoodMapping = loxoneId.includes('_mood_');
+    if (isMoodMapping) {
+      return [
+        {
+          label: 'Mood aktivieren (Szene)',
+          url: `${baseUrl}/ws?cmd=SCENE ${loxoneId}`,
+        }
+      ];
+    }
+
+    // For groups, add MOOD test URLs
+    if (hueType === 'group') {
+      return [
+        {
+          label: 'Einschalten',
+          url: `${baseUrl}/ws?cmd=SET ${loxoneId} ON`,
+        },
+        {
+          label: 'Ausschalten',
+          url: `${baseUrl}/ws?cmd=SET ${loxoneId} OFF`,
+        },
+        {
+          label: 'Helligkeit 50%',
+          url: `${baseUrl}/ws?cmd=SET ${loxoneId} BRI 50`,
+        },
+        {
+          label: 'MOOD 0 (Aus)',
+          url: `${baseUrl}/ws?cmd=MOOD ${loxoneId} 0`,
+        },
+        {
+          label: 'MOOD 1',
+          url: `${baseUrl}/ws?cmd=MOOD ${loxoneId} 1`,
+        },
+        {
+          label: 'MOOD 2',
+          url: `${baseUrl}/ws?cmd=MOOD ${loxoneId} 2`,
+        }
+      ];
+    }
+
+    // Light
     return [
       {
         label: 'Einschalten',
@@ -201,15 +266,34 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
       {
         label: 'Helligkeit 50%',
         url: `${baseUrl}/ws?cmd=SET ${loxoneId} BRI 50`,
+      },
+      {
+        label: 'Farbtemperatur 4000K',
+        url: `${baseUrl}/ws?cmd=SET ${loxoneId} CT 4000`,
       }
     ];
   };
 
   const getLoxoneGuide = (mapping: Mapping) => {
     const loxoneId = mapping.loxone_id;
-    const isScene = mapping.hue_type === 'scene';
+    const hueType = mapping.hue_type;
 
-    if (isScene) {
+    if (hueType === 'scene') {
+      // Check if this is a mood scene mapping
+      const isMoodMapping = loxoneId.includes('_mood_');
+      if (isMoodMapping) {
+        return {
+          title: 'Mood-Szene (für Lichtsteuerungs-Baustein)',
+          commands: [
+            {
+              label: 'Direkt aktivieren',
+              value: `/ws?cmd=SCENE ${loxoneId}`,
+              description: 'Szene direkt aktivieren (ohne Lichtsteuerungs-Baustein)'
+            }
+          ],
+          note: `Diese Szene ist Teil eines MOOD-Mappings. Sie wird automatisch aktiviert, wenn der Lichtsteuerungs-Baustein die entsprechende Stimmungsnummer sendet. Verwende den MOOD-Befehl am Gruppen-Mapping.`
+        };
+      }
       return {
         title: 'Szene aktivieren (Impuls-Taster)',
         commands: [
@@ -223,8 +307,38 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
       };
     }
 
+    if (hueType === 'group') {
+      return {
+        title: 'Gruppe/Raum steuern',
+        commands: [
+          {
+            label: 'Befehl bei EIN',
+            value: `/ws?cmd=SET ${loxoneId} ON`,
+            description: 'Virtueller Ausgang Befehl - Gruppe einschalten'
+          },
+          {
+            label: 'Befehl bei AUS',
+            value: `/ws?cmd=SET ${loxoneId} OFF`,
+            description: 'Virtueller Ausgang Befehl - Gruppe ausschalten'
+          },
+          {
+            label: 'Helligkeit (0-100%)',
+            value: `/ws?cmd=SET ${loxoneId} BRI <v>`,
+            description: 'Virtueller Ausgang Befehl (Analog) - <v> wird durch Wert ersetzt'
+          },
+          {
+            label: 'Lichtsteuerungs-Baustein (MOOD)',
+            value: `/ws?cmd=MOOD ${loxoneId} <v>`,
+            description: 'AQ-Ausgang → Virtueller Ausgang (Analog) - <v> = Stimmungsnummer'
+          }
+        ],
+        note: `Für den Lichtsteuerungs-Baustein: Erstelle zusätzlich Szenen-Mappings mit dem Muster "${loxoneId}_mood_1", "${loxoneId}_mood_2", etc. MOOD 0 schaltet diese Gruppe aus.`
+      };
+    }
+
+    // Light
     return {
-      title: 'Licht/Gruppe steuern',
+      title: 'Einzelnes Licht steuern',
       commands: [
         {
           label: 'Befehl bei EIN',
@@ -245,6 +359,11 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
           label: 'Farbtemperatur (2000-6500K)',
           value: `/ws?cmd=SET ${loxoneId} CT <v>`,
           description: 'Virtueller Ausgang Befehl (Analog) - optional'
+        },
+        {
+          label: 'Farbe (Hex)',
+          value: `/ws?cmd=SET ${loxoneId} COLOR #FF5500`,
+          description: 'Virtueller Ausgang Befehl - Farbe als Hex-Wert'
         }
       ],
       note: 'Erstelle einen Virtuellen Ausgang mit Adresse http://GATEWAY_IP:8080 und füge die Befehle als Virtuelle Ausgang Befehle hinzu.'
@@ -311,9 +430,9 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
                   </option>
                 ))}
               {formData.hue_type === 'scene' &&
-                [...scenes].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((s) => (
+                getScenesWithGroupName().map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name}
+                    {s.name}{s.groupName ? ` (${s.groupName})` : ''}
                   </option>
                 ))}
               {formData.hue_type !== 'group' && formData.hue_type !== 'scene' &&
@@ -402,9 +521,9 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
                         </option>
                       ))}
                     {formData.hue_type === 'scene' &&
-                      [...scenes].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((s) => (
+                      getScenesWithGroupName().map((s) => (
                         <option key={s.id} value={s.id}>
-                          {s.name}
+                          {s.name}{s.groupName ? ` (${s.groupName})` : ''}
                         </option>
                       ))}
                     {formData.hue_type !== 'group' && formData.hue_type !== 'scene' &&

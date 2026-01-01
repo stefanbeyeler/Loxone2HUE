@@ -43,6 +43,10 @@ const openAPISpec = `{
       "description": "Service Health Check"
     },
     {
+      "name": "Loxone",
+      "description": "Loxone Befehle (HTTP/WebSocket Endpoint)"
+    },
+    {
       "name": "Bridge",
       "description": "HUE Bridge Discovery und Pairing"
     },
@@ -80,6 +84,78 @@ const openAPISpec = `{
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/../ws": {
+      "get": {
+        "tags": ["Loxone"],
+        "summary": "Loxone Befehl ausführen",
+        "description": "Führt einen Loxone-Befehl aus. Dieser Endpoint ist für Loxone Virtual Outputs gedacht.\n\n## Verfügbare Befehle\n\n| Befehl | Beschreibung | Beispiel |\n|--------|--------------|----------|\n| SET id ON | Licht/Gruppe einschalten | SET wz_decke ON |\n| SET id OFF | Licht/Gruppe ausschalten | SET wz_decke OFF |\n| SET id BRI n | Helligkeit setzen (0-100%) | SET wz_decke BRI 75 |\n| SET id CT n | Farbtemperatur (2000-6500K) | SET wz_decke CT 4000 |\n| SET id COLOR hex | Farbe setzen | SET wz_decke COLOR #FF5500 |\n| SCENE id | Szene aktivieren | SCENE sz_relax |\n| MOOD id n | Stimmung aktivieren (Lichtsteuerung) | MOOD wohnzimmer 1 |\n| GET id STATUS | Status abfragen | GET wz_decke STATUS |\n\n## MOOD-Befehl für Lichtsteuerungs-Baustein\n\nDer MOOD-Befehl ist für den Loxone Lichtsteuerungs-Baustein konzipiert:\n- MOOD 0: Schaltet die zugehörige Gruppe/Licht aus\n- MOOD 1-9: Aktiviert die entsprechende Szene\n\nBenötigte Mappings für MOOD:\n- target -> Gruppe (für Mood 0 = Aus)\n- target_mood_1 -> Szene (für Mood 1)\n- target_mood_2 -> Szene (für Mood 2)\n- etc.",
+        "parameters": [
+          {
+            "name": "cmd",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Der auszuführende Befehl",
+            "examples": {
+              "on": {
+                "summary": "Licht einschalten",
+                "value": "SET wz_decke ON"
+              },
+              "off": {
+                "summary": "Licht ausschalten",
+                "value": "SET wz_decke OFF"
+              },
+              "brightness": {
+                "summary": "Helligkeit setzen",
+                "value": "SET wz_decke BRI 75"
+              },
+              "scene": {
+                "summary": "Szene aktivieren",
+                "value": "SCENE sz_relax"
+              },
+              "mood": {
+                "summary": "Stimmung aktivieren",
+                "value": "MOOD wohnzimmer 1"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Befehl erfolgreich ausgeführt",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoxoneCommandResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Ungültiger Befehl oder fehlende Parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Kein Mapping für Target gefunden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoxoneMoodError"
                 }
               }
             }
@@ -955,6 +1031,56 @@ const openAPISpec = `{
         "properties": {
           "error": {
             "type": "string"
+          }
+        }
+      },
+      "LoxoneCommandResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          },
+          "target": {
+            "type": "string",
+            "description": "Die Loxone ID aus dem Befehl",
+            "example": "wz_decke"
+          },
+          "action": {
+            "type": "string",
+            "description": "Die ausgeführte Aktion",
+            "enum": ["set", "scene", "mood"],
+            "example": "set"
+          },
+          "hue_id": {
+            "type": "string",
+            "description": "Die aufgelöste HUE Ressourcen-ID",
+            "example": "abc123-def456"
+          },
+          "hue_type": {
+            "type": "string",
+            "description": "Der Typ der HUE Ressource",
+            "enum": ["light", "group", "scene"],
+            "example": "light"
+          }
+        }
+      },
+      "LoxoneMoodError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "no mapping found for mood"
+          },
+          "target": {
+            "type": "string",
+            "description": "Die Loxone ID aus dem Befehl",
+            "example": "wohnzimmer"
+          },
+          "mood_number": {
+            "type": "string",
+            "description": "Die angeforderte Stimmungsnummer",
+            "example": "1"
           }
         }
       }

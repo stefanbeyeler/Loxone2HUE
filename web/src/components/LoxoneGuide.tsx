@@ -1,4 +1,4 @@
-import { BookOpen, Settings, Code, Link2, Terminal, Lightbulb, Home, Play, CheckCircle2 } from 'lucide-react';
+import { BookOpen, Settings, Code, Link2, Terminal, Lightbulb, Home, Play, CheckCircle2, AlertTriangle, Zap, HelpCircle } from 'lucide-react';
 
 export function LoxoneGuide() {
   return (
@@ -310,6 +310,191 @@ export function LoxoneGuide() {
         </div>
       </section>
 
+      {/* Praxis-Beispiel: Lichtsteuerungs-Baustein */}
+      <section className="bg-gray-800 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Zap size={20} className="text-hue-orange" />
+          Praxis-Beispiel: Lichtsteuerungs-Baustein
+        </h3>
+        <div className="space-y-4 text-gray-300">
+          <p className="text-sm">
+            Komplettes Beispiel für einen Raum "Wohnzimmer" mit dem Loxone Lichtsteuerungs-Baustein
+            und 3 HUE-Szenen.
+          </p>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-3">1. Benötigte Mappings erstellen</h4>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-400 border-b border-gray-700">
+                  <th className="pb-2 pr-4">Loxone ID</th>
+                  <th className="pb-2 pr-4">HUE Typ</th>
+                  <th className="pb-2">HUE Ressource</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">wohnzimmer</td>
+                  <td className="py-2 pr-4">Gruppe</td>
+                  <td className="py-2">Wohnzimmer (Raum)</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">wohnzimmer_mood_1</td>
+                  <td className="py-2 pr-4">Szene</td>
+                  <td className="py-2">Entspannen</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">wohnzimmer_mood_2</td>
+                  <td className="py-2 pr-4">Szene</td>
+                  <td className="py-2">Konzentrieren</td>
+                </tr>
+                <tr>
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">wohnzimmer_mood_3</td>
+                  <td className="py-2 pr-4">Szene</td>
+                  <td className="py-2">Energie tanken</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-3">2. Loxone Config: Virtueller Ausgang</h4>
+            <div className="space-y-2 text-sm">
+              <div>
+                <span className="text-gray-400">Adresse:</span>
+                <code className="block bg-gray-800 px-3 py-2 rounded mt-1 font-mono">
+                  http://192.168.1.100:8080
+                </code>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-3">3. Loxone Config: Virtueller Ausgang Befehl</h4>
+            <div className="space-y-2 text-sm">
+              <div>
+                <span className="text-gray-400">Bezeichnung:</span>
+                <span className="ml-2">Wohnzimmer HUE</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Befehl (Analog vom AQ-Ausgang):</span>
+                <code className="block bg-gray-800 px-3 py-2 rounded mt-1 font-mono">
+                  /ws?cmd=MOOD wohnzimmer &lt;v&gt;
+                </code>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-3">4. Loxone Config: Lichtsteuerungs-Baustein</h4>
+            <div className="space-y-2 text-sm">
+              <p className="text-gray-400">
+                Verbinde den <strong>AQ</strong>-Ausgang (Stimmungsnummer) mit dem Virtuellen Ausgang Befehl.
+              </p>
+              <div className="mt-3 p-3 bg-blue-900/30 border border-blue-500/30 rounded">
+                <p className="text-xs text-blue-300">
+                  Der AQ-Ausgang gibt die aktuelle Stimmungsnummer aus:
+                  <strong> 0</strong> = Aus,
+                  <strong> 1</strong> = Mood 1,
+                  <strong> 2</strong> = Mood 2, etc.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-4">
+            <h4 className="font-medium text-green-400 mb-2">Ergebnis</h4>
+            <ul className="text-sm text-green-300 space-y-1">
+              <li>• Mood 0 → Wohnzimmer-Gruppe wird ausgeschaltet</li>
+              <li>• Mood 1 → Szene "Entspannen" wird aktiviert</li>
+              <li>• Mood 2 → Szene "Konzentrieren" wird aktiviert</li>
+              <li>• Mood 3 → Szene "Energie tanken" wird aktiviert</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* Troubleshooting */}
+      <section className="bg-gray-800 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <AlertTriangle size={20} className="text-yellow-500" />
+          Troubleshooting
+        </h3>
+        <div className="space-y-4">
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-yellow-400 mb-2">Befehl wird nicht ausgeführt</h4>
+            <ul className="text-sm text-gray-300 space-y-2">
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Prüfe die Gateway-IP-Adresse im Virtuellen Ausgang</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Stelle sicher, dass der Gateway-Container läuft (Port 8080 erreichbar)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Teste die URL direkt im Browser: <code className="bg-gray-800 px-1 rounded">http://GATEWAY_IP:8080/ws?cmd=SET test ON</code></span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-yellow-400 mb-2">"no mapping found" Fehler</h4>
+            <ul className="text-sm text-gray-300 space-y-2">
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Die Loxone ID im Befehl stimmt nicht mit einem Mapping überein</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Bei MOOD: Prüfe, ob sowohl Gruppen-Mapping als auch Szenen-Mappings (<code className="bg-gray-800 px-1 rounded">*_mood_1</code>, <code className="bg-gray-800 px-1 rounded">*_mood_2</code>, ...) existieren</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Prüfe, ob das Mapping aktiviert ist (Enabled = true)</span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-yellow-400 mb-2">HUE reagiert nicht</h4>
+            <ul className="text-sm text-gray-300 space-y-2">
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Prüfe, ob die HUE Bridge verbunden ist (Dashboard: "Verbunden")</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Teste die HUE-Steuerung direkt über das Dashboard (Geräte/Räume)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Prüfe die HUE Bridge IP in der Konfiguration</span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-yellow-400 mb-2">Helligkeit/MOOD-Wert wird nicht übertragen</h4>
+            <ul className="text-sm text-gray-300 space-y-2">
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Stelle sicher, dass <code className="bg-gray-800 px-1 rounded">&lt;v&gt;</code> im Befehl enthalten ist (wird durch den Wert ersetzt)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Der Virtuelle Ausgang Befehl muss als "Analog" konfiguriert sein</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Prüfe den Wertebereich: Helligkeit 0-100, MOOD 0-9</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       {/* Checkliste */}
       <section className="bg-gray-800 rounded-xl p-6">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
@@ -343,9 +528,47 @@ export function LoxoneGuide() {
           </li>
           <li className="flex items-start gap-3">
             <div className="w-5 h-5 rounded border-2 border-gray-600 flex-shrink-0 mt-0.5"></div>
+            <span>Test: URL im Browser testen (Mappings → Test URLs)</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <div className="w-5 h-5 rounded border-2 border-gray-600 flex-shrink-0 mt-0.5"></div>
             <span>Test: Licht über Loxone schalten</span>
           </li>
         </ul>
+      </section>
+
+      {/* Quick Reference Card */}
+      <section className="bg-gradient-to-br from-hue-orange/20 to-orange-600/10 rounded-xl p-6 border border-hue-orange/30">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Zap size={20} className="text-hue-orange" />
+          Schnellreferenz
+        </h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="bg-gray-900/50 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-hue-orange mb-2">Licht Ein/Aus</h4>
+            <code className="text-xs text-gray-300 font-mono">/ws?cmd=SET id ON|OFF</code>
+          </div>
+          <div className="bg-gray-900/50 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-hue-orange mb-2">Helligkeit</h4>
+            <code className="text-xs text-gray-300 font-mono">/ws?cmd=SET id BRI &lt;v&gt;</code>
+          </div>
+          <div className="bg-gray-900/50 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-hue-orange mb-2">Szene</h4>
+            <code className="text-xs text-gray-300 font-mono">/ws?cmd=SCENE id</code>
+          </div>
+          <div className="bg-gray-900/50 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-hue-orange mb-2">Lichtsteuerung (MOOD)</h4>
+            <code className="text-xs text-gray-300 font-mono">/ws?cmd=MOOD id &lt;v&gt;</code>
+          </div>
+          <div className="bg-gray-900/50 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-hue-orange mb-2">Farbtemperatur</h4>
+            <code className="text-xs text-gray-300 font-mono">/ws?cmd=SET id CT &lt;v&gt;</code>
+          </div>
+          <div className="bg-gray-900/50 rounded-lg p-3">
+            <h4 className="text-sm font-medium text-hue-orange mb-2">Farbe</h4>
+            <code className="text-xs text-gray-300 font-mono">/ws?cmd=SET id COLOR #hex</code>
+          </div>
+        </div>
       </section>
     </div>
   );
