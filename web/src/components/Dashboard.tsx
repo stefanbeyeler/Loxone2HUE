@@ -11,6 +11,7 @@ import {
   Palette,
   Link2,
   BookOpen,
+  Code2,
   RefreshCw,
   Wifi,
   WifiOff,
@@ -18,7 +19,7 @@ import {
   X,
 } from 'lucide-react';
 
-type Tab = 'devices' | 'groups' | 'scenes' | 'mappings' | 'guide';
+type Tab = 'devices' | 'groups' | 'scenes' | 'mappings' | 'guide' | 'api';
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('devices');
@@ -55,6 +56,7 @@ export function Dashboard() {
     { id: 'scenes' as Tab, label: 'Szenen', icon: Palette, count: scenes.length },
     { id: 'mappings' as Tab, label: 'Mappings', icon: Link2 },
     { id: 'guide' as Tab, label: 'Anleitung', icon: BookOpen },
+    { id: 'api' as Tab, label: 'API', icon: Code2 },
   ];
 
   return (
@@ -208,6 +210,16 @@ export function Dashboard() {
         )}
 
         {activeTab === 'guide' && <LoxoneGuide />}
+
+        {activeTab === 'api' && (
+          <div className="bg-gray-800 rounded-xl overflow-hidden h-[calc(100vh-220px)]">
+            <iframe
+              src="/api/swagger"
+              title="API Dokumentation"
+              className="w-full h-full border-0 min-h-[600px]"
+            />
+          </div>
+        )}
       </main>
 
       {/* Footer */}
