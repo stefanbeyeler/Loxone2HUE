@@ -72,36 +72,47 @@ func (h *Handlers) TestBridgeConnection(w http.ResponseWriter, r *http.Request) 
 	results["bridge_ip"] = req.BridgeIP
 
 	// Test 1: DNS/IP resolution
+	dnsResult := make(map[string]interface{})
 	ips, err := net.LookupIP(req.BridgeIP)
 	if err != nil {
-		results["dns_lookup"] = fmt.Sprintf("failed: %v", err)
+		dnsResult["success"] = false
+		dnsResult["error"] = err.Error()
 	} else {
 		ipStrings := make([]string, len(ips))
 		for i, ip := range ips {
 			ipStrings[i] = ip.String()
 		}
-		results["dns_lookup"] = ipStrings
+		dnsResult["success"] = true
+		dnsResult["addresses"] = ipStrings
 	}
+	results["dns_lookup"] = dnsResult
 
 	// Test 2: TCP connection to port 443 (HTTPS)
+	tcp443Result := make(map[string]interface{})
 	tcpConn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:443", req.BridgeIP), 5*time.Second)
 	if err != nil {
-		results["tcp_443"] = fmt.Sprintf("failed: %v", err)
+		tcp443Result["success"] = false
+		tcp443Result["error"] = err.Error()
 	} else {
 		tcpConn.Close()
-		results["tcp_443"] = "success"
+		tcp443Result["success"] = true
 	}
+	results["tcp_443"] = tcp443Result
 
 	// Test 3: TCP connection to port 80 (HTTP)
+	tcp80Result := make(map[string]interface{})
 	tcpConn80, err := net.DialTimeout("tcp", fmt.Sprintf("%s:80", req.BridgeIP), 5*time.Second)
 	if err != nil {
-		results["tcp_80"] = fmt.Sprintf("failed: %v", err)
+		tcp80Result["success"] = false
+		tcp80Result["error"] = err.Error()
 	} else {
 		tcpConn80.Close()
-		results["tcp_80"] = "success"
+		tcp80Result["success"] = true
 	}
+	results["tcp_80"] = tcp80Result
 
 	// Test 4: HTTPS request to bridge API
+	httpsResult := make(map[string]interface{})
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
@@ -112,11 +123,14 @@ func (h *Handlers) TestBridgeConnection(w http.ResponseWriter, r *http.Request) 
 
 	resp, err := client.Get(fmt.Sprintf("https://%s/api/config", req.BridgeIP))
 	if err != nil {
-		results["https_api"] = fmt.Sprintf("failed: %v", err)
+		httpsResult["success"] = false
+		httpsResult["error"] = err.Error()
 	} else {
 		resp.Body.Close()
-		results["https_api"] = fmt.Sprintf("success (status: %d)", resp.StatusCode)
+		httpsResult["success"] = true
+		httpsResult["status_code"] = resp.StatusCode
 	}
+	results["https_request"] = httpsResult
 
 	log.Info().Interface("results", results).Msg("Bridge connection test completed")
 	jsonResponse(w, http.StatusOK, results)
