@@ -12,7 +12,7 @@ FROM golang:1.22-alpine AS go-builder
 ARG REPO_URL=https://github.com/stefanbeyeler/Loxone2HUE.git
 ARG REPO_BRANCH=main
 ARG TARGETARCH
-ARG CACHE_BUST=1.0.4
+ARG CACHE_BUST=1.0.5
 
 WORKDIR /build
 RUN apk add --no-cache git ca-certificates
@@ -22,8 +22,8 @@ RUN echo "Cache bust: ${CACHE_BUST}" && \
     git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} . && \
     ls -la cmd/gateway/
 
-# Download dependencies
-RUN go mod download
+# Regenerate go.sum and download dependencies
+RUN rm -f go.sum && go mod tidy
 
 # Build for target architecture
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-arm64} go build \
@@ -36,7 +36,7 @@ FROM node:20-alpine AS web-builder
 
 ARG REPO_URL=https://github.com/stefanbeyeler/Loxone2HUE.git
 ARG REPO_BRANCH=main
-ARG CACHE_BUST=1.0.4
+ARG CACHE_BUST=1.0.5
 
 WORKDIR /build
 RUN apk add --no-cache git
