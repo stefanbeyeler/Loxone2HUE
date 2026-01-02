@@ -1,6 +1,6 @@
 # Home Assistant Add-on Dockerfile for Loxone2HUE Gateway
-ARG BUILD_FROM
-FROM ${BUILD_FROM} as base
+ARG BUILD_FROM=ghcr.io/home-assistant/aarch64-base:3.18
+FROM ${BUILD_FROM} AS base
 
 # Install runtime dependencies only
 RUN apk add --no-cache \
@@ -15,13 +15,13 @@ FROM golang:1.22-alpine AS go-builder
 WORKDIR /build
 RUN apk add --no-cache git
 
-# Copy Go source files
-COPY src/go.mod src/go.sum ./
-RUN go mod download
+# Copy Go source files from parent directory (repository root)
+COPY go.mod go.sum* ./
+RUN go mod download || go mod tidy
 
-COPY src/cmd ./cmd
-COPY src/internal ./internal
-COPY src/configs ./configs
+COPY cmd ./cmd
+COPY internal ./internal
+COPY configs ./configs
 
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o gateway ./cmd/gateway
 
@@ -31,10 +31,11 @@ FROM node:20-alpine AS web-builder
 
 WORKDIR /build/web
 
-COPY src/web/package.json ./
+# Copy web source files from parent directory
+COPY web/package.json web/package-lock.json* ./
 RUN npm install
 
-COPY src/web/ ./
+COPY web/ ./
 RUN npm run build
 
 #---------------------------------------------
@@ -47,8 +48,8 @@ WORKDIR /app
 COPY --from=go-builder /build/gateway ./gateway
 COPY --from=web-builder /build/web/dist ./web/dist
 
-# Copy rootfs (run script)
-COPY rootfs /
+# Copy rootfs (run script) from addon directory
+COPY loxone2hue/rootfs /
 
 # Create config directory
 RUN mkdir -p /app/configs && \
