@@ -3,6 +3,9 @@ import { BridgeInfo } from '../types';
 import * as api from '../services/api';
 import { Wifi, RefreshCw, CheckCircle, AlertCircle, TestTube, XCircle } from 'lucide-react';
 
+// Version - should match config.yaml
+const VERSION = '1.0.12';
+
 interface BridgeSetupProps {
   onComplete: () => void;
 }
@@ -303,6 +306,11 @@ export function BridgeSetup({ onComplete }: BridgeSetupProps) {
           <p className="text-xs text-gray-500 text-center">
             Drücke vor dem Verbinden den Link-Button auf deiner HUE Bridge
           </p>
+        </div>
+
+        {/* Version footer */}
+        <div className="mt-6 text-center text-xs text-gray-600">
+          Loxone2HUE Gateway v{VERSION}
         </div>
       </div>
     </div>
