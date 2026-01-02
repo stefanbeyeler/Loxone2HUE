@@ -187,6 +187,7 @@ export function Dashboard() {
         {activeTab === 'devices' && (
           <DeviceList
             devices={lights}
+            groups={groups}
             loading={loading}
             onToggle={handleLightToggle}
             onBrightness={handleLightBrightness}

@@ -266,7 +266,24 @@ func (c *Client) SetLightState(id string, cmd models.DeviceCommand) error {
 func (c *Client) GetGroups() ([]*models.Group, error) {
 	groups := make([]*models.Group, 0)
 
-	// First fetch grouped_light states
+	// First fetch lights to build device-to-light mapping
+	deviceToLightID := make(map[string]string)
+	lightsResp, err := c.request("GET", "/clip/v2/resource/light", nil)
+	if err == nil {
+		var lightsResult struct {
+			Data []hueLight `json:"data"`
+		}
+		if err := json.Unmarshal(lightsResp, &lightsResult); err == nil {
+			for _, hl := range lightsResult.Data {
+				if hl.Owner != nil && hl.Owner.RType == "device" {
+					deviceToLightID[hl.Owner.RID] = hl.ID
+				}
+			}
+		}
+	}
+	log.Debug().Int("mappings", len(deviceToLightID)).Msg("Built device-to-light mapping")
+
+	// Fetch grouped_light states
 	groupedLightStates := make(map[string]models.GroupState)
 	glResp, err := c.request("GET", "/clip/v2/resource/grouped_light", nil)
 	if err == nil {
@@ -308,7 +325,7 @@ func (c *Client) GetGroups() ([]*models.Group, error) {
 
 	c.mu.Lock()
 	for _, hr := range roomsResult.Data {
-		group := convertHueRoom(hr)
+		group := convertHueRoom(hr, deviceToLightID)
 		// Apply state from grouped_light
 		if state, ok := groupedLightStates[group.ID]; ok {
 			group.State = state
@@ -329,7 +346,7 @@ func (c *Client) GetGroups() ([]*models.Group, error) {
 		if err := json.Unmarshal(zonesResp, &zonesResult); err == nil {
 			c.mu.Lock()
 			for _, hz := range zonesResult.Data {
-				group := convertHueRoom(hz)
+				group := convertHueRoom(hz, deviceToLightID)
 				group.Type = "zone"
 				// Apply state from grouped_light
 				if state, ok := groupedLightStates[group.ID]; ok {
@@ -464,6 +481,10 @@ func (c *Client) Close() {
 // Internal HUE API response types
 type hueLight struct {
 	ID       string `json:"id"`
+	Owner    *struct {
+		RID   string `json:"rid"`
+		RType string `json:"rtype"`
+	} `json:"owner,omitempty"`
 	Metadata struct {
 		Name      string `json:"name"`
 		Archetype string `json:"archetype"`
@@ -558,7 +579,7 @@ func convertHueLight(hl hueLight) *models.Light {
 	return light
 }
 
-func convertHueRoom(hr hueRoom) *models.Group {
+func convertHueRoom(hr hueRoom, deviceToLightID map[string]string) *models.Group {
 	group := &models.Group{
 		ID:     hr.ID,
 		Name:   hr.Metadata.Name,
@@ -568,7 +589,10 @@ func convertHueRoom(hr hueRoom) *models.Group {
 
 	for _, child := range hr.Children {
 		if child.RType == "device" {
-			group.Lights = append(group.Lights, child.RID)
+			// Map device ID to light ID
+			if lightID, ok := deviceToLightID[child.RID]; ok {
+				group.Lights = append(group.Lights, lightID)
+			}
 		}
 	}
 

@@ -1,4 +1,4 @@
-import { BookOpen, Settings, Code, Link2, Terminal, Lightbulb, Home, Play, CheckCircle2, AlertTriangle, Zap, HelpCircle } from 'lucide-react';
+import { BookOpen, Settings, Code, Link2, Terminal, Lightbulb, Home, Play, CheckCircle2, AlertTriangle, Zap, HelpCircle, Layers } from 'lucide-react';
 
 export function LoxoneGuide() {
   return (
@@ -16,12 +16,91 @@ export function LoxoneGuide() {
           Loxone Miniserver und der Philips HUE Bridge. Du kannst HUE Lampen, Gruppen und
           Szenen direkt aus Loxone steuern.
         </p>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-4">
+          <div className="bg-gray-900 rounded-lg p-3 text-center">
+            <Lightbulb size={24} className="mx-auto text-hue-orange mb-2" />
+            <span className="text-sm text-gray-300">Geräte</span>
+            <p className="text-xs text-gray-500 mt-1">Nach Räumen gruppiert</p>
+          </div>
+          <div className="bg-gray-900 rounded-lg p-3 text-center">
+            <Home size={24} className="mx-auto text-hue-orange mb-2" />
+            <span className="text-sm text-gray-300">Räume</span>
+            <p className="text-xs text-gray-500 mt-1">Physische Bereiche</p>
+          </div>
+          <div className="bg-gray-900 rounded-lg p-3 text-center">
+            <Layers size={24} className="mx-auto text-hue-orange mb-2" />
+            <span className="text-sm text-gray-300">Zonen</span>
+            <p className="text-xs text-gray-500 mt-1">Virtuelle Gruppen</p>
+          </div>
+          <div className="bg-gray-900 rounded-lg p-3 text-center">
+            <Play size={24} className="mx-auto text-hue-orange mb-2" />
+            <span className="text-sm text-gray-300">Szenen</span>
+            <p className="text-xs text-gray-500 mt-1">Lichtstimmungen</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Dashboard Übersicht */}
+      <section className="bg-gray-800 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Settings size={20} className="text-hue-orange" />
+          Dashboard Übersicht
+        </h3>
+        <div className="space-y-4 text-gray-300">
+          <p className="text-sm">
+            Das Dashboard bietet eine übersichtliche Steuerung aller HUE-Ressourcen:
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="bg-gray-900 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Lightbulb size={18} className="text-hue-orange" />
+                <span className="font-medium text-white">Geräte</span>
+              </div>
+              <p className="text-sm text-gray-400">
+                Alle Lampen werden automatisch nach ihren zugewiesenen Räumen gruppiert dargestellt.
+                Du siehst sofort, welche Geräte zu welchem Raum gehören.
+              </p>
+            </div>
+            <div className="bg-gray-900 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Home size={18} className="text-hue-orange" />
+                <span className="font-medium text-white">Räume</span>
+              </div>
+              <p className="text-sm text-gray-400">
+                Physische Räume wie "Wohnzimmer" oder "Küche". Jeder Raum kann mehrere Lampen enthalten
+                und verfügt über eigene Szenen.
+              </p>
+            </div>
+            <div className="bg-gray-900 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Layers size={18} className="text-hue-orange" />
+                <span className="font-medium text-white">Zonen</span>
+              </div>
+              <p className="text-sm text-gray-400">
+                Virtuelle Gruppen, die Lampen aus verschiedenen Räumen zusammenfassen können,
+                z.B. "Erdgeschoss" oder "Alle Flure".
+              </p>
+            </div>
+            <div className="bg-gray-900 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Play size={18} className="text-hue-orange" />
+                <span className="font-medium text-white">Szenen</span>
+              </div>
+              <p className="text-sm text-gray-400">
+                Vordefinierte Lichtstimmungen. Im Dropdown werden Szenen mit ihrem zugehörigen
+                Raum angezeigt: "Raum - Szenenname".
+              </p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* Architektur */}
       <section className="bg-gray-800 rounded-xl p-6">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Settings size={20} className="text-hue-orange" />
+          <Code size={20} className="text-hue-orange" />
           Funktionsweise
         </h3>
         <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm text-gray-300 overflow-x-auto">

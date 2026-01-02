@@ -56,7 +56,7 @@ const openAPISpec = `{
     },
     {
       "name": "Groups",
-      "description": "HUE Räume und Gruppen verwalten"
+      "description": "HUE Räume und Zonen verwalten. Räume sind physische Bereiche (z.B. Wohnzimmer), Zonen sind virtuelle Gruppen die Geräte aus mehreren Räumen zusammenfassen können."
     },
     {
       "name": "Scenes",
@@ -340,8 +340,8 @@ const openAPISpec = `{
     "/groups": {
       "get": {
         "tags": ["Groups"],
-        "summary": "Alle Gruppen abrufen",
-        "description": "Gibt eine Liste aller HUE Räume und Zonen zurück.",
+        "summary": "Alle Räume und Zonen abrufen",
+        "description": "Gibt eine Liste aller HUE Räume (type: room) und Zonen (type: zone) zurück. Räume sind physische Bereiche, Zonen sind virtuelle Gruppen. Jede Gruppe enthält eine Liste der zugehörigen Lampen-IDs.",
         "responses": {
           "200": {
             "description": "Liste der Gruppen",
@@ -438,7 +438,7 @@ const openAPISpec = `{
       "get": {
         "tags": ["Scenes"],
         "summary": "Alle Szenen abrufen",
-        "description": "Gibt eine Liste aller HUE Szenen zurück.",
+        "description": "Gibt eine Liste aller HUE Szenen zurück. Jede Szene ist einem Raum oder einer Zone zugeordnet (group_id). Die Szenen werden im Frontend mit dem Format 'Raum - Szenenname' angezeigt.",
         "responses": {
           "200": {
             "description": "Liste der Szenen",
@@ -830,20 +830,24 @@ const openAPISpec = `{
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "Eindeutige ID der Gruppe (UUID)"
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Name des Raums oder der Zone"
           },
           "type": {
             "type": "string",
-            "enum": ["room", "zone"]
+            "enum": ["room", "zone"],
+            "description": "room = physischer Raum, zone = virtuelle Gruppe"
           },
           "lights": {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "Liste der Light-IDs (nicht Device-IDs!) die zu dieser Gruppe gehören"
           },
           "state": {
             "$ref": "#/components/schemas/GroupState"
@@ -878,14 +882,16 @@ const openAPISpec = `{
         "type": "object",
         "properties": {
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "Eindeutige ID der Szene (UUID)"
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description": "Name der Szene (z.B. 'Entspannen', 'Konzentrieren')"
           },
           "group_id": {
             "type": "string",
-            "description": "ID der zugehörigen Gruppe/Raum"
+            "description": "ID des zugehörigen Raums oder der Zone. Im Frontend als 'Raum - Szene' dargestellt."
           }
         }
       },
