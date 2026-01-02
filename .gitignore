@@ -2,9 +2,8 @@
 .DS_Store
 
 # Go
-gateway
+/gateway
 *.exe
-go.sum
 
 # Node
 node_modules/
