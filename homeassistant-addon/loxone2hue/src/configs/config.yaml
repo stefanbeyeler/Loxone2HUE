@@ -1,0 +1,34 @@
+server:
+    port: 8080
+    host: 0.0.0.0
+hue:
+    bridge_ip: 10.1.19.45
+    application_key: Eo1Pq5khteLqcc1-8zoLDRUVnZ4UEsHPEIqgVJON
+loxone:
+    enabled: true
+    miniserver_ip: ""
+logging:
+    level: debug
+    format: json
+mappings:
+    - id: a09b46de-5ebc-4781-bedb-2d9a4afe2032
+      name: Buero Stefan Mood 1 (Hell)
+      loxoneid: buero_stefan_mood_1
+      hueid: 2b7427fa-7e26-4bda-bb69-79898dd4c859
+      huetype: scene
+      enabled: true
+      description: Szene "Hell"
+    - id: 57f61681-6895-4998-8304-bda730283806
+      name: Buero Stefan Mood 2 (Kontentration)
+      loxoneid: buero_stefan_mood_2
+      hueid: ee4fd19a-3ee6-4139-8627-af3345705de4
+      huetype: scene
+      enabled: true
+      description: Szene "Kontentration"
+    - id: 45111d22-1e79-4a27-bf62-afd0033d4d2a
+      name: Buero Stefan Mood 3 (Gedimmt)
+      loxoneid: buero_stefan_mood_3
+      hueid: a508f2df-4858-4330-a852-8a2c29c20a48
+      huetype: scene
+      enabled: true
+      description: Szene "Gedimmt"
