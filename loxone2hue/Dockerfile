@@ -15,28 +15,28 @@ FROM golang:1.22-alpine AS go-builder
 WORKDIR /build
 RUN apk add --no-cache git
 
-# Copy Go source files from parent directory (repository root)
-COPY go.mod go.sum* ./
-RUN go mod download || go mod tidy
+# Clone repository and build
+ARG REPO_URL=https://github.com/stefanbeyeler/Loxone2HUE.git
+ARG REPO_BRANCH=main
+RUN git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} .
 
-COPY cmd ./cmd
-COPY internal ./internal
-COPY configs ./configs
-
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o gateway ./cmd/gateway
+RUN go mod tidy && \
+    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o gateway ./cmd/gateway
 
 #---------------------------------------------
 # Build stage for frontend
 FROM node:20-alpine AS web-builder
 
+WORKDIR /build
+RUN apk add --no-cache git
+
+# Clone repository and build frontend
+ARG REPO_URL=https://github.com/stefanbeyeler/Loxone2HUE.git
+ARG REPO_BRANCH=main
+RUN git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} .
+
 WORKDIR /build/web
-
-# Copy web source files from parent directory
-COPY web/package.json web/package-lock.json* ./
-RUN npm install
-
-COPY web/ ./
-RUN npm run build
+RUN npm install && npm run build
 
 #---------------------------------------------
 # Final stage
@@ -48,8 +48,8 @@ WORKDIR /app
 COPY --from=go-builder /build/gateway ./gateway
 COPY --from=web-builder /build/web/dist ./web/dist
 
-# Copy rootfs (run script) from addon directory
-COPY loxone2hue/rootfs /
+# Copy rootfs (run script)
+COPY rootfs /
 
 # Create config directory
 RUN mkdir -p /app/configs && \
