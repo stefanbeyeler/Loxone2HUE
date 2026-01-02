@@ -130,6 +130,29 @@ export async function importMappings(
   });
 }
 
+// Config endpoint
+export interface ConfigResponse {
+  server: {
+    host: string;
+    port: number;
+  };
+  hue: {
+    bridge_ip: string;
+    configured: boolean;
+  };
+  loxone: {
+    host: string;
+    port: number;
+  };
+  logging: {
+    level: string;
+  };
+}
+
+export async function getConfig(): Promise<ConfigResponse> {
+  return fetchJSON(`${API_BASE}/config`);
+}
+
 // Health check
 export async function getHealth(): Promise<{ status: string; hue_configured: boolean }> {
   return fetchJSON(`${API_BASE}/health`);
