@@ -11,18 +11,20 @@ FROM golang:1.22-alpine AS go-builder
 
 ARG REPO_URL=https://github.com/stefanbeyeler/Loxone2HUE.git
 ARG REPO_BRANCH=main
+ARG TARGETARCH
 
 WORKDIR /build
 RUN apk add --no-cache git ca-certificates
 
-# Clone repository and build
+# Clone repository
 RUN git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} .
 
-# Build with optimizations
-RUN go mod download && \
-    CGO_ENABLED=0 GOOS=linux go build \
+# Download dependencies first (cacheable)
+RUN go mod download
+
+# Build for target architecture
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-arm64} go build \
     -ldflags="-w -s" \
-    -a -installsuffix cgo \
     -o gateway ./cmd/gateway
 
 #---------------------------------------------
@@ -39,7 +41,7 @@ RUN apk add --no-cache git
 RUN git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} .
 
 WORKDIR /build/web
-RUN npm ci --no-audit --no-fund && npm run build
+RUN npm ci --no-audit --no-fund 2>/dev/null && npm run build
 
 #---------------------------------------------
 # Final stage - Home Assistant base image
@@ -48,8 +50,7 @@ FROM base
 # Install runtime dependencies
 RUN apk add --no-cache \
     ca-certificates \
-    tzdata \
-    bash
+    tzdata
 
 WORKDIR /app
 
@@ -62,12 +63,8 @@ COPY rootfs /
 
 # Create required directories and set permissions
 RUN mkdir -p /app/configs /data /config/loxone2hue && \
-    chmod a+x /run.sh && \
-    chmod a+x /app/gateway
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/health || exit 1
+    chmod +x /run.sh && \
+    chmod +x /app/gateway
 
 # Expose port
 EXPOSE 8080
