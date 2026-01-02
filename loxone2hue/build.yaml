@@ -4,5 +4,6 @@ build_from:
   amd64: ghcr.io/home-assistant/amd64-base:3.18
   armv7: ghcr.io/home-assistant/armv7-base:3.18
 squash: false
-args: {}
-build_context: ..
+args:
+  REPO_URL: https://github.com/stefanbeyeler/Loxone2HUE.git
+  REPO_BRANCH: main
