@@ -1,27 +1,27 @@
 # Home Assistant Add-on Dockerfile for Loxone2HUE Gateway
 # Supports multi-architecture builds (aarch64, amd64, armv7)
 
-# Define build arguments at the top level
-ARG BUILD_FROM=ghcr.io/home-assistant/aarch64-base:3.18
-ARG REPO_URL=https://github.com/stefanbeyeler/Loxone2HUE.git
-ARG REPO_BRANCH=main
+# Build argument for base image (set by Home Assistant build system)
+ARG BUILD_FROM
+FROM ${BUILD_FROM:-ghcr.io/home-assistant/aarch64-base:3.18} AS base
 
 #---------------------------------------------
 # Build stage for Go backend
 FROM golang:1.22-alpine AS go-builder
 
+ARG REPO_URL=https://github.com/stefanbeyeler/Loxone2HUE.git
+ARG REPO_BRANCH=main
+
 WORKDIR /build
 RUN apk add --no-cache git ca-certificates
 
 # Clone repository and build
-ARG REPO_URL
-ARG REPO_BRANCH
 RUN git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} .
 
 # Build with optimizations
 RUN go mod download && \
     CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags="-w -s -X main.version=1.0.0 -X main.buildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    -ldflags="-w -s" \
     -a -installsuffix cgo \
     -o gateway ./cmd/gateway
 
@@ -29,12 +29,13 @@ RUN go mod download && \
 # Build stage for frontend
 FROM node:20-alpine AS web-builder
 
+ARG REPO_URL=https://github.com/stefanbeyeler/Loxone2HUE.git
+ARG REPO_BRANCH=main
+
 WORKDIR /build
 RUN apk add --no-cache git
 
 # Clone repository and build frontend
-ARG REPO_URL
-ARG REPO_BRANCH
 RUN git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} .
 
 WORKDIR /build/web
@@ -42,8 +43,7 @@ RUN npm ci --no-audit --no-fund && npm run build
 
 #---------------------------------------------
 # Final stage - Home Assistant base image
-ARG BUILD_FROM
-FROM ${BUILD_FROM}
+FROM base
 
 # Install runtime dependencies
 RUN apk add --no-cache \
