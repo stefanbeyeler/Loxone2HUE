@@ -20,6 +20,10 @@ import {
   Layers,
 } from 'lucide-react';
 
+// Version info - updated at build time
+const VERSION = '1.0.0';
+const BUILD_DATE = '2026-01-02 14:30';
+
 type Tab = 'devices' | 'rooms' | 'zones' | 'scenes' | 'mappings' | 'guide' | 'api';
 
 export function Dashboard() {
@@ -242,8 +246,13 @@ export function Dashboard() {
 
       {/* Footer */}
       <footer className="border-t border-gray-800 py-4 mt-8">
-        <div className="max-w-6xl mx-auto px-4 text-center text-xs text-gray-500">
-          Loxone2HUE Gateway &bull; {lights.length} Geräte &bull; {rooms.length} Räume &bull; {zones.length} Zonen
+        <div className="max-w-6xl mx-auto px-4 text-center text-xs text-gray-500 space-y-1">
+          <div>
+            Loxone2HUE Gateway v{VERSION} &bull; Build {BUILD_DATE}
+          </div>
+          <div className="text-gray-600">
+            &copy; 2026 Stefan Beyeler
+          </div>
         </div>
       </footer>
     </div>
