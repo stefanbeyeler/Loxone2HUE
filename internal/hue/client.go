@@ -125,14 +125,19 @@ func (c *Client) Pair(appName, instanceName string) (string, error) {
 		"generateclientkey": true,
 	}
 
+	log.Info().Str("bridge_ip", c.bridgeIP).Msg("Attempting to pair with HUE Bridge")
+
 	resp, err := c.request("POST", "/api", body)
 	if err != nil {
-		return "", err
+		log.Error().Err(err).Str("bridge_ip", c.bridgeIP).Msg("Failed to connect to HUE Bridge")
+		return "", fmt.Errorf("connection to bridge failed: %v", err)
 	}
+
+	log.Debug().Str("response", string(resp)).Msg("Pairing response from bridge")
 
 	var result []map[string]interface{}
 	if err := json.Unmarshal(resp, &result); err != nil {
-		return "", err
+		return "", fmt.Errorf("invalid response from bridge: %v", err)
 	}
 
 	if len(result) == 0 {
@@ -141,13 +146,21 @@ func (c *Client) Pair(appName, instanceName string) (string, error) {
 
 	if errInfo, ok := result[0]["error"]; ok {
 		errMap := errInfo.(map[string]interface{})
-		return "", fmt.Errorf("pairing error: %s", errMap["description"])
+		errType := int(errMap["type"].(float64))
+		errDesc := errMap["description"].(string)
+		log.Warn().Int("error_type", errType).Str("description", errDesc).Msg("Bridge pairing error")
+		// Error type 101 = link button not pressed
+		if errType == 101 {
+			return "", fmt.Errorf("link button not pressed - please press the link button on your HUE Bridge and try again within 30 seconds")
+		}
+		return "", fmt.Errorf("pairing error: %s", errDesc)
 	}
 
 	if success, ok := result[0]["success"]; ok {
 		successMap := success.(map[string]interface{})
 		if username, ok := successMap["username"]; ok {
 			c.applicationKey = username.(string)
+			log.Info().Msg("Successfully paired with HUE Bridge")
 			return c.applicationKey, nil
 		}
 	}
