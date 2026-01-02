@@ -157,3 +157,33 @@ export async function getConfig(): Promise<ConfigResponse> {
 export async function getHealth(): Promise<{ status: string; hue_configured: boolean }> {
   return fetchJSON(`${API_BASE}/health`);
 }
+
+// Bridge connection test
+export interface BridgeTestResult {
+  bridge_ip: string;
+  dns_lookup: {
+    success: boolean;
+    addresses?: string[];
+    error?: string;
+  };
+  tcp_443: {
+    success: boolean;
+    error?: string;
+  };
+  tcp_80: {
+    success: boolean;
+    error?: string;
+  };
+  https_request: {
+    success: boolean;
+    status_code?: number;
+    error?: string;
+  };
+}
+
+export async function testBridgeConnection(bridgeIP: string): Promise<BridgeTestResult> {
+  return fetchJSON(`${API_BASE}/bridge/test`, {
+    method: 'POST',
+    body: JSON.stringify({ bridge_ip: bridgeIP }),
+  });
+}

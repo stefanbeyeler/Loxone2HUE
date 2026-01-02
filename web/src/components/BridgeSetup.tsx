@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BridgeInfo } from '../types';
 import * as api from '../services/api';
-import { Wifi, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import { Wifi, RefreshCw, CheckCircle, AlertCircle, TestTube, XCircle } from 'lucide-react';
 
 interface BridgeSetupProps {
   onComplete: () => void;
@@ -14,6 +14,8 @@ export function BridgeSetup({ onComplete }: BridgeSetupProps) {
   const [selectedBridge, setSelectedBridge] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<api.BridgeTestResult | null>(null);
 
   const discoverBridges = async () => {
     setSearching(true);
@@ -64,6 +66,24 @@ export function BridgeSetup({ onComplete }: BridgeSetupProps) {
       }
     } finally {
       setPairing(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!selectedBridge) return;
+
+    setTesting(true);
+    setTestResult(null);
+    setError(null);
+
+    try {
+      const result = await api.testBridgeConnection(selectedBridge);
+      setTestResult(result);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Test fehlgeschlagen';
+      setError(`Verbindungstest fehlgeschlagen: ${message}`);
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -157,6 +177,107 @@ export function BridgeSetup({ onComplete }: BridgeSetupProps) {
               className="w-full bg-gray-700 text-white rounded-lg px-4 py-3"
             />
           </div>
+
+          {/* Test Connection Button */}
+          <button
+            onClick={handleTestConnection}
+            disabled={!selectedBridge || testing}
+            className={`
+              w-full py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2
+              ${selectedBridge && !testing
+                ? 'bg-gray-600 text-white hover:bg-gray-500'
+                : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+              }
+            `}
+          >
+            {testing ? (
+              <>
+                <RefreshCw className="animate-spin" size={16} />
+                Teste Verbindung...
+              </>
+            ) : (
+              <>
+                <TestTube size={16} />
+                Verbindung testen
+              </>
+            )}
+          </button>
+
+          {/* Test Results */}
+          {testResult && (
+            <div className="bg-gray-700/50 rounded-lg p-4 space-y-2 text-sm">
+              <div className="font-medium text-white mb-3">Verbindungstest: {testResult.bridge_ip}</div>
+
+              <div className="flex items-center gap-2">
+                {testResult.dns_lookup?.success ? (
+                  <CheckCircle className="text-green-500" size={16} />
+                ) : (
+                  <XCircle className="text-red-500" size={16} />
+                )}
+                <span className="text-gray-300">DNS Lookup</span>
+                {testResult.dns_lookup?.addresses && (
+                  <span className="text-gray-500 text-xs">({testResult.dns_lookup.addresses.join(', ')})</span>
+                )}
+                {testResult.dns_lookup?.error && (
+                  <span className="text-red-400 text-xs">{testResult.dns_lookup.error}</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {testResult.tcp_80?.success ? (
+                  <CheckCircle className="text-green-500" size={16} />
+                ) : (
+                  <XCircle className="text-red-500" size={16} />
+                )}
+                <span className="text-gray-300">TCP Port 80</span>
+                {testResult.tcp_80?.error && (
+                  <span className="text-red-400 text-xs">{testResult.tcp_80.error}</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {testResult.tcp_443?.success ? (
+                  <CheckCircle className="text-green-500" size={16} />
+                ) : (
+                  <XCircle className="text-red-500" size={16} />
+                )}
+                <span className="text-gray-300">TCP Port 443 (HTTPS)</span>
+                {testResult.tcp_443?.error && (
+                  <span className="text-red-400 text-xs">{testResult.tcp_443.error}</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {testResult.https_request?.success ? (
+                  <CheckCircle className="text-green-500" size={16} />
+                ) : (
+                  <XCircle className="text-red-500" size={16} />
+                )}
+                <span className="text-gray-300">HUE API Erreichbar</span>
+                {testResult.https_request?.status_code && (
+                  <span className="text-gray-500 text-xs">(HTTP {testResult.https_request.status_code})</span>
+                )}
+                {testResult.https_request?.error && (
+                  <span className="text-red-400 text-xs">{testResult.https_request.error}</span>
+                )}
+              </div>
+
+              {/* Summary */}
+              <div className="pt-2 mt-2 border-t border-gray-600">
+                {testResult.dns_lookup?.success && testResult.tcp_443?.success && testResult.https_request?.success ? (
+                  <div className="flex items-center gap-2 text-green-400">
+                    <CheckCircle size={16} />
+                    <span>Bridge ist erreichbar - Pairing möglich</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-red-400">
+                    <AlertCircle size={16} />
+                    <span>Bridge nicht erreichbar - Netzwerk prüfen</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           <button
             onClick={handlePair}
