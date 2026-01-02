@@ -617,6 +617,64 @@ const openAPISpec = `{
         }
       }
     },
+    "/mappings/export": {
+      "get": {
+        "tags": ["Mappings"],
+        "summary": "Mappings exportieren",
+        "description": "Exportiert alle Mappings als JSON-Backup. Die Datei enthält Versionsinformationen, einen Zeitstempel und alle Mappings.",
+        "responses": {
+          "200": {
+            "description": "Backup der Mappings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingsBackup"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mappings/import": {
+      "post": {
+        "tags": ["Mappings"],
+        "summary": "Mappings importieren",
+        "description": "Importiert Mappings aus einem zuvor exportierten Backup. Unterstützt zwei Modi:\n\n- **replace**: Alle bestehenden Mappings werden gelöscht und durch die importierten ersetzt.\n- **merge**: Bestehende Mappings bleiben erhalten. Mappings mit gleicher Loxone ID werden aktualisiert, neue werden hinzugefügt.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Import erfolgreich",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Ungültiges Backup-Format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/config": {
       "get": {
         "tags": ["Config"],
@@ -966,6 +1024,70 @@ const openAPISpec = `{
             "items": {
               "$ref": "#/components/schemas/Mapping"
             }
+          }
+        }
+      },
+      "MappingsBackup": {
+        "type": "object",
+        "description": "Backup-Datei für Mappings mit Versionsinformationen",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "Version des Backup-Formats",
+            "example": "1.0"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Zeitpunkt der Backup-Erstellung"
+          },
+          "mappings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Mapping"
+            },
+            "description": "Liste aller exportierten Mappings"
+          }
+        }
+      },
+      "ImportRequest": {
+        "type": "object",
+        "required": ["mode", "backup"],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": ["replace", "merge"],
+            "description": "Import-Modus: 'replace' = alle ersetzen, 'merge' = zusammenführen"
+          },
+          "backup": {
+            "$ref": "#/components/schemas/MappingsBackup",
+            "description": "Das zu importierende Backup"
+          }
+        }
+      },
+      "ImportResult": {
+        "type": "object",
+        "description": "Ergebnis des Import-Vorgangs",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok"
+          },
+          "imported": {
+            "type": "integer",
+            "description": "Anzahl neu importierter Mappings"
+          },
+          "updated": {
+            "type": "integer",
+            "description": "Anzahl aktualisierter bestehender Mappings"
+          },
+          "skipped": {
+            "type": "integer",
+            "description": "Anzahl übersprungener Mappings"
+          },
+          "total": {
+            "type": "integer",
+            "description": "Gesamtanzahl verarbeiteter Mappings"
           }
         }
       },

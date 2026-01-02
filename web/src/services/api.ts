@@ -99,6 +99,37 @@ export async function deleteMapping(id: string): Promise<void> {
   });
 }
 
+// Backup types
+export interface MappingsBackup {
+  version: string;
+  created_at: string;
+  mappings: Mapping[];
+}
+
+export interface ImportResult {
+  status: string;
+  imported: number;
+  updated: number;
+  skipped: number;
+  total: number;
+}
+
+// Export mappings - triggers file download
+export async function exportMappings(): Promise<MappingsBackup> {
+  return fetchJSON(`${API_BASE}/mappings/export`);
+}
+
+// Import mappings
+export async function importMappings(
+  backup: MappingsBackup,
+  mode: 'replace' | 'merge'
+): Promise<ImportResult> {
+  return fetchJSON(`${API_BASE}/mappings/import`, {
+    method: 'POST',
+    body: JSON.stringify({ mode, backup }),
+  });
+}
+
 // Health check
 export async function getHealth(): Promise<{ status: string; hue_configured: boolean }> {
   return fetchJSON(`${API_BASE}/health`);

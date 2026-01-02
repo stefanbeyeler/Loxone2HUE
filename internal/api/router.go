@@ -70,6 +70,8 @@ func (s *Server) setupRoutes() {
 	api.HandleFunc("/mappings", s.handlers.CreateMapping).Methods("POST")
 	api.HandleFunc("/mappings/{id}", s.handlers.UpdateMapping).Methods("PUT")
 	api.HandleFunc("/mappings/{id}", s.handlers.DeleteMapping).Methods("DELETE")
+	api.HandleFunc("/mappings/export", s.handlers.ExportMappings).Methods("GET")
+	api.HandleFunc("/mappings/import", s.handlers.ImportMappings).Methods("POST")
 
 	// Config endpoints
 	api.HandleFunc("/config", s.handlers.GetConfig).Methods("GET")

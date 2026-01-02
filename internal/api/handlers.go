@@ -387,3 +387,116 @@ func (h *Handlers) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, http.StatusOK, map[string]string{"status": "ok"})
 }
+
+// MappingsBackup represents a backup of mappings
+type MappingsBackup struct {
+	Version   string           `json:"version"`
+	CreatedAt time.Time        `json:"created_at"`
+	Mappings  []models.Mapping `json:"mappings"`
+}
+
+// ExportMappings exports all mappings as a downloadable JSON file
+func (h *Handlers) ExportMappings(w http.ResponseWriter, r *http.Request) {
+	mappings := config.GetMappings()
+
+	backup := MappingsBackup{
+		Version:   "1.0",
+		CreatedAt: time.Now().UTC(),
+		Mappings:  mappings,
+	}
+
+	// Set headers for file download
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", "attachment; filename=loxone2hue-mappings-backup.json")
+	w.WriteHeader(http.StatusOK)
+
+	encoder := json.NewEncoder(w)
+	encoder.SetIndent("", "  ")
+	encoder.Encode(backup)
+}
+
+// ImportMappings imports mappings from a JSON backup
+func (h *Handlers) ImportMappings(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Mode   string         `json:"mode"` // "replace" or "merge"
+		Backup MappingsBackup `json:"backup"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		errorResponse(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.Backup.Version == "" {
+		errorResponse(w, http.StatusBadRequest, "invalid backup format: missing version")
+		return
+	}
+
+	importedMappings := req.Backup.Mappings
+	if importedMappings == nil {
+		importedMappings = []models.Mapping{}
+	}
+
+	var resultMappings []models.Mapping
+	var imported, skipped, updated int
+
+	switch req.Mode {
+	case "replace":
+		// Replace all existing mappings
+		for i := range importedMappings {
+			if importedMappings[i].ID == "" {
+				importedMappings[i].ID = uuid.New().String()
+			}
+		}
+		resultMappings = importedMappings
+		imported = len(importedMappings)
+
+	case "merge":
+		// Merge with existing mappings (skip duplicates by loxone_id)
+		existingMappings := config.GetMappings()
+		existingByLoxoneID := make(map[string]int)
+		for i, m := range existingMappings {
+			existingByLoxoneID[m.LoxoneID] = i
+		}
+
+		resultMappings = existingMappings
+
+		for _, newMapping := range importedMappings {
+			if idx, exists := existingByLoxoneID[newMapping.LoxoneID]; exists {
+				// Update existing mapping
+				newMapping.ID = resultMappings[idx].ID
+				resultMappings[idx] = newMapping
+				updated++
+			} else {
+				// Add new mapping
+				if newMapping.ID == "" {
+					newMapping.ID = uuid.New().String()
+				}
+				resultMappings = append(resultMappings, newMapping)
+				imported++
+			}
+		}
+
+	default:
+		errorResponse(w, http.StatusBadRequest, "invalid mode: use 'replace' or 'merge'")
+		return
+	}
+
+	// Update config and mapping manager
+	config.UpdateMappings(resultMappings)
+	h.mappingManager.Load(resultMappings)
+
+	if err := config.Save(); err != nil {
+		log.Error().Err(err).Msg("Failed to save config after import")
+		errorResponse(w, http.StatusInternalServerError, "failed to save config")
+		return
+	}
+
+	jsonResponse(w, http.StatusOK, map[string]interface{}{
+		"status":   "ok",
+		"imported": imported,
+		"updated":  updated,
+		"skipped":  skipped,
+		"total":    len(resultMappings),
+	})
+}
