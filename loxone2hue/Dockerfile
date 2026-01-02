@@ -12,14 +12,17 @@ FROM golang:1.22-alpine AS go-builder
 ARG REPO_URL=https://github.com/stefanbeyeler/Loxone2HUE.git
 ARG REPO_BRANCH=main
 ARG TARGETARCH
+ARG CACHE_BUST=1.0.3
 
 WORKDIR /build
 RUN apk add --no-cache git ca-certificates
 
-# Clone repository
-RUN git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} .
+# Clone repository (CACHE_BUST forces fresh clone)
+RUN echo "Cache bust: ${CACHE_BUST}" && \
+    git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} . && \
+    ls -la cmd/gateway/
 
-# Download dependencies first (cacheable)
+# Download dependencies
 RUN go mod download
 
 # Build for target architecture
@@ -33,12 +36,14 @@ FROM node:20-alpine AS web-builder
 
 ARG REPO_URL=https://github.com/stefanbeyeler/Loxone2HUE.git
 ARG REPO_BRANCH=main
+ARG CACHE_BUST=1.0.3
 
 WORKDIR /build
 RUN apk add --no-cache git
 
-# Clone repository and build frontend
-RUN git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} .
+# Clone repository (CACHE_BUST forces fresh clone)
+RUN echo "Cache bust: ${CACHE_BUST}" && \
+    git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} .
 
 WORKDIR /build/web
 RUN npm ci --no-audit --no-fund 2>/dev/null && npm run build
@@ -74,7 +79,7 @@ LABEL \
     io.hass.name="Loxone2HUE Gateway" \
     io.hass.description="Gateway für Loxone zu Philips HUE Kommunikation" \
     io.hass.type="addon" \
-    io.hass.version="1.0.0" \
+    io.hass.version="1.0.3" \
     io.hass.arch="aarch64|amd64|armv7"
 
 # Start gateway
