@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useHueDevices } from '../hooks/useHueDevices';
 import { DeviceList } from './DeviceList';
 import { GroupList } from './GroupList';
 import { SceneList } from './SceneList';
 import { MappingConfig } from './MappingConfig';
 import { LoxoneGuide } from './LoxoneGuide';
+import * as api from '../services/api';
 import {
   Lightbulb,
   Home,
@@ -18,6 +19,7 @@ import {
   Menu,
   X,
   Layers,
+  Router,
 } from 'lucide-react';
 
 // Version info - updated at build time
@@ -29,6 +31,7 @@ type Tab = 'devices' | 'rooms' | 'zones' | 'scenes' | 'mappings' | 'guide' | 'ap
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('devices');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [bridgeIP, setBridgeIP] = useState<string | null>(null);
 
   const {
     lights,
@@ -42,6 +45,21 @@ export function Dashboard() {
     setGroupState,
     activateScene,
   } = useHueDevices();
+
+  // Fetch bridge IP on mount
+  useEffect(() => {
+    const fetchBridgeInfo = async () => {
+      try {
+        const config = await api.getConfig();
+        if (config.hue?.bridge_ip) {
+          setBridgeIP(config.hue.bridge_ip);
+        }
+      } catch (err) {
+        console.error('Failed to fetch bridge info:', err);
+      }
+    };
+    fetchBridgeInfo();
+  }, []);
 
   const handleLightToggle = (id: string, on: boolean) => {
     setLightState(id, on);
@@ -86,6 +104,14 @@ export function Dashboard() {
             </div>
 
             <div className="flex items-center gap-4">
+              {/* Bridge IP */}
+              {bridgeIP && (
+                <div className="hidden md:flex items-center gap-2 bg-gray-700/50 px-3 py-1.5 rounded-lg">
+                  <Router size={16} className="text-hue-orange" />
+                  <span className="text-sm text-gray-300 font-mono">{bridgeIP}</span>
+                </div>
+              )}
+
               {/* Connection Status */}
               <div className="hidden sm:flex items-center gap-2">
                 {isConnected ? (
