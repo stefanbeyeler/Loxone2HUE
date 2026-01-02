@@ -26,7 +26,33 @@ Ein Gateway Service zur bidirektionalen Steuerung von Philips HUE Geräten über
 
 ## Installation
 
-### Mit Docker (empfohlen)
+### Home Assistant Add-on (empfohlen)
+
+Das einfachste Setup ist als Home Assistant Add-on:
+
+1. **Repository hinzufügen:**
+   - Gehe zu **Einstellungen** → **Add-ons** → **Add-on Store**
+   - Klicke auf das **⋮** Menü (oben rechts) → **Repositories**
+   - Füge hinzu: `https://github.com/stefanbeyeler/Loxone2HUE`
+
+2. **Add-on installieren:**
+   - Suche nach "Loxone2HUE Gateway"
+   - Klicke auf **Installieren**
+   - Warte bis die Installation abgeschlossen ist
+
+3. **Add-on starten:**
+   - Aktiviere **Beim Start ausführen** (optional)
+   - Klicke auf **Starten**
+   - Öffne das **Web UI** über den Seitenbereich
+
+4. **HUE Bridge verbinden:**
+   - Die Bridge wird automatisch erkannt
+   - Drücke den **Link-Button** auf der HUE Bridge
+   - Klicke auf **Verbinden** im Web UI
+
+Weitere Details: [Add-on Dokumentation](loxone2hue/DOCS.md)
+
+### Mit Docker
 
 1. Repository klonen:
 ```bash
