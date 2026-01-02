@@ -1,7 +1,10 @@
 package api
 
 import (
+	"crypto/tls"
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -47,6 +50,76 @@ func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {
 		"timestamp": time.Now().UTC(),
 		"hue_configured": h.hueClient.IsConfigured(),
 	})
+}
+
+// TestBridgeConnection tests network connectivity to a HUE bridge
+func (h *Handlers) TestBridgeConnection(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		BridgeIP string `json:"bridge_ip"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		errorResponse(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.BridgeIP == "" {
+		errorResponse(w, http.StatusBadRequest, "bridge_ip required")
+		return
+	}
+
+	results := make(map[string]interface{})
+	results["bridge_ip"] = req.BridgeIP
+
+	// Test 1: DNS/IP resolution
+	ips, err := net.LookupIP(req.BridgeIP)
+	if err != nil {
+		results["dns_lookup"] = fmt.Sprintf("failed: %v", err)
+	} else {
+		ipStrings := make([]string, len(ips))
+		for i, ip := range ips {
+			ipStrings[i] = ip.String()
+		}
+		results["dns_lookup"] = ipStrings
+	}
+
+	// Test 2: TCP connection to port 443 (HTTPS)
+	tcpConn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:443", req.BridgeIP), 5*time.Second)
+	if err != nil {
+		results["tcp_443"] = fmt.Sprintf("failed: %v", err)
+	} else {
+		tcpConn.Close()
+		results["tcp_443"] = "success"
+	}
+
+	// Test 3: TCP connection to port 80 (HTTP)
+	tcpConn80, err := net.DialTimeout("tcp", fmt.Sprintf("%s:80", req.BridgeIP), 5*time.Second)
+	if err != nil {
+		results["tcp_80"] = fmt.Sprintf("failed: %v", err)
+	} else {
+		tcpConn80.Close()
+		results["tcp_80"] = "success"
+	}
+
+	// Test 4: HTTPS request to bridge API
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{
+		Transport: tr,
+		Timeout:   10 * time.Second,
+	}
+
+	resp, err := client.Get(fmt.Sprintf("https://%s/api/config", req.BridgeIP))
+	if err != nil {
+		results["https_api"] = fmt.Sprintf("failed: %v", err)
+	} else {
+		resp.Body.Close()
+		results["https_api"] = fmt.Sprintf("success (status: %d)", resp.StatusCode)
+	}
+
+	log.Info().Interface("results", results).Msg("Bridge connection test completed")
+	jsonResponse(w, http.StatusOK, results)
 }
 
 // GetBridge returns bridge information

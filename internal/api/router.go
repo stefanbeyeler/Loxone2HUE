@@ -50,6 +50,7 @@ func (s *Server) setupRoutes() {
 	api.HandleFunc("/bridge", s.handlers.GetBridge).Methods("GET")
 	api.HandleFunc("/bridge/discover", s.handlers.DiscoverBridges).Methods("GET")
 	api.HandleFunc("/bridge/pair", s.handlers.PairBridge).Methods("POST")
+	api.HandleFunc("/bridge/test", s.handlers.TestBridgeConnection).Methods("POST")
 
 	// Device endpoints
 	api.HandleFunc("/devices", s.handlers.GetDevices).Methods("GET")
