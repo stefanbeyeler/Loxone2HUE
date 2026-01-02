@@ -25,8 +25,11 @@ export function BridgeSetup({ onComplete }: BridgeSetupProps) {
       if (response.bridges?.length === 1) {
         setSelectedBridge(response.bridges[0].ip);
       }
+      // Don't show error if no bridges found - user can enter IP manually
     } catch (err) {
-      setError('Bridge-Suche fehlgeschlagen');
+      // mDNS discovery often fails in Docker containers - this is expected
+      // User can still enter IP address manually
+      console.log('Bridge discovery failed (expected in Docker):', err);
     } finally {
       setSearching(false);
     }
@@ -47,10 +50,17 @@ export function BridgeSetup({ onComplete }: BridgeSetupProps) {
       setSuccess(true);
       setTimeout(onComplete, 2000);
     } catch (err) {
-      if (err instanceof Error && err.message.includes('link button')) {
-        setError('Bitte drücke den Link-Button auf der HUE Bridge und versuche es erneut');
+      const message = err instanceof Error ? err.message : 'Unbekannter Fehler';
+      console.error('Pairing error:', message);
+
+      if (message.includes('link button') || message.includes('101')) {
+        setError('Bitte drücke den Link-Button auf der HUE Bridge und versuche es erneut (innerhalb von 30 Sekunden)');
+      } else if (message.includes('timeout') || message.includes('ETIMEDOUT') || message.includes('ECONNREFUSED')) {
+        setError(`Verbindung zur Bridge ${selectedBridge} fehlgeschlagen. Bitte prüfe, ob die IP-Adresse korrekt ist und die Bridge erreichbar ist.`);
+      } else if (message.includes('certificate') || message.includes('TLS')) {
+        setError('TLS-Verbindungsfehler zur Bridge. Bitte versuche es erneut.');
       } else {
-        setError(err instanceof Error ? err.message : 'Pairing fehlgeschlagen');
+        setError(`Pairing fehlgeschlagen: ${message}`);
       }
     } finally {
       setPairing(false);
