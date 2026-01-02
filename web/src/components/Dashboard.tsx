@@ -17,9 +17,10 @@ import {
   WifiOff,
   Menu,
   X,
+  Layers,
 } from 'lucide-react';
 
-type Tab = 'devices' | 'groups' | 'scenes' | 'mappings' | 'guide' | 'api';
+type Tab = 'devices' | 'rooms' | 'zones' | 'scenes' | 'mappings' | 'guide' | 'api';
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('devices');
@@ -50,9 +51,14 @@ export function Dashboard() {
     setGroupState(id, on);
   };
 
+  // Separate rooms and zones
+  const rooms = groups.filter((g) => g.type === 'room');
+  const zones = groups.filter((g) => g.type === 'zone');
+
   const tabs = [
     { id: 'devices' as Tab, label: 'Geräte', icon: Lightbulb, count: lights.length },
-    { id: 'groups' as Tab, label: 'Räume', icon: Home, count: groups.length },
+    { id: 'rooms' as Tab, label: 'Räume', icon: Home, count: rooms.length },
+    { id: 'zones' as Tab, label: 'Zonen', icon: Layers, count: zones.length },
     { id: 'scenes' as Tab, label: 'Szenen', icon: Palette, count: scenes.length },
     { id: 'mappings' as Tab, label: 'Mappings', icon: Link2 },
     { id: 'guide' as Tab, label: 'Anleitung', icon: BookOpen },
@@ -188,12 +194,23 @@ export function Dashboard() {
           />
         )}
 
-        {activeTab === 'groups' && (
+        {activeTab === 'rooms' && (
           <GroupList
-            groups={groups}
+            groups={rooms}
             scenes={scenes}
             onToggle={handleGroupToggle}
             onActivateScene={activateScene}
+            title="Räume"
+          />
+        )}
+
+        {activeTab === 'zones' && (
+          <GroupList
+            groups={zones}
+            scenes={scenes}
+            onToggle={handleGroupToggle}
+            onActivateScene={activateScene}
+            title="Zonen"
           />
         )}
 
@@ -225,7 +242,7 @@ export function Dashboard() {
       {/* Footer */}
       <footer className="border-t border-gray-800 py-4 mt-8">
         <div className="max-w-6xl mx-auto px-4 text-center text-xs text-gray-500">
-          Loxone2HUE Gateway &bull; {lights.length} Geräte &bull; {groups.length} Räume
+          Loxone2HUE Gateway &bull; {lights.length} Geräte &bull; {rooms.length} Räume &bull; {zones.length} Zonen
         </div>
       </footer>
     </div>

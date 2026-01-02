@@ -7,9 +7,10 @@ interface GroupListProps {
   scenes: Scene[];
   onToggle: (id: string, on: boolean) => void;
   onActivateScene: (id: string) => void;
+  title?: string;
 }
 
-export function GroupList({ groups, scenes, onToggle, onActivateScene }: GroupListProps) {
+export function GroupList({ groups, scenes, onToggle, onActivateScene, title }: GroupListProps) {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   const getGroupScenes = (groupId: string) => {
@@ -104,8 +105,12 @@ export function GroupList({ groups, scenes, onToggle, onActivateScene }: GroupLi
 
       {groups.length === 0 && (
         <div className="text-center py-12">
-          <Home className="mx-auto text-gray-600 mb-4" size={48} />
-          <p className="text-gray-400">Keine Räume gefunden</p>
+          {title === 'Zonen' ? (
+            <Layers className="mx-auto text-gray-600 mb-4" size={48} />
+          ) : (
+            <Home className="mx-auto text-gray-600 mb-4" size={48} />
+          )}
+          <p className="text-gray-400">Keine {title || 'Gruppen'} gefunden</p>
         </div>
       )}
     </div>
