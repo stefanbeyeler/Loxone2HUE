@@ -3,12 +3,14 @@ name: "Loxone2HUE Gateway"
 description: "Gateway Service für bidirektionale Kommunikation zwischen Loxone und Philips HUE"
 version: "1.0.0"
 slug: "loxone2hue"
-url: "https://github.com/sbeyeler/loxone2hue"
+url: "https://github.com/stefanbeyeler/Loxone2HUE"
 arch:
   - aarch64
   - amd64
   - armv7
 init: false
+startup: application
+boot: auto
 homeassistant_api: false
 host_network: true
 panel_icon: "mdi:lightbulb-group"
