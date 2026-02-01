@@ -25,3 +25,6 @@ configs/config.yaml
 
 # Coverage
 coverage/
+
+# Docker images
+*.tar
