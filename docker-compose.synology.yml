@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  loxone2hue:
+    build:
+      context: .
+      dockerfile: Dockerfile.standalone
+    image: loxone2hue:latest
+    container_name: loxone2hue
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - loxone2hue-data:/data
+    environment:
+      - TZ=Europe/Zurich
+
+volumes:
+  loxone2hue-data:
