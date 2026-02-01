@@ -23,8 +23,8 @@ import {
 } from 'lucide-react';
 
 // Version info - updated at build time
-const VERSION = '1.0.0';
-const BUILD_DATE = '2026-01-02 14:30';
+const VERSION = '1.0.13';
+const BUILD_DATE = '2026-02-01';
 
 type Tab = 'devices' | 'rooms' | 'zones' | 'scenes' | 'mappings' | 'guide' | 'api';
 
