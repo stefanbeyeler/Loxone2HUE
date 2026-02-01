@@ -3,9 +3,8 @@ version: '3.8'
 # Loxone2HUE Gateway für Synology NAS
 #
 # Verwendung:
-#   1. Diesen Ordner auf das NAS kopieren
-#   2. docker-compose up -d --build
-#   3. Web-UI: http://<NAS-IP>:8080
+#   1. docker-compose up -d --build
+#   2. Web-UI: http://<NAS-IP>:8080
 
 services:
   loxone2hue:
@@ -15,7 +14,8 @@ services:
     image: loxone2hue:latest
     container_name: loxone2hue
     restart: unless-stopped
-    network_mode: host
+    ports:
+      - "8080:8080"
     volumes:
       - loxone2hue-data:/data
     environment:
