@@ -9,7 +9,9 @@
       "Bash(docker build:*)",
       "Bash(docker run:*)",
       "Bash(docker logs:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(docker save:*)",
+      "Bash(git restore:*)"
     ]
   }
 }
