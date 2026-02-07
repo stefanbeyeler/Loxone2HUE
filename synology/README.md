@@ -38,6 +38,7 @@ Standalone Docker-Deployment ohne Home Assistant Abhängigkeiten.
 
 - **Web-UI:** `http://<NAS-IP>:8080`
 - **API:** `http://<NAS-IP>:8080/api/`
+- **Health Check:** `http://<NAS-IP>:8080/api/health`
 
 ## Konfiguration
 
@@ -48,6 +49,45 @@ Nach dem ersten Start:
 2. HUE Bridge IP eingeben
 3. Link-Button auf der Bridge drücken
 4. "Verbinden" klicken
+
+## Loxone Anbindung
+
+### Virtueller Ausgang
+
+In Loxone Config einen **Virtuellen Ausgang** erstellen:
+- **Adresse:** `http://<NAS-IP>:8080`
+
+### Befehle (Virtueller Ausgang Befehl)
+
+Befehle werden als HTTP GET an den WebSocket-Endpoint gesendet:
+
+| Aktion | Befehl |
+|--------|--------|
+| Licht/Gruppe EIN | `/ws?cmd=SET%20<LoxoneID>%20ON` |
+| Licht/Gruppe AUS | `/ws?cmd=SET%20<LoxoneID>%20OFF` |
+| Helligkeit | `/ws?cmd=SET%20<LoxoneID>%20BRI%20<v>` |
+| Farbtemperatur | `/ws?cmd=SET%20<LoxoneID>%20CT%20<v>` |
+| Farbe (Hex) | `/ws?cmd=SET%20<LoxoneID>%20COLOR%20%23FF5500` |
+| Szene aktivieren | `/ws?cmd=SCENE%20<LoxoneID>` |
+| Mood (Lichtsteuerung) | `/ws?cmd=MOOD%20<LoxoneID>%20<v>` |
+
+> `<LoxoneID>` = Loxone ID aus dem Mapping, `<v>` = Analogwert vom Baustein
+
+### Beispiel: Licht steuern
+
+1. Mapping im Web-UI erstellen (z.B. `Buero_Stefan` → HUE Licht)
+2. Virtueller Ausgang in Loxone Config:
+   - Befehl bei EIN: `/ws?cmd=SET%20Buero_Stefan%20ON`
+   - Befehl bei AUS: `/ws?cmd=SET%20Buero_Stefan%20OFF`
+3. Für Dimmer (Analogwert): `/ws?cmd=SET%20Buero_Stefan%20BRI%20<v>`
+
+### Beispiel: Lichtsteuerungs-Baustein (MOOD)
+
+1. Gruppen-Mapping erstellen (z.B. `Wohnzimmer` → HUE Raum)
+2. Szenen-Mappings erstellen: `Wohnzimmer_mood_1`, `Wohnzimmer_mood_2`, etc.
+3. AQ-Ausgang des Lichtsteuerungs-Bausteins → Virtueller Ausgang:
+   - Befehl: `/ws?cmd=MOOD%20Wohnzimmer%20<v>`
+   - MOOD 0 = Aus, MOOD 1 = Szene 1, MOOD 2 = Szene 2, etc.
 
 ## Container Manager (DSM 7.2+)
 
@@ -75,4 +115,4 @@ docker-compose up -d --build
 
 | Port | Beschreibung |
 |------|--------------|
-| 8080 | Web-UI & API |
+| 8080 | Web-UI, API & WebSocket |

@@ -11,6 +11,9 @@ services:
     build:
       context: ..
       dockerfile: synology/Dockerfile
+      args:
+        VERSION: ${VERSION:-dev}
+        BUILD_DATE: ${BUILD_DATE:-unknown}
     image: loxone2hue:latest
     container_name: loxone2hue
     restart: unless-stopped

@@ -3,8 +3,8 @@ import { BridgeInfo } from '../types';
 import * as api from '../services/api';
 import { Wifi, RefreshCw, CheckCircle, AlertCircle, TestTube, XCircle } from 'lucide-react';
 
-// Version - should match config.yaml
-const VERSION = '1.0.13';
+// Version - injected at build time via Vite define
+const VERSION = __APP_VERSION__;
 
 interface BridgeSetupProps {
   onComplete: () => void;
