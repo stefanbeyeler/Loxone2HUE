@@ -59,6 +59,7 @@ export function DeviceCard({ device, onToggle, onBrightness }: DeviceCardProps) 
           <div>
             <h3 className="font-medium text-white">{device.name}</h3>
             <p className="text-xs text-gray-400">{device.product_name || device.type}</p>
+            <p className="text-xs text-gray-500 font-mono">{device.id}</p>
           </div>
         </div>
 
