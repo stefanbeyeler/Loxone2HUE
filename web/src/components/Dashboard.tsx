@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useHueDevices } from '../hooks/useHueDevices';
 import { DeviceList } from './DeviceList';
 import { GroupList } from './GroupList';
@@ -20,6 +20,8 @@ import {
   X,
   Layers,
   Router,
+  Timer,
+  ChevronDown,
 } from 'lucide-react';
 
 // Version info - updated at build time
@@ -32,6 +34,9 @@ export function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('devices');
   const [menuOpen, setMenuOpen] = useState(false);
   const [bridgeIP, setBridgeIP] = useState<string | null>(null);
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState(10);
+  const [showIntervalMenu, setShowIntervalMenu] = useState(false);
+  const intervalMenuRef = useRef<HTMLDivElement>(null);
 
   const {
     lights,
@@ -60,6 +65,35 @@ export function Dashboard() {
     };
     fetchBridgeInfo();
   }, []);
+
+  // Auto-refresh
+  useEffect(() => {
+    if (autoRefreshInterval <= 0) return;
+    const id = setInterval(() => {
+      refresh();
+    }, autoRefreshInterval * 1000);
+    return () => clearInterval(id);
+  }, [autoRefreshInterval, refresh]);
+
+  // Close interval menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (intervalMenuRef.current && !intervalMenuRef.current.contains(e.target as Node)) {
+        setShowIntervalMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const refreshIntervalOptions = [
+    { label: 'Aus', value: 0 },
+    { label: '5s', value: 5 },
+    { label: '10s', value: 10 },
+    { label: '15s', value: 15 },
+    { label: '30s', value: 30 },
+    { label: '60s', value: 60 },
+  ];
 
   const handleLightToggle = (id: string, on: boolean) => {
     setLightState(id, on);
@@ -124,14 +158,55 @@ export function Dashboard() {
                 </span>
               </div>
 
-              {/* Refresh Button */}
-              <button
-                onClick={refresh}
-                disabled={loading}
-                className="p-2 text-gray-400 hover:text-white transition-colors"
-              >
-                <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-              </button>
+              {/* Auto-Refresh Control */}
+              <div className="relative flex items-center" ref={intervalMenuRef}>
+                <button
+                  onClick={refresh}
+                  disabled={loading}
+                  className="p-2 text-gray-400 hover:text-white transition-colors"
+                  title="Jetzt aktualisieren"
+                >
+                  <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                </button>
+                <button
+                  onClick={() => setShowIntervalMenu(!showIntervalMenu)}
+                  className={`
+                    flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors
+                    ${autoRefreshInterval > 0
+                      ? 'text-hue-orange bg-hue-orange/10'
+                      : 'text-gray-500 hover:text-gray-300'
+                    }
+                  `}
+                  title="Auto-Refresh Intervall"
+                >
+                  <Timer size={14} />
+                  <span>{autoRefreshInterval > 0 ? `${autoRefreshInterval}s` : 'Aus'}</span>
+                  <ChevronDown size={12} />
+                </button>
+
+                {showIntervalMenu && (
+                  <div className="absolute right-0 top-full mt-2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl py-1 z-20 min-w-[120px]">
+                    {refreshIntervalOptions.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => {
+                          setAutoRefreshInterval(opt.value);
+                          setShowIntervalMenu(false);
+                        }}
+                        className={`
+                          w-full text-left px-4 py-2 text-sm transition-colors
+                          ${autoRefreshInterval === opt.value
+                            ? 'text-hue-orange bg-hue-orange/10'
+                            : 'text-gray-300 hover:bg-gray-700'
+                          }
+                        `}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Mobile Menu Toggle */}
               <button

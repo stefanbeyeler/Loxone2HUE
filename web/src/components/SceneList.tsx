@@ -70,7 +70,7 @@ export function SceneList({ scenes, groups, onActivateScene }: SceneListProps) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-white truncate">{scene.name}</h4>
-                    <p className="text-xs text-gray-400">Szene aktivieren</p>
+                    <p className="text-xs text-gray-500 font-mono truncate">{scene.id}</p>
                   </div>
                   <Play
                     size={18}

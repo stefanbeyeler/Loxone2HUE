@@ -59,6 +59,7 @@ export function GroupList({ groups, scenes, onToggle, onActivateScene, title }: 
                   <p className="text-xs text-gray-400">
                     {group.lights.length} Geräte • {groupScenes.length} Szenen
                   </p>
+                  <p className="text-xs text-gray-500 font-mono">{group.id}</p>
                 </div>
               </div>
 
@@ -92,8 +93,11 @@ export function GroupList({ groups, scenes, onToggle, onActivateScene, title }: 
                         hover:bg-gray-600 transition-colors text-left
                       "
                     >
-                      <Play size={16} className="text-hue-orange" />
-                      <span className="text-sm text-white truncate">{scene.name}</span>
+                      <Play size={16} className="text-hue-orange flex-shrink-0" />
+                      <div className="min-w-0">
+                        <span className="text-sm text-white truncate block">{scene.name}</span>
+                        <span className="text-xs text-gray-500 font-mono truncate block">{scene.id}</span>
+                      </div>
                     </button>
                   ))}
                 </div>

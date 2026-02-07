@@ -286,8 +286,12 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
     return `${window.location.protocol}//${window.location.host}`;
   };
 
-  const getTestUrls = (mapping: Mapping) => {
+  const buildTestUrl = (cmd: string) => {
     const baseUrl = getBaseUrl();
+    return `${baseUrl}/ws?cmd=${encodeURIComponent(cmd)}`;
+  };
+
+  const getTestUrls = (mapping: Mapping) => {
     const loxoneId = mapping.loxone_id;
     const hueType = mapping.hue_type;
 
@@ -295,7 +299,7 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
       return [
         {
           label: 'Szene aktivieren',
-          url: `${baseUrl}/ws?cmd=SCENE ${loxoneId}`,
+          url: buildTestUrl(`SCENE ${loxoneId}`),
         }
       ];
     }
@@ -306,7 +310,7 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
       return [
         {
           label: 'Mood aktivieren (Szene)',
-          url: `${baseUrl}/ws?cmd=SCENE ${loxoneId}`,
+          url: buildTestUrl(`SCENE ${loxoneId}`),
         }
       ];
     }
@@ -316,27 +320,27 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
       return [
         {
           label: 'Einschalten',
-          url: `${baseUrl}/ws?cmd=SET ${loxoneId} ON`,
+          url: buildTestUrl(`SET ${loxoneId} ON`),
         },
         {
           label: 'Ausschalten',
-          url: `${baseUrl}/ws?cmd=SET ${loxoneId} OFF`,
+          url: buildTestUrl(`SET ${loxoneId} OFF`),
         },
         {
           label: 'Helligkeit 50%',
-          url: `${baseUrl}/ws?cmd=SET ${loxoneId} BRI 50`,
+          url: buildTestUrl(`SET ${loxoneId} BRI 50`),
         },
         {
           label: 'MOOD 0 (Aus)',
-          url: `${baseUrl}/ws?cmd=MOOD ${loxoneId} 0`,
+          url: buildTestUrl(`MOOD ${loxoneId} 0`),
         },
         {
           label: 'MOOD 1',
-          url: `${baseUrl}/ws?cmd=MOOD ${loxoneId} 1`,
+          url: buildTestUrl(`MOOD ${loxoneId} 1`),
         },
         {
           label: 'MOOD 2',
-          url: `${baseUrl}/ws?cmd=MOOD ${loxoneId} 2`,
+          url: buildTestUrl(`MOOD ${loxoneId} 2`),
         }
       ];
     }
@@ -345,19 +349,19 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
     return [
       {
         label: 'Einschalten',
-        url: `${baseUrl}/ws?cmd=SET ${loxoneId} ON`,
+        url: buildTestUrl(`SET ${loxoneId} ON`),
       },
       {
         label: 'Ausschalten',
-        url: `${baseUrl}/ws?cmd=SET ${loxoneId} OFF`,
+        url: buildTestUrl(`SET ${loxoneId} OFF`),
       },
       {
         label: 'Helligkeit 50%',
-        url: `${baseUrl}/ws?cmd=SET ${loxoneId} BRI 50`,
+        url: buildTestUrl(`SET ${loxoneId} BRI 50`),
       },
       {
         label: 'Farbtemperatur 4000K',
-        url: `${baseUrl}/ws?cmd=SET ${loxoneId} CT 4000`,
+        url: buildTestUrl(`SET ${loxoneId} CT 4000`),
       }
     ];
   };
