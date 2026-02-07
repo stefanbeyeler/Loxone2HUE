@@ -1,9 +1,17 @@
 # Standalone Dockerfile for Synology NAS / Generic Docker
 # Does not depend on Home Assistant base images
 
+# Version args (passed by build.sh or docker-compose)
+ARG VERSION=dev
+ARG BUILD_DATE=unknown
+
 #---------------------------------------------
 # Build stage for Go backend
 FROM golang:1.22-alpine AS go-builder
+
+ARG VERSION
+ARG BUILD_DATE
+ARG TARGETARCH=amd64
 
 WORKDIR /build
 RUN apk add --no-cache git ca-certificates
@@ -14,15 +22,17 @@ COPY . .
 # Regenerate go.sum and download dependencies
 RUN rm -f go.sum && go mod tidy
 
-# Build for target architecture
-ARG TARGETARCH=amd64
+# Build for target architecture with version info
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build \
-    -ldflags="-w -s" \
+    -ldflags="-w -s -X main.version=${VERSION} -X main.buildTime=${BUILD_DATE}" \
     -o gateway ./cmd/gateway
 
 #---------------------------------------------
 # Build stage for frontend
 FROM node:20-alpine AS web-builder
+
+ARG VERSION
+ARG BUILD_DATE
 
 WORKDIR /build
 
@@ -31,11 +41,18 @@ COPY web/package*.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY web/ ./
+
+# Build with version info
+ENV VITE_APP_VERSION=${VERSION}
+ENV VITE_BUILD_DATE=${BUILD_DATE}
 RUN npm run build
 
 #---------------------------------------------
 # Final stage
-FROM alpine:3.18
+FROM alpine:3.19
+
+ARG VERSION
+ARG BUILD_DATE
 
 # Install runtime dependencies
 RUN apk add --no-cache \
@@ -48,6 +65,9 @@ WORKDIR /app
 COPY --from=go-builder /build/gateway ./gateway
 COPY --from=web-builder /build/dist ./web/dist
 
+# Copy example config
+COPY configs/config.example.yaml ./config.example.yaml
+
 # Create config directory
 RUN mkdir -p /data && chmod +x /app/gateway
 
@@ -57,24 +77,7 @@ RUN echo '#!/bin/sh' > /start.sh && \
     echo '' >> /start.sh && \
     echo 'if [ ! -f "$CONFIG_PATH" ]; then' >> /start.sh && \
     echo '  echo "Creating default config..."' >> /start.sh && \
-    echo '  cat > $CONFIG_PATH << EOF' >> /start.sh && \
-    echo 'server:' >> /start.sh && \
-    echo '  port: 8080' >> /start.sh && \
-    echo '  host: "0.0.0.0"' >> /start.sh && \
-    echo '' >> /start.sh && \
-    echo 'hue:' >> /start.sh && \
-    echo '  bridge_ip: ""' >> /start.sh && \
-    echo '  application_key: ""' >> /start.sh && \
-    echo '' >> /start.sh && \
-    echo 'loxone:' >> /start.sh && \
-    echo '  enabled: true' >> /start.sh && \
-    echo '' >> /start.sh && \
-    echo 'logging:' >> /start.sh && \
-    echo '  level: "info"' >> /start.sh && \
-    echo '  format: "json"' >> /start.sh && \
-    echo '' >> /start.sh && \
-    echo 'mappings: []' >> /start.sh && \
-    echo 'EOF' >> /start.sh && \
+    echo '  cp /app/config.example.yaml $CONFIG_PATH' >> /start.sh && \
     echo 'fi' >> /start.sh && \
     echo '' >> /start.sh && \
     echo 'exec /app/gateway -config $CONFIG_PATH' >> /start.sh && \
@@ -85,7 +88,13 @@ EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget -q --spider http://localhost:8080/api/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/api/health || exit 1
+
+# Labels
+LABEL \
+    version="${VERSION}" \
+    build_date="${BUILD_DATE}" \
+    description="Loxone2HUE Gateway for Synology NAS"
 
 # Start gateway
 CMD ["/start.sh"]

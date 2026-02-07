@@ -282,13 +282,8 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
     </Tooltip>
   );
 
-  const getBaseUrl = () => {
-    return `${window.location.protocol}//${window.location.host}`;
-  };
-
   const buildTestUrl = (cmd: string) => {
-    const baseUrl = getBaseUrl();
-    return `${baseUrl}/ws?cmd=${encodeURIComponent(cmd)}`;
+    return `/ws?cmd=${encodeURIComponent(cmd)}`;
   };
 
   const getTestUrls = (mapping: Mapping) => {
@@ -906,8 +901,8 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
                     <div className="mt-4 border-t border-gray-700 pt-3">
                       <div className="flex items-center gap-2 mb-3">
                         <ExternalLink size={16} className="text-green-500" />
-                        <h4 className="text-sm font-medium text-white">Test URLs</h4>
-                        <span className="text-xs text-gray-500">(zum Testen im Browser)</span>
+                        <h4 className="text-sm font-medium text-white">Befehle</h4>
+                        <span className="text-xs text-gray-500">(Loxone Virtueller Ausgang Befehl)</span>
                       </div>
                       <div className="space-y-2">
                         {getTestUrls(mapping).map((test, idx) => (
@@ -916,7 +911,7 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
                               <span className="text-xs text-gray-400">{test.label}</span>
                               <div className="flex gap-2">
                                 <CopyButton text={test.url} fieldId={`${mapping.id}-test-${idx}`} />
-                                <Tooltip content="Im Browser öffnen" position="top">
+                                <Tooltip content="Im Browser testen" position="top">
                                   <a
                                     href={test.url}
                                     target="_blank"

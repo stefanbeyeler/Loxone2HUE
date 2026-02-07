@@ -24,9 +24,9 @@ import {
   ChevronDown,
 } from 'lucide-react';
 
-// Version info - updated at build time
-const VERSION = '1.0.13';
-const BUILD_DATE = '2026-02-01';
+// Version info - injected at build time via Vite define
+const VERSION = __APP_VERSION__;
+const BUILD_DATE = __BUILD_DATE__;
 
 type Tab = 'devices' | 'rooms' | 'zones' | 'scenes' | 'mappings' | 'guide' | 'api';
 
