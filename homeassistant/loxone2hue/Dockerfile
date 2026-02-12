@@ -25,9 +25,10 @@ RUN echo "Cache bust: ${CACHE_BUST}" && \
 # Regenerate go.sum and download dependencies
 RUN rm -f go.sum && go mod tidy
 
-# Build for target architecture
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-arm64} go build \
-    -ldflags="-w -s" \
+# Build for target architecture with version injection
+RUN VERSION=$(cat VERSION) && BUILD_DATE=$(date -u +%Y-%m-%d) && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-arm64} go build \
+    -ldflags="-w -s -X main.version=${VERSION} -X main.buildTime=${BUILD_DATE}" \
     -o gateway ./cmd/gateway
 
 #---------------------------------------------
@@ -46,7 +47,9 @@ RUN echo "Cache bust: ${CACHE_BUST}" && \
     git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} .
 
 WORKDIR /build/web
-RUN npm ci --no-audit --no-fund 2>/dev/null && npm run build
+RUN npm ci --no-audit --no-fund 2>/dev/null && \
+    VERSION=$(cat /build/VERSION) && BUILD_DATE=$(date -u +%Y-%m-%d) && \
+    VITE_APP_VERSION=${VERSION} VITE_BUILD_DATE=${BUILD_DATE} npm run build
 
 #---------------------------------------------
 # Final stage - Home Assistant base image
