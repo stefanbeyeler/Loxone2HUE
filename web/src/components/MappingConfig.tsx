@@ -283,7 +283,7 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
   );
 
   const buildTestUrl = (cmd: string) => {
-    return `/ws?cmd=${encodeURIComponent(cmd)}`;
+    return `./ws?cmd=${encodeURIComponent(cmd)}`;
   };
 
   const getTestUrls = (mapping: Mapping) => {

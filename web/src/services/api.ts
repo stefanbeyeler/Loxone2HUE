@@ -1,6 +1,6 @@
 import { Light, Group, Scene, Mapping, BridgeInfo, DeviceCommand } from '../types';
 
-const API_BASE = '/api';
+const API_BASE = './api';
 
 async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, {
