@@ -337,7 +337,7 @@ export function Dashboard() {
         {activeTab === 'api' && (
           <div className="bg-gray-800 rounded-xl overflow-hidden h-[calc(100vh-220px)]">
             <iframe
-              src="/api/swagger"
+              src="./api/swagger"
               title="API Dokumentation"
               className="w-full h-full border-0 min-h-[600px]"
             />
