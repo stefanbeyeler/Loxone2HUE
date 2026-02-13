@@ -12,7 +12,8 @@
       "Bash(curl:*)",
       "Bash(docker save:*)",
       "Bash(git restore:*)",
-      "Bash(git check-ignore:*)"
+      "Bash(git check-ignore:*)",
+      "Bash(docker images:*)"
     ]
   }
 }
