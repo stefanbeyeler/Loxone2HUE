@@ -1,6 +1,10 @@
 import { BookOpen, Settings, Code, Link2, Terminal, Lightbulb, Home, Play, CheckCircle2, AlertTriangle, Zap, HelpCircle, Layers } from 'lucide-react';
 
 export function LoxoneGuide() {
+  const gatewayHost = window.location.hostname;
+  const gatewayPort = '8080';
+  const gatewayUrl = `${gatewayHost}:${gatewayPort}`;
+
   return (
     <div className="space-y-8 max-w-4xl">
       {/* Übersicht */}
@@ -203,7 +207,7 @@ export function LoxoneGuide() {
             <ol className="list-decimal list-inside space-y-2 text-sm ml-4">
               <li>Öffne <strong>Loxone Config</strong></li>
               <li>Erstelle einen neuen <strong>Virtuellen Ausgang</strong></li>
-              <li>Konfiguriere die Adresse: <code className="bg-gray-900 px-2 py-0.5 rounded">http://GATEWAY_IP:8080</code></li>
+              <li>Konfiguriere die Adresse: <code className="bg-gray-900 px-2 py-0.5 rounded">http://{gatewayUrl}</code></li>
               <li>Speichere den Virtuellen Ausgang</li>
             </ol>
           </div>
@@ -308,7 +312,7 @@ export function LoxoneGuide() {
               <div className="mb-2">
                 <span className="text-gray-400">WebSocket URL:</span>
                 <code className="block bg-gray-800 px-3 py-2 rounded mt-1 font-mono">
-                  ws://GATEWAY_IP:8080/ws
+                  ws://{gatewayUrl}/ws
                 </code>
               </div>
               <div>
@@ -442,7 +446,7 @@ export function LoxoneGuide() {
               <div>
                 <span className="text-gray-400">Adresse:</span>
                 <code className="block bg-gray-800 px-3 py-2 rounded mt-1 font-mono">
-                  http://192.168.1.100:8080
+                  http://{gatewayUrl}
                 </code>
               </div>
             </div>
@@ -513,7 +517,7 @@ export function LoxoneGuide() {
               </li>
               <li className="flex items-start gap-2">
                 <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
-                <span>Teste die URL direkt im Browser: <code className="bg-gray-800 px-1 rounded">http://GATEWAY_IP:8080/ws?cmd=SET test ON</code></span>
+                <span>Teste die URL direkt im Browser: <code className="bg-gray-800 px-1 rounded">http://{gatewayUrl}/ws?cmd=SET test ON</code></span>
               </li>
             </ul>
           </div>
