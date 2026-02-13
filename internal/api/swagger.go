@@ -33,8 +33,8 @@ const openAPISpec = `{
   },
   "servers": [
     {
-      "url": "/api",
-      "description": "API Endpunkt"
+      "url": ".",
+      "description": "API Endpunkt (relativ)"
     }
   ],
   "tags": [
