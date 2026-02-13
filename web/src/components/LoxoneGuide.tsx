@@ -215,70 +215,130 @@ export function LoxoneGuide() {
           <div>
             <h4 className="font-medium text-white mb-3">2.2 Virtuelle Ausgang-Befehle erstellen</h4>
             <p className="text-sm mb-3">
-              Für jedes Mapping erstellst du einen <strong>Virtuellen Ausgang Befehl</strong>:
+              Erstelle für jedes Mapping einen <strong>Virtuellen Ausgang Befehl</strong> unter dem
+              Virtuellen Ausgang. Rechtsklick → Virtuellen Ausgang Befehl hinzufügen.
             </p>
 
             <div className="space-y-4">
               {/* Ein/Aus Steuerung */}
               <div className="bg-gray-900 rounded-lg p-4">
-                <h5 className="font-medium text-hue-orange mb-2">Ein/Aus Steuerung (Digital)</h5>
-                <div className="grid gap-2 text-sm">
-                  <div>
-                    <span className="text-gray-400">Befehl bei EIN:</span>
-                    <code className="block bg-gray-800 px-3 py-2 rounded mt-1 font-mono">
-                      /ws?cmd=SET wz_decke ON
-                    </code>
+                <h5 className="font-medium text-hue-orange mb-3">Ein/Aus Steuerung (Digital)</h5>
+                <p className="text-sm text-gray-400 mb-3">Für Licht oder Gruppe ein- und ausschalten.</p>
+                <div className="space-y-2 text-sm">
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">Bezeichnung:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">Büro Licht</code>
                   </div>
-                  <div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">Befehl bei EIN:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">/ws?cmd=SET buero_stefan ON</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">HTTP Methode bei EIN:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">GET</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
                     <span className="text-gray-400">Befehl bei AUS:</span>
-                    <code className="block bg-gray-800 px-3 py-2 rounded mt-1 font-mono">
-                      /ws?cmd=SET wz_decke OFF
-                    </code>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">/ws?cmd=SET buero_stefan OFF</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">HTTP Methode bei AUS:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">GET</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">Als Digitalausgang:</span>
+                    <span className="text-green-400">✓ aktiviert</span>
                   </div>
                 </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  Alle anderen Felder (HTTP header, HTTP body, HTTP-Antwort speichern, Wiederholung) leer lassen.
+                </p>
               </div>
 
               {/* Helligkeit */}
               <div className="bg-gray-900 rounded-lg p-4">
-                <h5 className="font-medium text-hue-orange mb-2">Helligkeit (Analog 0-100%)</h5>
-                <div className="text-sm">
-                  <span className="text-gray-400">Befehl:</span>
-                  <code className="block bg-gray-800 px-3 py-2 rounded mt-1 font-mono">
-                    /ws?cmd=SET wz_decke BRI &lt;v&gt;
-                  </code>
-                  <p className="text-xs text-gray-500 mt-2">
-                    &lt;v&gt; wird automatisch durch den aktuellen Wert (0-100) ersetzt
-                  </p>
+                <h5 className="font-medium text-hue-orange mb-3">Helligkeit (Analog 0-100%)</h5>
+                <p className="text-sm text-gray-400 mb-3">Für stufenlose Helligkeitssteuerung über einen Analogwert.</p>
+                <div className="space-y-2 text-sm">
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">Bezeichnung:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">Büro Helligkeit</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">Befehl bei EIN:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">/ws?cmd=SET buero_stefan BRI &lt;v&gt;</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">HTTP Methode bei EIN:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">GET</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">Als Digitalausgang:</span>
+                    <span className="text-red-400">✗ deaktiviert</span>
+                  </div>
                 </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  <code className="bg-gray-800 px-1 rounded">&lt;v&gt;</code> wird von Loxone automatisch durch den aktuellen Wert (0-100) ersetzt.
+                  Befehl bei AUS kann leer bleiben.
+                </p>
               </div>
 
               {/* Szene aktivieren */}
               <div className="bg-gray-900 rounded-lg p-4">
-                <h5 className="font-medium text-hue-orange mb-2">Szene aktivieren (Impuls)</h5>
-                <div className="text-sm">
-                  <span className="text-gray-400">Befehl bei EIN:</span>
-                  <code className="block bg-gray-800 px-3 py-2 rounded mt-1 font-mono">
-                    /ws?cmd=SCENE sz_relax
-                  </code>
+                <h5 className="font-medium text-hue-orange mb-3">Szene aktivieren (Impuls)</h5>
+                <p className="text-sm text-gray-400 mb-3">Aktiviert eine HUE-Szene bei Tastendruck.</p>
+                <div className="space-y-2 text-sm">
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">Bezeichnung:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">Szene Entspannen</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">Befehl bei EIN:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">/ws?cmd=SCENE sz_relax</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">HTTP Methode bei EIN:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">GET</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">Als Digitalausgang:</span>
+                    <span className="text-green-400">✓ aktiviert</span>
+                  </div>
                 </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  Befehl bei AUS leer lassen. Als Taster/Impuls konfigurieren.
+                </p>
               </div>
 
               {/* Lichtsteuerungs-Baustein */}
               <div className="bg-gray-900 rounded-lg p-4 border-2 border-hue-orange/50">
-                <h5 className="font-medium text-hue-orange mb-2">Lichtsteuerungs-Baustein (MOOD)</h5>
+                <h5 className="font-medium text-hue-orange mb-3">Lichtsteuerungs-Baustein (MOOD)</h5>
                 <p className="text-sm text-gray-400 mb-3">
-                  Für den Loxone Lichtsteuerungs-Baustein verwendest du den MOOD-Befehl.
-                  Der AQ-Ausgang (Stimmungsnummer) wird automatisch übergeben.
+                  Für den Loxone Lichtsteuerungs-Baustein. Verbinde den <strong>AQ</strong>-Ausgang
+                  (Stimmungsnummer) mit diesem Virtuellen Ausgang Befehl.
                 </p>
-                <div className="text-sm">
-                  <span className="text-gray-400">Befehl (Analog, AQ → Virtueller Ausgang):</span>
-                  <code className="block bg-gray-800 px-3 py-2 rounded mt-1 font-mono">
-                    /ws?cmd=MOOD wohnzimmer &lt;v&gt;
-                  </code>
-                  <p className="text-xs text-gray-500 mt-2">
-                    &lt;v&gt; = Stimmungsnummer (0=Aus, 1=Mood 1, 2=Mood 2, ...)
-                  </p>
+                <div className="space-y-2 text-sm">
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">Bezeichnung:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">Wohnzimmer HUE</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">Befehl bei EIN:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">/ws?cmd=MOOD wohnzimmer &lt;v&gt;</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">HTTP Methode bei EIN:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">GET</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">Als Digitalausgang:</span>
+                    <span className="text-red-400">✗ deaktiviert</span>
+                  </div>
                 </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  <code className="bg-gray-800 px-1 rounded">&lt;v&gt;</code> = Stimmungsnummer vom AQ-Ausgang (0=Aus, 1=Mood 1, 2=Mood 2, ...).
+                  Befehl bei AUS leer lassen.
+                </p>
                 <div className="mt-3 p-3 bg-blue-900/30 border border-blue-500/30 rounded">
                   <h6 className="text-xs font-medium text-blue-400 mb-2">Benötigte Mappings:</h6>
                   <ul className="text-xs text-blue-300 space-y-1">
@@ -292,14 +352,43 @@ export function LoxoneGuide() {
 
               {/* Farbtemperatur */}
               <div className="bg-gray-900 rounded-lg p-4">
-                <h5 className="font-medium text-hue-orange mb-2">Farbtemperatur (Analog 2000-6500K)</h5>
-                <div className="text-sm">
-                  <span className="text-gray-400">Befehl:</span>
-                  <code className="block bg-gray-800 px-3 py-2 rounded mt-1 font-mono">
-                    /ws?cmd=SET wz_decke CT &lt;v&gt;
-                  </code>
+                <h5 className="font-medium text-hue-orange mb-3">Farbtemperatur (Analog 2000-6500K)</h5>
+                <p className="text-sm text-gray-400 mb-3">Für stufenlose Farbtemperatur-Steuerung.</p>
+                <div className="space-y-2 text-sm">
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">Bezeichnung:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">Büro Farbtemperatur</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">Befehl bei EIN:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">/ws?cmd=SET buero_stefan CT &lt;v&gt;</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">HTTP Methode bei EIN:</span>
+                    <code className="bg-gray-800 px-3 py-1.5 rounded font-mono">GET</code>
+                  </div>
+                  <div className="grid grid-cols-[180px_1fr] gap-2 items-center">
+                    <span className="text-gray-400">Als Digitalausgang:</span>
+                    <span className="text-red-400">✗ deaktiviert</span>
+                  </div>
                 </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  <code className="bg-gray-800 px-1 rounded">&lt;v&gt;</code> wird durch den Kelvin-Wert (2000-6500) ersetzt.
+                  Befehl bei AUS kann leer bleiben.
+                </p>
               </div>
+            </div>
+
+            {/* Allgemeine Hinweise */}
+            <div className="mt-4 p-4 bg-blue-900/30 border border-blue-500/30 rounded-lg">
+              <h5 className="text-sm font-medium text-blue-400 mb-2">Wichtige Hinweise zu den Feldern</h5>
+              <ul className="text-xs text-blue-300 space-y-1.5">
+                <li>• <strong>HTTP Methode</strong>: Immer <code className="bg-blue-900/50 px-1 rounded">GET</code> verwenden (bei EIN und AUS)</li>
+                <li>• <strong>HTTP header / HTTP body</strong>: Leer lassen</li>
+                <li>• <strong>HTTP-Antwort speichern</strong>: Leer lassen</li>
+                <li>• <strong>Wiederholung</strong>: Auf 0 lassen</li>
+                <li>• <strong>Als Digitalausgang</strong>: Aktiviert für Ein/Aus und Szene, deaktiviert für Analog-Werte (Helligkeit, MOOD, Farbtemperatur)</li>
+              </ul>
             </div>
           </div>
 
