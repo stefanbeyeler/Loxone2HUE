@@ -94,8 +94,8 @@ const openAPISpec = `{
     "/../ws": {
       "get": {
         "tags": ["Loxone"],
-        "summary": "Loxone Befehl ausführen",
-        "description": "Führt einen Loxone-Befehl aus. Dieser Endpoint ist für Loxone Virtual Outputs gedacht.\n\n## Verfügbare Befehle\n\n| Befehl | Beschreibung | Beispiel |\n|--------|--------------|----------|\n| SET id ON | Licht/Gruppe einschalten | SET wz_decke ON |\n| SET id OFF | Licht/Gruppe ausschalten | SET wz_decke OFF |\n| SET id BRI n | Helligkeit setzen (0-100%) | SET wz_decke BRI 75 |\n| SET id CT n | Farbtemperatur (2000-6500K) | SET wz_decke CT 4000 |\n| SET id COLOR hex | Farbe setzen | SET wz_decke COLOR #FF5500 |\n| SCENE id | Szene aktivieren | SCENE sz_relax |\n| MOOD id n | Stimmung aktivieren (Lichtsteuerung) | MOOD wohnzimmer 1 |\n| GET id STATUS | Status abfragen | GET wz_decke STATUS |\n\n## MOOD-Befehl für Lichtsteuerungs-Baustein\n\nDer MOOD-Befehl ist für den Loxone Lichtsteuerungs-Baustein konzipiert:\n- MOOD 0: Schaltet die zugehörige Gruppe/Licht aus\n- MOOD 1-9: Aktiviert die entsprechende Szene\n\nBenötigte Mappings für MOOD:\n- target -> Gruppe (für Mood 0 = Aus)\n- target_mood_1 -> Szene (für Mood 1)\n- target_mood_2 -> Szene (für Mood 2)\n- etc.",
+        "summary": "Loxone Befehl ausführen (WebSocket)",
+        "description": "Führt einen Loxone-Befehl aus. Dieser Endpoint ist für Loxone Virtual Outputs gedacht.\n\n**Hinweis:** Der WebSocket-Endpoint liegt auf /ws (Root-Ebene, nicht unter /api). Der Pfad /../ws ist relativ zum API-Basispfad /api.\n\n## Verfügbare Befehle\n\n| Befehl | Beschreibung | Beispiel |\n|--------|--------------|----------|\n| SET id ON | Licht/Gruppe einschalten | SET wz_decke ON |\n| SET id OFF | Licht/Gruppe ausschalten | SET wz_decke OFF |\n| SET id BRI n | Helligkeit setzen (0-100%) | SET wz_decke BRI 75 |\n| SET id CT n | Farbtemperatur (2000-6500K) | SET wz_decke CT 4000 |\n| SET id COLOR hex | Farbe setzen | SET wz_decke COLOR #FF5500 |\n| SCENE id | Szene aktivieren | SCENE sz_relax |\n| MOOD id n | Stimmung aktivieren (Lichtsteuerung) | MOOD wohnzimmer 1 |\n| GET id STATUS | Status abfragen | GET wz_decke STATUS |\n\n## MOOD-Befehl für Lichtsteuerungs-Baustein\n\nDer MOOD-Befehl ist für den Loxone Lichtsteuerungs-Baustein konzipiert:\n- MOOD 0: Schaltet die zugehörige Gruppe/Licht aus\n- MOOD 1-9: Aktiviert die entsprechende Szene\n\nBenötigte Mappings für MOOD:\n- target -> Gruppe (für Mood 0 = Aus)\n- target_mood_1 -> Szene (für Mood 1)\n- target_mood_2 -> Szene (für Mood 2)\n- etc.",
         "parameters": [
           {
             "name": "cmd",
@@ -240,6 +240,45 @@ const openAPISpec = `{
         }
       }
     },
+    "/bridge/test": {
+      "post": {
+        "tags": ["Bridge"],
+        "summary": "Bridge Verbindungstest",
+        "description": "Testet die Netzwerkverbindung zu einer HUE Bridge. Führt DNS-Lookup, TCP-Verbindungstests (Port 80 und 443) und einen HTTPS-Request an die Bridge-API durch.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PairRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Testergebnisse (auch bei fehlgeschlagenen Tests)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BridgeTestResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Ungültige Anfrage (bridge_ip fehlt)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/devices": {
       "get": {
         "tags": ["Devices"],
@@ -302,6 +341,44 @@ const openAPISpec = `{
         "tags": ["Devices"],
         "summary": "Lampe steuern",
         "description": "Setzt den Zustand einer Lampe (Ein/Aus, Helligkeit, Farbe, etc.).",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID der Lampe"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Erfolgreich",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Devices"],
+        "summary": "Lampe steuern (POST)",
+        "description": "Setzt den Zustand einer Lampe. Identisch mit PUT, wird für Loxone-Kompatibilität unterstützt.",
         "parameters": [
           {
             "name": "id",
@@ -399,6 +476,44 @@ const openAPISpec = `{
         "tags": ["Groups"],
         "summary": "Gruppe steuern",
         "description": "Setzt den Zustand aller Lampen in einer Gruppe.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID der Gruppe"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceCommand"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Erfolgreich",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Groups"],
+        "summary": "Gruppe steuern (POST)",
+        "description": "Setzt den Zustand aller Lampen in einer Gruppe. Identisch mit PUT, wird für Loxone-Kompatibilität unterstützt.",
         "parameters": [
           {
             "name": "id",
@@ -779,6 +894,75 @@ const openAPISpec = `{
                 "ip": {
                   "type": "string"
                 }
+              }
+            }
+          }
+        }
+      },
+      "BridgeTestResult": {
+        "type": "object",
+        "description": "Ergebnis des Bridge-Verbindungstests mit detaillierten Diagnoseinformationen",
+        "properties": {
+          "bridge_ip": {
+            "type": "string",
+            "description": "Getestete IP-Adresse",
+            "example": "192.168.1.100"
+          },
+          "dns_lookup": {
+            "type": "object",
+            "properties": {
+              "success": {
+                "type": "boolean"
+              },
+              "addresses": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Aufgelöste IP-Adressen"
+              },
+              "error": {
+                "type": "string"
+              }
+            }
+          },
+          "tcp_443": {
+            "type": "object",
+            "description": "TCP-Verbindungstest auf Port 443 (HTTPS)",
+            "properties": {
+              "success": {
+                "type": "boolean"
+              },
+              "error": {
+                "type": "string"
+              }
+            }
+          },
+          "tcp_80": {
+            "type": "object",
+            "description": "TCP-Verbindungstest auf Port 80 (HTTP)",
+            "properties": {
+              "success": {
+                "type": "boolean"
+              },
+              "error": {
+                "type": "string"
+              }
+            }
+          },
+          "https_request": {
+            "type": "object",
+            "description": "HTTPS-Request an die Bridge-API (/api/config)",
+            "properties": {
+              "success": {
+                "type": "boolean"
+              },
+              "status_code": {
+                "type": "integer",
+                "description": "HTTP Status Code der Antwort"
+              },
+              "error": {
+                "type": "string"
               }
             }
           }
