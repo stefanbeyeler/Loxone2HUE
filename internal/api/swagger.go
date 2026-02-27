@@ -69,6 +69,10 @@ const openAPISpec = `{
     {
       "name": "Config",
       "description": "Gateway Konfiguration"
+    },
+    {
+      "name": "Export",
+      "description": "Loxone Config XML-Vorlagen exportieren (Virtual UDP Input, Virtual HTTP Output)"
     }
   ],
   "paths": {
@@ -790,6 +794,58 @@ const openAPISpec = `{
         }
       }
     },
+    "/export/inputs": {
+      "get": {
+        "tags": ["Export"],
+        "summary": "Virtual UDP Input XML exportieren",
+        "description": "Generiert eine Loxone Virtual UDP Input XML-Vorlage zum Import in Loxone Config. Erstellt Befehls-Erkennungen für On/Off, Helligkeit, Farbtemperatur und Farbe (XY) passend zum UDP-Feedback-Format.\n\nDie Datei kann in Loxone Config unter **Gerätevorlagen → Vorlage importieren** geladen werden.",
+        "parameters": [
+          {
+            "name": "all",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["true"]
+            },
+            "description": "Wenn 'true', werden alle HUE-Geräte exportiert (nicht nur gemappte)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "XML-Datei (VirtualInUdp)",
+            "content": {
+              "text/xml": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<VirtualInUdp Title=\"Loxone2HUE Status\" Port=\"7777\">\n  <VirtualInUdpCmd Title=\"Büro On\" Check=\"buero/on:\\\\v\" Analog=\"true\"/>\n</VirtualInUdp>"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/export/outputs": {
+      "get": {
+        "tags": ["Export"],
+        "summary": "Virtual HTTP Output XML exportieren",
+        "description": "Generiert eine Loxone Virtual HTTP Output XML-Vorlage zum Import in Loxone Config. Erstellt Befehle zur Steuerung von HUE-Geräten über den Gateway.\n\nMood-Mappings (Loxone ID mit Pattern *_mood_N) werden automatisch zu einem einzigen MOOD-Befehl pro Zielgruppe zusammengefasst. Direkte Light/Group-Mappings erhalten SET BRI Befehle.\n\nDie Datei kann in Loxone Config unter Gerätevorlagen > Vorlage importieren geladen werden.",
+        "responses": {
+          "200": {
+            "description": "XML-Datei (VirtualOut)",
+            "content": {
+              "text/xml": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<VirtualOut Title=\"Loxone2HUE\" Address=\"http://gateway:8080\">\n  <VirtualOutCmd Title=\"Wohnzimmer (Mood)\" CmdOn=\"/ws?cmd=MOOD wohnzimmer <v>\" Analog=\"true\"/>\n</VirtualOut>"
+              }
+            }
+          }
+        }
+      }
+    },
     "/config": {
       "get": {
         "tags": ["Config"],
@@ -1308,6 +1364,9 @@ const openAPISpec = `{
               },
               "miniserver_ip": {
                 "type": "string"
+              },
+              "udp_feedback": {
+                "$ref": "#/components/schemas/UDPFeedbackConfig"
               }
             }
           }
@@ -1324,8 +1383,33 @@ const openAPISpec = `{
               },
               "miniserver_ip": {
                 "type": "string"
+              },
+              "udp_feedback": {
+                "$ref": "#/components/schemas/UDPFeedbackConfig"
               }
             }
+          }
+        }
+      },
+      "UDPFeedbackConfig": {
+        "type": "object",
+        "description": "Konfiguration für UDP Status-Feedback an den Loxone Miniserver. Sendet bei jeder HUE-Statusänderung ein UDP-Paket im Format: <loxone_id>/<eigenschaft>:<wert>",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "UDP Feedback aktivieren/deaktivieren"
+          },
+          "ip": {
+            "type": "string",
+            "description": "Ziel-IP des Loxone Miniservers",
+            "example": "192.168.1.10"
+          },
+          "port": {
+            "type": "integer",
+            "description": "UDP Zielport (Standard: 7777)",
+            "example": 7777,
+            "minimum": 1,
+            "maximum": 65535
           }
         }
       },

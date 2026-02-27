@@ -1,4 +1,4 @@
-import { BookOpen, Settings, Code, Link2, Terminal, Lightbulb, Home, Play, CheckCircle2, AlertTriangle, Zap, HelpCircle, Layers } from 'lucide-react';
+import { BookOpen, Settings, Code, Link2, Terminal, Lightbulb, Home, Play, CheckCircle2, AlertTriangle, Zap, HelpCircle, Layers, Radio, Download } from 'lucide-react';
 
 export function LoxoneGuide() {
   const gatewayHost = window.location.hostname;

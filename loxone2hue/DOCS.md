@@ -9,6 +9,8 @@ Gateway Service für die bidirektionale Kommunikation zwischen Loxone Miniserver
 - **Gruppen & Zonen**: Räume und Zonen gemeinsam steuern
 - **Szenen**: HUE Szenen über Loxone aktivieren
 - **Echtzeit-Updates**: Bidirektionale Synchronisation via WebSocket
+- **UDP Status-Feedback**: Automatische Status-Rückmeldung an Loxone per UDP
+- **Loxone Config Export**: XML-Vorlagen für Virtual UDP Input und Virtual HTTP Output
 - **Web UI**: Übersichtliches Dashboard zur Konfiguration
 
 ## Erste Schritte
@@ -61,6 +63,63 @@ Erstelle in Loxone Config:
 | `SET id COLOR #hex` | RGB Farbe | `SET licht1 COLOR #FF5500` |
 | `SET id CT x` | Farbtemperatur (2000-6500K) | `SET licht1 CT 4000` |
 | `SET id SCENE x` | Szene aktivieren | `SET wohnzimmer SCENE 1` |
+| `MOOD id x` | Stimmung aktivieren (Lichtsteuerung) | `MOOD wohnzimmer 1` |
+| `GET id STATUS` | Status abfragen | `GET wz_decke STATUS` |
+
+## UDP Status-Feedback
+
+Der Gateway kann Status-Änderungen von HUE-Geräten automatisch per UDP an den Loxone Miniserver senden. So erhält Loxone Echtzeit-Rückmeldungen über den Zustand der Lampen.
+
+### Aktivierung
+
+1. Gehe zum Tab **Einstellungen** in der Web UI
+2. Aktiviere **UDP Feedback**
+3. Gib die **Miniserver-IP** und den **UDP-Port** ein (Standard: 7777)
+4. Klicke auf **Speichern**
+
+### UDP-Nachrichtenformat
+
+Pro Eigenschaftsänderung wird ein UDP-Paket gesendet:
+
+```text
+<loxone_id>/<eigenschaft>:<wert>
+```
+
+| Eigenschaft | Wertebereich | Beispiel |
+| ----------- | ------------ | -------- |
+| `on` | 0/1 | `buero_stefan/on:1` |
+| `bri` | 0-100 | `buero_stefan/bri:80` |
+| `ct` | 153-500 (Mirek) | `buero_stefan/ct:250` |
+| `color_x` | 0-1 (Float) | `buero_stefan/color_x:0.4573` |
+| `color_y` | 0-1 (Float) | `buero_stefan/color_y:0.4100` |
+
+### Loxone Config: Virtual UDP Input
+
+Um die UDP-Pakete in Loxone zu empfangen, wird ein **Virtueller UDP Eingang** benötigt. Dieser kann automatisch exportiert werden:
+
+1. Gehe zum Tab **Einstellungen** → **Loxone Config Export**
+2. Klicke auf **Gemappte Geräte** (oder **Alle HUE-Geräte**)
+3. Die heruntergeladene XML-Datei in Loxone Config importieren unter **Gerätevorlagen → Vorlage importieren**
+
+## Loxone Config Export
+
+XML-Vorlagen können direkt zum Import in Loxone Config heruntergeladen werden:
+
+### Virtual UDP Input
+
+Empfängt Status-Feedback (On/Off, Helligkeit, Farbtemperatur, Farbe) für gemappte Geräte.
+
+- **Gemappte Geräte**: Nur Geräte mit aktivem Mapping
+- **Alle HUE-Geräte**: Alle erkannten HUE-Geräte
+
+### Virtual HTTP Output
+
+Erstellt Befehle zur Steuerung von HUE-Geräten aus Loxone:
+
+- **MOOD-Befehle** für Lichtsteuerungs-Bausteine (automatische Gruppierung)
+- **SET BRI-Befehle** für direkte Lichter/Gruppen
+
+Die Dateien werden unter **Einstellungen → Loxone Config Export** heruntergeladen und in Loxone Config unter **Gerätevorlagen → Vorlage importieren** geladen.
 
 ## Backup & Restore
 

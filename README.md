@@ -6,6 +6,8 @@ Ein Gateway Service zur bidirektionalen Steuerung von Philips HUE Geräten über
 
 - **Bidirektionale WebSocket-Kommunikation** zwischen Loxone und HUE
 - **Echtzeit-Status-Updates** via HUE SSE Event Stream
+- **UDP Status-Feedback** — automatische Rückmeldung an Loxone Miniserver per UDP
+- **Loxone Config Export** — XML-Vorlagen (Virtual UDP Input / Virtual HTTP Output) zum direkten Import
 - **Web-Frontend** zur Visualisierung und Steuerung
 - **Mapping-Konfiguration** für Loxone ↔ HUE Zuordnungen
 - **Docker-Deployment** für einfache Installation
@@ -112,6 +114,10 @@ hue:
 loxone:
   enabled: true
   miniserver_ip: ""       # Optional
+  udp_feedback:
+    enabled: false        # UDP Status-Feedback aktivieren
+    ip: ""                # Ziel-IP (Loxone Miniserver)
+    port: 7777            # UDP Port
 
 logging:
   level: "info"           # debug, info, warn, error
@@ -153,6 +159,27 @@ ws://gateway-ip:8080/ws?type=loxone&id=miniserver1
 | `set` | `color` (hex) | Farbe z.B. "#FF5500" |
 | `set` | `color_temp` (2000-6500) | Farbtemperatur in Kelvin |
 | `scene` | `scene_id` (string) | Szene aktivieren |
+
+### UDP Status-Feedback
+
+Der Gateway kann HUE-Statusänderungen automatisch per UDP an den Loxone Miniserver senden. Aktivierung über die Web UI unter **Einstellungen**.
+
+Format pro Eigenschaftsänderung:
+
+```text
+<loxone_id>/<eigenschaft>:<wert>
+```
+
+Beispiele: `buero_stefan/on:1`, `buero_stefan/bri:80`, `buero_stefan/ct:250`
+
+### Loxone Config Export
+
+XML-Vorlagen zum direkten Import in Loxone Config (**Gerätevorlagen → Vorlage importieren**):
+
+- **Virtual UDP Input** (`GET /api/export/inputs`): Empfängt Status-Feedback
+- **Virtual HTTP Output** (`GET /api/export/outputs`): Steuert HUE-Geräte
+
+Download über die Web UI unter **Einstellungen → Loxone Config Export**.
 
 ### Status-Updates
 
@@ -199,6 +226,10 @@ Für Dimming kann ein Virtual Output mit analogem Wert verwendet werden.
 | POST | `/api/mappings` | Mapping erstellen |
 | PUT | `/api/mappings/{id}` | Mapping aktualisieren |
 | DELETE | `/api/mappings/{id}` | Mapping löschen |
+| GET | `/api/config` | Konfiguration abrufen |
+| PUT | `/api/config` | Konfiguration aktualisieren |
+| GET | `/api/export/inputs` | Loxone Virtual UDP Input XML |
+| GET | `/api/export/outputs` | Loxone Virtual HTTP Output XML |
 
 ## Entwicklung
 
