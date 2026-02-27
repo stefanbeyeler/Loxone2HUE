@@ -53,6 +53,14 @@ func main() {
 	mappingManager := loxone.NewMappingManager()
 	mappingManager.Load(cfg.Mappings)
 
+	// Create UDP sender for Loxone status feedback
+	udpSender := loxone.NewUDPSender()
+	if cfg.Loxone.UDPFeedback.Enabled {
+		if err := udpSender.Configure(cfg.Loxone.UDPFeedback); err != nil {
+			log.Error().Err(err).Msg("Failed to configure UDP feedback")
+		}
+	}
+
 	// If HUE is configured, start event stream
 	if hueClient.IsConfigured() {
 		log.Info().Str("bridge_ip", cfg.Hue.BridgeIP).Msg("HUE Bridge configured, starting event stream")
@@ -62,7 +70,7 @@ func main() {
 	}
 
 	// Create API server
-	server := api.NewServer(hueClient, mappingManager)
+	server := api.NewServer(hueClient, mappingManager, udpSender)
 
 	// Setup context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -89,6 +97,7 @@ func main() {
 	}
 
 	// Cleanup
+	udpSender.Close()
 	hueClient.Close()
 	log.Info().Msg("Loxone2HUE Gateway stopped")
 }

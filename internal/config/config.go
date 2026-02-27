@@ -11,35 +11,43 @@ import (
 
 // Config represents the application configuration
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
-	Hue      HueConfig      `yaml:"hue"`
-	Loxone   LoxoneConfig   `yaml:"loxone"`
-	Logging  LoggingConfig  `yaml:"logging"`
-	Mappings []models.Mapping `yaml:"mappings"`
+	Server   ServerConfig     `yaml:"server" json:"server"`
+	Hue      HueConfig        `yaml:"hue" json:"hue"`
+	Loxone   LoxoneConfig     `yaml:"loxone" json:"loxone"`
+	Logging  LoggingConfig    `yaml:"logging" json:"logging"`
+	Mappings []models.Mapping `yaml:"mappings" json:"mappings"`
 }
 
 // ServerConfig holds HTTP server settings
 type ServerConfig struct {
-	Port int    `yaml:"port"`
-	Host string `yaml:"host"`
+	Port int    `yaml:"port" json:"port"`
+	Host string `yaml:"host" json:"host"`
 }
 
 // HueConfig holds HUE bridge settings
 type HueConfig struct {
-	BridgeIP       string `yaml:"bridge_ip"`
-	ApplicationKey string `yaml:"application_key"`
+	BridgeIP       string `yaml:"bridge_ip" json:"bridge_ip"`
+	ApplicationKey string `yaml:"application_key" json:"application_key"`
 }
 
 // LoxoneConfig holds Loxone integration settings
 type LoxoneConfig struct {
-	Enabled      bool   `yaml:"enabled"`
-	MiniserverIP string `yaml:"miniserver_ip"`
+	Enabled      bool              `yaml:"enabled" json:"enabled"`
+	MiniserverIP string            `yaml:"miniserver_ip" json:"miniserver_ip"`
+	UDPFeedback  UDPFeedbackConfig `yaml:"udp_feedback" json:"udp_feedback"`
+}
+
+// UDPFeedbackConfig holds UDP status feedback settings
+type UDPFeedbackConfig struct {
+	Enabled bool   `yaml:"enabled" json:"enabled"`
+	IP      string `yaml:"ip" json:"ip"`
+	Port    int    `yaml:"port" json:"port"`
 }
 
 // LoggingConfig holds logging settings
 type LoggingConfig struct {
-	Level  string `yaml:"level"`
-	Format string `yaml:"format"`
+	Level  string `yaml:"level" json:"level"`
+	Format string `yaml:"format" json:"format"`
 }
 
 var (
@@ -63,6 +71,11 @@ func DefaultConfig() *Config {
 		Loxone: LoxoneConfig{
 			Enabled:      true,
 			MiniserverIP: "",
+			UDPFeedback: UDPFeedbackConfig{
+				Enabled: false,
+				IP:      "",
+				Port:    7777,
+			},
 		},
 		Logging: LoggingConfig{
 			Level:  "info",

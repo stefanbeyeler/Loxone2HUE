@@ -21,13 +21,15 @@ import (
 type Handlers struct {
 	hueClient      *hue.Client
 	mappingManager *loxone.MappingManager
+	udpSender      *loxone.UDPSender
 }
 
 // NewHandlers creates a new handlers instance
-func NewHandlers(hueClient *hue.Client, mappingManager *loxone.MappingManager) *Handlers {
+func NewHandlers(hueClient *hue.Client, mappingManager *loxone.MappingManager, udpSender *loxone.UDPSender) *Handlers {
 	return &Handlers{
 		hueClient:      hueClient,
 		mappingManager: mappingManager,
+		udpSender:      udpSender,
 	}
 }
 
@@ -465,6 +467,15 @@ func (h *Handlers) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 	if update.Loxone != nil {
 		cfg.Loxone = *update.Loxone
+
+		// Reconfigure UDP sender on the fly
+		if h.udpSender != nil {
+			if err := h.udpSender.Configure(update.Loxone.UDPFeedback); err != nil {
+				log.Error().Err(err).Msg("Failed to reconfigure UDP feedback")
+				errorResponse(w, http.StatusInternalServerError, "failed to configure UDP: "+err.Error())
+				return
+			}
+		}
 	}
 
 	if err := config.Save(); err != nil {

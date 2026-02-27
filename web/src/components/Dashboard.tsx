@@ -5,6 +5,7 @@ import { GroupList } from './GroupList';
 import { SceneList } from './SceneList';
 import { MappingConfig } from './MappingConfig';
 import { LoxoneGuide } from './LoxoneGuide';
+import { SettingsPanel } from './SettingsPanel';
 import * as api from '../services/api';
 import {
   Lightbulb,
@@ -13,6 +14,7 @@ import {
   Link2,
   BookOpen,
   Code2,
+  Settings,
   RefreshCw,
   Wifi,
   WifiOff,
@@ -28,7 +30,7 @@ import {
 const VERSION = __APP_VERSION__;
 const BUILD_DATE = __BUILD_DATE__;
 
-type Tab = 'devices' | 'rooms' | 'zones' | 'scenes' | 'mappings' | 'guide' | 'api';
+type Tab = 'devices' | 'rooms' | 'zones' | 'scenes' | 'mappings' | 'settings' | 'guide' | 'api';
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('devices');
@@ -117,6 +119,7 @@ export function Dashboard() {
     { id: 'zones' as Tab, label: 'Zonen', icon: Layers, count: zones.length },
     { id: 'scenes' as Tab, label: 'Szenen', icon: Palette, count: scenes.length },
     { id: 'mappings' as Tab, label: 'Mappings', icon: Link2 },
+    { id: 'settings' as Tab, label: 'Einstellungen', icon: Settings },
     { id: 'guide' as Tab, label: 'Anleitung', icon: BookOpen },
     { id: 'api' as Tab, label: 'API', icon: Code2 },
   ];
@@ -331,6 +334,8 @@ export function Dashboard() {
         {activeTab === 'mappings' && (
           <MappingConfig lights={lights} groups={groups} scenes={scenes} />
         )}
+
+        {activeTab === 'settings' && <SettingsPanel />}
 
         {activeTab === 'guide' && <LoxoneGuide />}
 
