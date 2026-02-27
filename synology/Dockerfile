@@ -75,8 +75,10 @@ RUN mkdir -p /data && chmod +x /app/gateway
 RUN echo '#!/bin/sh' > /start.sh && \
     echo 'CONFIG_PATH=/data/config.yaml' >> /start.sh && \
     echo '' >> /start.sh && \
-    echo 'if [ ! -f "$CONFIG_PATH" ]; then' >> /start.sh && \
-    echo '  echo "Creating default config..."' >> /start.sh && \
+    echo 'if [ -f "$CONFIG_PATH" ]; then' >> /start.sh && \
+    echo '  echo "Existing config found, preserving: $CONFIG_PATH"' >> /start.sh && \
+    echo 'else' >> /start.sh && \
+    echo '  echo "No config found, creating default: $CONFIG_PATH"' >> /start.sh && \
     echo '  cp /app/config.example.yaml $CONFIG_PATH' >> /start.sh && \
     echo 'fi' >> /start.sh && \
     echo '' >> /start.sh && \

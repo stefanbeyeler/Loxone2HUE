@@ -11,6 +11,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TAR_FILE="$SCRIPT_DIR/loxone2hue.tar"
 CONTAINER_NAME="loxone2hue"
 IMAGE_NAME="loxone2hue:latest"
+VOLUME_NAME="loxone2hue-data"
+BACKUP_DIR="$SCRIPT_DIR/config-backup"
 
 echo "========================================"
 echo " Loxone2HUE Deployment"
@@ -23,31 +25,58 @@ if [ ! -f "$TAR_FILE" ]; then
   exit 1
 fi
 
+# Backup existing config from volume
+echo ""
+echo "[1/5] Konfiguration sichern..."
+mkdir -p "$BACKUP_DIR"
+if docker volume inspect "$VOLUME_NAME" >/dev/null 2>&1; then
+  docker run --rm -v "$VOLUME_NAME":/data -v "$BACKUP_DIR":/backup alpine \
+    sh -c 'if [ -f /data/config.yaml ]; then cp /data/config.yaml /backup/config.yaml.bak; echo "Config gesichert nach config-backup/config.yaml.bak"; else echo "Keine bestehende Config gefunden"; fi'
+else
+  echo "Kein bestehendes Volume gefunden, ueberspringe Backup"
+fi
+
 # Load new image
 echo ""
-echo "[1/4] Image importieren..."
+echo "[2/5] Image importieren..."
 docker load -i "$TAR_FILE"
 
 # Stop old container (ignore error if not running)
 echo ""
-echo "[2/4] Container stoppen..."
+echo "[3/5] Container stoppen..."
 docker stop "$CONTAINER_NAME" 2>/dev/null || true
 
 # Remove old container (ignore error if not exists)
 echo ""
-echo "[3/4] Alten Container entfernen..."
+echo "[4/5] Alten Container entfernen..."
 docker rm "$CONTAINER_NAME" 2>/dev/null || true
 
 # Start new container
 echo ""
-echo "[4/4] Neuen Container starten..."
+echo "[5/5] Neuen Container starten..."
 docker run -d \
   --name "$CONTAINER_NAME" \
   --network host \
-  -v loxone2hue-data:/data \
+  -v "$VOLUME_NAME":/data \
   -e TZ=Europe/Zurich \
   --restart unless-stopped \
   "$IMAGE_NAME"
+
+# Verify config was preserved
+echo ""
+if docker exec "$CONTAINER_NAME" sh -c '[ -f /data/config.yaml ] && grep -q "application_key" /data/config.yaml && ! grep -q "application_key: \"\"" /data/config.yaml' 2>/dev/null; then
+  echo "Config mit Bridge-Konfiguration erkannt."
+else
+  # Restore from backup if config is empty/default
+  if [ -f "$BACKUP_DIR/config.yaml.bak" ] && grep -q 'application_key: ".\+"' "$BACKUP_DIR/config.yaml.bak" 2>/dev/null; then
+    echo "Config ist leer, stelle Backup wieder her..."
+    docker cp "$BACKUP_DIR/config.yaml.bak" "$CONTAINER_NAME":/data/config.yaml
+    docker restart "$CONTAINER_NAME"
+    echo "Config aus Backup wiederhergestellt."
+  else
+    echo "HINWEIS: Keine Bridge konfiguriert. Bitte in der Web-UI pairen."
+  fi
+fi
 
 # Show status
 echo ""
@@ -56,6 +85,8 @@ echo " Deployment erfolgreich!"
 echo "========================================"
 echo ""
 echo " Container: $CONTAINER_NAME"
+echo " Volume:    $VOLUME_NAME"
+echo " Backup:    $BACKUP_DIR/"
 echo " Web-UI:    http://$(hostname -I 2>/dev/null | awk '{print $1}' || echo '<NAS-IP>'):8080"
 echo " Logs:      docker logs -f $CONTAINER_NAME"
 echo ""

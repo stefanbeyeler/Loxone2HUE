@@ -89,6 +89,31 @@ Befehle werden als HTTP GET an den WebSocket-Endpoint gesendet:
    - Befehl: `/ws?cmd=MOOD%20Wohnzimmer%20<v>`
    - MOOD 0 = Aus, MOOD 1 = Szene 1, MOOD 2 = Szene 2, etc.
 
+## UDP Status-Feedback
+
+Der Gateway kann Status-Änderungen von HUE-Geräten automatisch per UDP an den Loxone Miniserver senden.
+
+1. Web-UI öffnen → Tab **Einstellungen**
+2. **UDP Feedback** aktivieren
+3. Miniserver-IP und UDP-Port (Standard: 7777) eingeben
+4. Speichern
+
+Format: `<loxone_id>/<eigenschaft>:<wert>` (z.B. `Buero_Stefan/on:1`, `Buero_Stefan/bri:80`)
+
+Um die UDP-Pakete in Loxone zu empfangen, unter **Einstellungen → Loxone Config Export** die XML-Vorlage für **Virtual UDP Input** herunterladen und in Loxone Config importieren.
+
+## Loxone Config Export
+
+XML-Vorlagen zum direkten Import in Loxone Config (**Gerätevorlagen → Vorlage importieren**):
+
+| Export | URL | Beschreibung |
+| ------ | --- | ------------ |
+| Virtual UDP Input | `/api/export/inputs` | Status-Feedback empfangen |
+| Virtual UDP Input (alle) | `/api/export/inputs?all=true` | Alle HUE-Geräte |
+| Virtual HTTP Output | `/api/export/outputs` | HUE-Geräte steuern |
+
+Download über die Web-UI unter **Einstellungen → Loxone Config Export**.
+
 ## Container Manager (DSM 7.2+)
 
 1. **Container Manager** → **Projekt** → **Erstellen**
