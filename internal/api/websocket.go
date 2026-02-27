@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -33,6 +34,7 @@ type WebSocketHub struct {
 	hueClient      *hue.Client
 	mappingManager *loxone.MappingManager
 	commandParser  *loxone.CommandParser
+	udpSender      *loxone.UDPSender
 }
 
 // WebSocketClient represents a connected WebSocket client
@@ -45,7 +47,7 @@ type WebSocketClient struct {
 }
 
 // NewWebSocketHub creates a new WebSocket hub
-func NewWebSocketHub(hueClient *hue.Client, mappingManager *loxone.MappingManager) *WebSocketHub {
+func NewWebSocketHub(hueClient *hue.Client, mappingManager *loxone.MappingManager, udpSender *loxone.UDPSender) *WebSocketHub {
 	return &WebSocketHub{
 		clients:        make(map[*WebSocketClient]bool),
 		broadcast:      make(chan []byte, 256),
@@ -54,6 +56,7 @@ func NewWebSocketHub(hueClient *hue.Client, mappingManager *loxone.MappingManage
 		hueClient:      hueClient,
 		mappingManager: mappingManager,
 		commandParser:  loxone.NewCommandParser(),
+		udpSender:      udpSender,
 	}
 }
 
@@ -116,7 +119,71 @@ func (h *WebSocketHub) forwardHueEvents(ctx context.Context) {
 			}
 
 			h.broadcast <- data
+
+			// Send UDP feedback to Loxone Miniserver
+			if h.udpSender != nil && h.udpSender.IsEnabled() {
+				h.sendUDPFeedback(event)
+			}
 		}
+	}
+}
+
+// sendUDPFeedback extracts changed properties from a HUE event and sends them via UDP
+func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
+	// Look up the LoxoneID for this HUE resource
+	mapping := h.mappingManager.GetByHueID(event.ID)
+	if mapping == nil {
+		return
+	}
+
+	loxoneID := mapping.LoxoneID
+
+	// Extract event data fields via JSON roundtrip
+	type eventData struct {
+		On *struct {
+			On bool `json:"on"`
+		} `json:"on,omitempty"`
+		Dimming *struct {
+			Brightness float64 `json:"brightness"`
+		} `json:"dimming,omitempty"`
+		ColorTemperature *struct {
+			Mirek int `json:"mirek"`
+		} `json:"color_temperature,omitempty"`
+		Color *struct {
+			XY struct {
+				X float64 `json:"x"`
+				Y float64 `json:"y"`
+			} `json:"xy"`
+		} `json:"color,omitempty"`
+	}
+
+	raw, err := json.Marshal(event.Data)
+	if err != nil {
+		return
+	}
+
+	var ed eventData
+	if err := json.Unmarshal(raw, &ed); err != nil {
+		return
+	}
+
+	// Send one UDP packet per changed property
+	if ed.On != nil {
+		onVal := 0
+		if ed.On.On {
+			onVal = 1
+		}
+		h.udpSender.Send(loxoneID, "on", onVal)
+	}
+	if ed.Dimming != nil {
+		h.udpSender.Send(loxoneID, "bri", int(ed.Dimming.Brightness))
+	}
+	if ed.ColorTemperature != nil {
+		h.udpSender.Send(loxoneID, "ct", ed.ColorTemperature.Mirek)
+	}
+	if ed.Color != nil {
+		h.udpSender.Send(loxoneID, "color_x", fmt.Sprintf("%.4f", ed.Color.XY.X))
+		h.udpSender.Send(loxoneID, "color_y", fmt.Sprintf("%.4f", ed.Color.XY.Y))
 	}
 }
 

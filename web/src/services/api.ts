@@ -131,6 +131,18 @@ export async function importMappings(
 }
 
 // Config endpoint
+export interface UDPFeedbackConfig {
+  enabled: boolean;
+  ip: string;
+  port: number;
+}
+
+export interface LoxoneConfig {
+  enabled: boolean;
+  miniserver_ip: string;
+  udp_feedback: UDPFeedbackConfig;
+}
+
 export interface ConfigResponse {
   server: {
     host: string;
@@ -140,10 +152,7 @@ export interface ConfigResponse {
     bridge_ip: string;
     configured: boolean;
   };
-  loxone: {
-    host: string;
-    port: number;
-  };
+  loxone: LoxoneConfig;
   logging: {
     level: string;
   };
@@ -151,6 +160,13 @@ export interface ConfigResponse {
 
 export async function getConfig(): Promise<ConfigResponse> {
   return fetchJSON(`${API_BASE}/config`);
+}
+
+export async function updateConfig(update: { loxone?: LoxoneConfig }): Promise<{ status: string }> {
+  return fetchJSON(`${API_BASE}/config`, {
+    method: 'PUT',
+    body: JSON.stringify(update),
+  });
 }
 
 // Health check

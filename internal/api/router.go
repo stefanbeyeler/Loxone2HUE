@@ -20,18 +20,20 @@ type Server struct {
 	handlers       *Handlers
 	hueClient      *hue.Client
 	mappingManager *loxone.MappingManager
+	udpSender      *loxone.UDPSender
 }
 
 // NewServer creates a new API server
-func NewServer(hueClient *hue.Client, mappingManager *loxone.MappingManager) *Server {
+func NewServer(hueClient *hue.Client, mappingManager *loxone.MappingManager, udpSender *loxone.UDPSender) *Server {
 	s := &Server{
 		router:         mux.NewRouter(),
 		hueClient:      hueClient,
 		mappingManager: mappingManager,
+		udpSender:      udpSender,
 	}
 
-	s.wsHub = NewWebSocketHub(hueClient, mappingManager)
-	s.handlers = NewHandlers(hueClient, mappingManager)
+	s.wsHub = NewWebSocketHub(hueClient, mappingManager, udpSender)
+	s.handlers = NewHandlers(hueClient, mappingManager, udpSender)
 
 	s.setupRoutes()
 	return s

@@ -9,6 +9,10 @@ hue:
 loxone:
   enabled: true
   miniserver_ip: ""       # Optional: Loxone Miniserver IP
+  udp_feedback:
+    enabled: false        # Send HUE status changes via UDP to Loxone
+    ip: ""                # Target IP (Loxone Miniserver)
+    port: 7777            # UDP target port
 
 logging:
   level: "info"           # debug, info, warn, error
