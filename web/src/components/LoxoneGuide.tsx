@@ -586,6 +586,134 @@ export function LoxoneGuide() {
         </div>
       </section>
 
+      {/* UDP Status-Feedback */}
+      <section className="bg-gray-800 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Radio size={20} className="text-hue-orange" />
+          UDP Status-Feedback
+        </h3>
+        <div className="space-y-4 text-gray-300">
+          <p className="text-sm">
+            Der Gateway sendet Status-Änderungen von HUE-Geräten automatisch per UDP an den Loxone Miniserver.
+            So erhält Loxone Echtzeit-Rückmeldungen über den Zustand der Lampen.
+          </p>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-3">Aktivierung</h4>
+            <ol className="list-decimal list-inside space-y-2 text-sm ml-4">
+              <li>Gehe zum Tab <strong>Einstellungen</strong></li>
+              <li>Aktiviere <strong>UDP Feedback</strong></li>
+              <li>Gib die <strong>Miniserver-IP</strong> und den <strong>UDP-Port</strong> ein (Standard: 7777)</li>
+              <li>Klicke auf <strong>Speichern</strong></li>
+            </ol>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-3">Nachrichtenformat</h4>
+            <p className="text-sm text-gray-400 mb-3">
+              Pro Eigenschaftsänderung wird ein UDP-Paket gesendet:
+            </p>
+            <div className="bg-gray-800 rounded-lg p-3 font-mono text-sm mb-3">
+              <code>&lt;loxone_id&gt;/&lt;eigenschaft&gt;:&lt;wert&gt;</code>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-400 border-b border-gray-700">
+                  <th className="pb-2 pr-4">Eigenschaft</th>
+                  <th className="pb-2 pr-4">Wertebereich</th>
+                  <th className="pb-2">Beispiel</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">on</td>
+                  <td className="py-2 pr-4">0 / 1</td>
+                  <td className="py-2 font-mono text-xs">buero_stefan/on:1</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">bri</td>
+                  <td className="py-2 pr-4">0–100</td>
+                  <td className="py-2 font-mono text-xs">buero_stefan/bri:80</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">ct</td>
+                  <td className="py-2 pr-4">153–500 (Mirek)</td>
+                  <td className="py-2 font-mono text-xs">buero_stefan/ct:250</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">color_x</td>
+                  <td className="py-2 pr-4">0–1 (Float)</td>
+                  <td className="py-2 font-mono text-xs">buero_stefan/color_x:0.4573</td>
+                </tr>
+                <tr>
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">color_y</td>
+                  <td className="py-2 pr-4">0–1 (Float)</td>
+                  <td className="py-2 font-mono text-xs">buero_stefan/color_y:0.4100</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4">
+            <p className="text-sm text-blue-300">
+              <strong>Hinweis:</strong> Es werden nur Geräte übertragen, für die ein aktives Mapping existiert.
+              Die Loxone ID aus dem Mapping wird als Prefix verwendet.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Loxone Config Export */}
+      <section className="bg-gray-800 rounded-xl p-6">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Download size={20} className="text-hue-orange" />
+          Loxone Config Export
+        </h3>
+        <div className="space-y-4 text-gray-300">
+          <p className="text-sm">
+            XML-Vorlagen zum direkten Import in Loxone Config. Die Dateien können unter
+            <strong> Einstellungen → Loxone Config Export</strong> heruntergeladen und in Loxone Config
+            unter <strong>Gerätevorlagen → Vorlage importieren</strong> geladen werden.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="bg-gray-900 rounded-lg p-4">
+              <h4 className="font-medium text-hue-orange mb-2">Virtual UDP Input</h4>
+              <p className="text-sm text-gray-400">
+                Empfängt Status-Feedback (On/Off, Helligkeit, Farbtemperatur, Farbe) für gemappte Geräte.
+                Erstellt automatisch passende Befehls-Erkennungen zum UDP-Feedback-Format.
+              </p>
+              <ul className="text-xs text-gray-500 mt-2 space-y-1">
+                <li>• <strong>Gemappte Geräte</strong>: Nur Geräte mit aktivem Mapping</li>
+                <li>• <strong>Alle HUE-Geräte</strong>: Alle erkannten Geräte</li>
+              </ul>
+            </div>
+            <div className="bg-gray-900 rounded-lg p-4">
+              <h4 className="font-medium text-hue-orange mb-2">Virtual HTTP Output</h4>
+              <p className="text-sm text-gray-400">
+                Erstellt Befehle zur Steuerung von HUE-Geräten aus Loxone.
+                Mood-Mappings werden automatisch zu einem MOOD-Befehl pro Zielgruppe zusammengefasst.
+              </p>
+              <ul className="text-xs text-gray-500 mt-2 space-y-1">
+                <li>• <strong>MOOD-Befehle</strong>: Für Lichtsteuerungs-Bausteine</li>
+                <li>• <strong>SET BRI-Befehle</strong>: Für direkte Lichter/Gruppen</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-4">
+            <h4 className="font-medium text-green-400 mb-2">Empfohlener Workflow</h4>
+            <ol className="text-sm text-green-300 space-y-1 list-decimal list-inside">
+              <li>Mappings im Tab "Mappings" erstellen</li>
+              <li>UDP-Feedback in Einstellungen aktivieren</li>
+              <li>XML-Vorlagen herunterladen (Einstellungen → Loxone Config Export)</li>
+              <li>In Loxone Config importieren (Gerätevorlagen → Vorlage importieren)</li>
+              <li>Loxone Config speichern und auf Miniserver übertragen</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
       {/* Troubleshooting */}
       <section className="bg-gray-800 rounded-xl p-6">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
@@ -643,6 +771,28 @@ export function LoxoneGuide() {
               <li className="flex items-start gap-2">
                 <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
                 <span>Prüfe die HUE Bridge IP in der Konfiguration</span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-yellow-400 mb-2">UDP-Feedback kommt nicht an</h4>
+            <ul className="text-sm text-gray-300 space-y-2">
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Prüfe, ob UDP-Feedback in den Einstellungen aktiviert ist</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Prüfe die Ziel-IP und den Port (Standard: 7777)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Stelle sicher, dass ein Mapping für das Gerät existiert (nur gemappte Geräte senden UDP)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Prüfe die Firewall: UDP-Port muss am Miniserver offen sein</span>
               </li>
             </ul>
           </div>
