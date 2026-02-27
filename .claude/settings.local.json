@@ -15,7 +15,9 @@
       "Bash(git check-ignore:*)",
       "Bash(docker images:*)",
       "Bash(go build:*)",
-      "Bash(go run:*)"
+      "Bash(go run:*)",
+      "Bash(docker compose up -d)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }
