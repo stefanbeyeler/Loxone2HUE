@@ -33,7 +33,7 @@ const BUILD_DATE = __BUILD_DATE__;
 type Tab = 'devices' | 'rooms' | 'zones' | 'scenes' | 'mappings' | 'settings' | 'guide' | 'api';
 
 export function Dashboard() {
-  const [activeTab, setActiveTab] = useState<Tab>('devices');
+  const [activeTab, setActiveTab] = useState<Tab>('guide');
   const [menuOpen, setMenuOpen] = useState(false);
   const [bridgeIP, setBridgeIP] = useState<string | null>(null);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(10);
@@ -114,13 +114,13 @@ export function Dashboard() {
   const zones = groups.filter((g) => g.type === 'zone');
 
   const tabs = [
+    { id: 'guide' as Tab, label: 'Anleitung', icon: BookOpen },
+    { id: 'mappings' as Tab, label: 'Mappings', icon: Link2 },
     { id: 'devices' as Tab, label: 'Geräte', icon: Lightbulb, count: lights.length },
     { id: 'rooms' as Tab, label: 'Räume', icon: Home, count: rooms.length },
     { id: 'zones' as Tab, label: 'Zonen', icon: Layers, count: zones.length },
     { id: 'scenes' as Tab, label: 'Szenen', icon: Palette, count: scenes.length },
-    { id: 'mappings' as Tab, label: 'Mappings', icon: Link2 },
     { id: 'settings' as Tab, label: 'Einstellungen', icon: Settings },
-    { id: 'guide' as Tab, label: 'Anleitung', icon: BookOpen },
     { id: 'api' as Tab, label: 'API', icon: Code2 },
   ];
 
