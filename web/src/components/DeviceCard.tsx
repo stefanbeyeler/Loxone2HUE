@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lightbulb, Power, Link2 } from 'lucide-react';
+import { Lightbulb, Power, Link2, Plus } from 'lucide-react';
 import { Light, Mapping } from '../types';
 
 interface DeviceCardProps {
@@ -8,9 +8,10 @@ interface DeviceCardProps {
   onToggle: (id: string, on: boolean) => void;
   onBrightness: (id: string, brightness: number) => void;
   onNavigateToMapping?: (mappingId: string) => void;
+  onCreateMapping?: (prefill: { hue_id: string; hue_type: string; name: string }) => void;
 }
 
-export function DeviceCard({ device, mapping, onToggle, onBrightness, onNavigateToMapping }: DeviceCardProps) {
+export function DeviceCard({ device, mapping, onToggle, onBrightness, onNavigateToMapping, onCreateMapping }: DeviceCardProps) {
   const [localBrightness, setLocalBrightness] = useState(device.state.brightness);
 
   const handleBrightnessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,7 +63,7 @@ export function DeviceCard({ device, mapping, onToggle, onBrightness, onNavigate
             <h3 className="font-medium text-white">{device.name}</h3>
             <p className="text-xs text-gray-400">{device.product_name || device.type}</p>
             <p className="text-xs text-gray-500 font-mono">{device.id}</p>
-            {mapping && (
+            {mapping ? (
               <button
                 onClick={(e) => { e.stopPropagation(); onNavigateToMapping?.(mapping.id); }}
                 className="flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity"
@@ -70,6 +71,15 @@ export function DeviceCard({ device, mapping, onToggle, onBrightness, onNavigate
               >
                 <Link2 size={12} className="text-hue-orange" />
                 <span className="text-xs text-hue-orange">{mapping.loxone_id}</span>
+              </button>
+            ) : onCreateMapping && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onCreateMapping({ hue_id: device.id, hue_type: 'light', name: device.name }); }}
+                className="flex items-center gap-1 mt-0.5 text-gray-500 hover:text-hue-orange transition-colors"
+                title="Mapping erstellen"
+              >
+                <Plus size={12} />
+                <span className="text-xs">Mapping erstellen</span>
               </button>
             )}
           </div>

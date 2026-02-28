@@ -1,5 +1,5 @@
 import { Scene, Group, Mapping } from '../types';
-import { Play, Palette, Home, Link2 } from 'lucide-react';
+import { Play, Palette, Home, Link2, Plus } from 'lucide-react';
 
 interface SceneListProps {
   scenes: Scene[];
@@ -7,9 +7,10 @@ interface SceneListProps {
   mappings: Mapping[];
   onActivateScene: (id: string) => void;
   onNavigateToMapping: (mappingId: string) => void;
+  onCreateMapping: (prefill: { hue_id: string; hue_type: string; name: string }) => void;
 }
 
-export function SceneList({ scenes, groups, mappings, onActivateScene, onNavigateToMapping }: SceneListProps) {
+export function SceneList({ scenes, groups, mappings, onActivateScene, onNavigateToMapping, onCreateMapping }: SceneListProps) {
   const getGroupName = (groupId: string) => {
     const group = groups.find((g) => g.id === groupId);
     return group?.name || 'Unbekannt';
@@ -84,7 +85,16 @@ export function SceneList({ scenes, groups, mappings, onActivateScene, onNavigat
                           <Link2 size={12} className="text-hue-orange" />
                           <span className="text-xs text-hue-orange truncate">{sceneMapping.loxone_id}</span>
                         </div>
-                      ) : null;
+                      ) : (
+                        <div
+                          onClick={(e) => { e.stopPropagation(); onCreateMapping({ hue_id: scene.id, hue_type: 'scene', name: scene.name }); }}
+                          className="flex items-center gap-1 mt-0.5 text-gray-500 hover:text-hue-orange transition-colors cursor-pointer"
+                          title="Mapping erstellen"
+                        >
+                          <Plus size={12} />
+                          <span className="text-xs">Mapping erstellen</span>
+                        </div>
+                      );
                     })()}
                   </div>
                   <Play

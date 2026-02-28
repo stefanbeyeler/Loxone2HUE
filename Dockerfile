@@ -24,8 +24,13 @@ RUN npm install
 # Copy source code
 COPY web/ ./
 
-# Build the frontend
-RUN npm run build
+# Copy VERSION file for build-time injection
+COPY VERSION /tmp/VERSION
+
+# Build the frontend with version info
+RUN export VITE_APP_VERSION=$(cat /tmp/VERSION | tr -d '[:space:]') && \
+    export VITE_BUILD_DATE=$(date -u +%Y-%m-%d) && \
+    npm run build
 
 # Final stage
 FROM alpine:3.19

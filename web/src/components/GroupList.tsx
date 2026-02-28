@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Group, Scene, Mapping } from '../types';
-import { Home, Layers, Power, Play, Link2 } from 'lucide-react';
+import { Home, Layers, Power, Play, Link2, Plus } from 'lucide-react';
 
 interface GroupListProps {
   groups: Group[];
@@ -9,10 +9,11 @@ interface GroupListProps {
   onToggle: (id: string, on: boolean) => void;
   onActivateScene: (id: string) => void;
   onNavigateToMapping: (mappingId: string) => void;
+  onCreateMapping: (prefill: { hue_id: string; hue_type: string; name: string }) => void;
   title?: string;
 }
 
-export function GroupList({ groups, scenes, mappings, onToggle, onActivateScene, onNavigateToMapping, title }: GroupListProps) {
+export function GroupList({ groups, scenes, mappings, onToggle, onActivateScene, onNavigateToMapping, onCreateMapping, title }: GroupListProps) {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   const getGroupScenes = (groupId: string) => {
@@ -73,7 +74,16 @@ export function GroupList({ groups, scenes, mappings, onToggle, onActivateScene,
                         <Link2 size={12} className="text-hue-orange" />
                         <span className="text-xs text-hue-orange">{groupMapping.loxone_id}</span>
                       </button>
-                    ) : null;
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onCreateMapping({ hue_id: group.id, hue_type: 'group', name: group.name }); }}
+                        className="flex items-center gap-1 mt-0.5 text-gray-500 hover:text-hue-orange transition-colors"
+                        title="Mapping erstellen"
+                      >
+                        <Plus size={12} />
+                        <span className="text-xs">Mapping erstellen</span>
+                      </button>
+                    );
                   })()}
                 </div>
               </div>
@@ -123,7 +133,16 @@ export function GroupList({ groups, scenes, mappings, onToggle, onActivateScene,
                               <Link2 size={10} className="text-hue-orange" />
                               <span className="text-xs text-hue-orange">{sceneMapping.loxone_id}</span>
                             </span>
-                          ) : null;
+                          ) : (
+                            <span
+                              onClick={(e) => { e.stopPropagation(); onCreateMapping({ hue_id: scene.id, hue_type: 'scene', name: scene.name }); }}
+                              className="flex items-center gap-1 mt-0.5 text-gray-500 hover:text-hue-orange transition-colors cursor-pointer"
+                              title="Mapping erstellen"
+                            >
+                              <Plus size={10} />
+                              <span className="text-xs">Mapping</span>
+                            </span>
+                          );
                         })()}
                       </div>
                     </button>
