@@ -36,6 +36,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
   }, []);
 
   // Initialize mood order when mood is enabled or group changes
+  // Note: scenes is intentionally NOT a dependency to prevent auto-refresh from resetting user's custom order
   useEffect(() => {
     if (!moodEnabled || formData.hue_type !== 'group' || !formData.hue_id) {
       setMoodOrder([]);
@@ -45,7 +46,8 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
       .filter((s) => s.group_id === formData.hue_id)
       .sort((a, b) => a.name.localeCompare(b.name, 'de'));
     setMoodOrder(groupScenes.map((s) => s.id));
-  }, [moodEnabled, formData.hue_id, formData.hue_type, scenes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moodEnabled, formData.hue_id, formData.hue_type]);
 
   const moveMoodScene = (index: number, direction: 'up' | 'down') => {
     const newOrder = [...moodOrder];
@@ -244,10 +246,12 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
 
     try {
       await api.updateMapping(moodA.id, {
+        ...moodA,
         loxone_id: `${parentLoxoneId}_mood_${numB}`,
         description: `Mood ${numB} für ${parentName}`,
       });
       await api.updateMapping(moodB.id, {
+        ...moodB,
         loxone_id: `${parentLoxoneId}_mood_${numA}`,
         description: `Mood ${numA} für ${parentName}`,
       });
