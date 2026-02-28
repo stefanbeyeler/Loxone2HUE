@@ -9,22 +9,18 @@ FROM ${BUILD_FROM:-ghcr.io/home-assistant/aarch64-base:3.18} AS base
 # Build stage for Go backend
 FROM golang:1.22-alpine AS go-builder
 
-ARG REPO_URL=https://github.com/stefanbeyeler/Loxone2HUE.git
-ARG REPO_BRANCH=main
 ARG TARGETARCH
 
 WORKDIR /build
-RUN apk add --no-cache git ca-certificates
 
-# Fetch current commit ref to bust Docker cache on new commits
-ADD https://api.github.com/repos/stefanbeyeler/Loxone2HUE/git/refs/heads/main /tmp/git-version
-RUN git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} . && \
-    ls -la cmd/gateway/
+# Copy source from build context
+COPY src/ .
 
-# Regenerate go.sum and download dependencies
+RUN apk add --no-cache ca-certificates
+
+# Download dependencies and build
 RUN rm -f go.sum && go mod tidy
 
-# Build for target architecture with version injection
 RUN VERSION=$(cat VERSION) && BUILD_DATE=$(date -u +%Y-%m-%d) && \
     CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-arm64} go build \
     -ldflags="-w -s -X main.version=${VERSION} -X main.buildTime=${BUILD_DATE}" \
@@ -34,19 +30,16 @@ RUN VERSION=$(cat VERSION) && BUILD_DATE=$(date -u +%Y-%m-%d) && \
 # Build stage for frontend
 FROM node:20-alpine AS web-builder
 
-ARG REPO_URL=https://github.com/stefanbeyeler/Loxone2HUE.git
-ARG REPO_BRANCH=main
-
 WORKDIR /build
-RUN apk add --no-cache git
 
-# Fetch current commit ref to bust Docker cache on new commits
-ADD https://api.github.com/repos/stefanbeyeler/Loxone2HUE/git/refs/heads/main /tmp/git-version
-RUN git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} .
+# Copy source from build context
+COPY src/web/package*.json ./
+RUN npm ci --no-audit --no-fund
 
-WORKDIR /build/web
-RUN npm ci --no-audit --no-fund 2>/dev/null && \
-    VERSION=$(cat /build/VERSION) && BUILD_DATE=$(date -u +%Y-%m-%d) && \
+COPY src/web/ ./
+COPY src/VERSION /build/VERSION
+
+RUN VERSION=$(cat /build/VERSION) && BUILD_DATE=$(date -u +%Y-%m-%d) && \
     VITE_APP_VERSION=${VERSION} VITE_BUILD_DATE=${BUILD_DATE} npm run build
 
 #---------------------------------------------
@@ -62,10 +55,13 @@ WORKDIR /app
 
 # Copy built artifacts
 COPY --from=go-builder /build/gateway ./gateway
-COPY --from=web-builder /build/web/dist ./web/dist
+COPY --from=web-builder /build/dist ./web/dist
 
 # Copy rootfs (run script)
 COPY rootfs /
+
+# Copy example config
+COPY src/configs/config.example.yaml ./config.example.yaml
 
 # Create required directories and set permissions
 RUN mkdir -p /app/configs /data /config/loxone2hue && \
@@ -80,7 +76,7 @@ LABEL \
     io.hass.name="Loxone2HUE Gateway" \
     io.hass.description="Gateway für Loxone zu Philips HUE Kommunikation" \
     io.hass.type="addon" \
-    io.hass.version="1.0.34" \
+    io.hass.version="1.0.35" \
     io.hass.arch="aarch64|amd64|armv7"
 
 # Start gateway
