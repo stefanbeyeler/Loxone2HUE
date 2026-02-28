@@ -99,6 +99,8 @@ func (h *Handlers) ExportVirtualInputs(w http.ResponseWriter, r *http.Request) {
 	})
 
 	var buf bytes.Buffer
+	// UTF-8 BOM required by Loxone Config
+	buf.Write([]byte{0xEF, 0xBB, 0xBF})
 	buf.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
 	fmt.Fprintf(&buf, "<VirtualInUdp Title=\"Loxone2HUE Status\" Port=\"%d\">\n", port)
 	buf.WriteString("\t<Info templateType=\"1\" minVersion=\"16011106\"/>\n")
@@ -116,8 +118,8 @@ func (h *Handlers) ExportVirtualInputs(w http.ResponseWriter, r *http.Request) {
 
 	buf.WriteString("</VirtualInUdp>")
 
-	w.Header().Set("Content-Type", "text/xml")
-	w.Header().Set("Content-Disposition", "attachment; filename=\"loxone2hue_inputs.xml\"")
+	w.Header().Set("Content-Type", "text/xml; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"VIU_Loxone2HUE.xml\"")
 	w.Write(buf.Bytes())
 }
 
@@ -166,6 +168,8 @@ func (h *Handlers) ExportVirtualOutputs(w http.ResponseWriter, r *http.Request) 
 	sort.Strings(moodBaseNames)
 
 	var buf bytes.Buffer
+	// UTF-8 BOM required by Loxone Config
+	buf.Write([]byte{0xEF, 0xBB, 0xBF})
 	buf.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
 	fmt.Fprintf(&buf, "<VirtualOut Title=\"Loxone2HUE\" Address=\"%s\" CmdInit=\"\" CloseAfterSend=\"true\" CmdSep=\";\">\n", xmlAttr(address))
 	buf.WriteString("\t<Info templateType=\"3\" minVersion=\"16011106\"/>\n")
@@ -203,7 +207,7 @@ func (h *Handlers) ExportVirtualOutputs(w http.ResponseWriter, r *http.Request) 
 
 	buf.WriteString("</VirtualOut>")
 
-	w.Header().Set("Content-Type", "text/xml")
-	w.Header().Set("Content-Disposition", "attachment; filename=\"loxone2hue_outputs.xml\"")
+	w.Header().Set("Content-Type", "text/xml; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"VO_Loxone2HUE.xml\"")
 	w.Write(buf.Bytes())
 }
