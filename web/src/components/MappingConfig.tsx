@@ -4,15 +4,23 @@ import * as api from '../services/api';
 import { Link2, Plus, Trash2, Edit2, Save, X, Lightbulb, Home, Play, Copy, Check, Terminal, ExternalLink, Download, Upload, AlertCircle } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
+interface CreateMappingPrefill {
+  hue_id: string;
+  hue_type: string;
+  name: string;
+}
+
 interface MappingConfigProps {
   lights: Light[];
   groups: Group[];
   scenes: Scene[];
   highlightMappingId?: string | null;
   onHighlightConsumed?: () => void;
+  createPrefill?: CreateMappingPrefill | null;
+  onCreatePrefillConsumed?: () => void;
 }
 
-export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHighlightConsumed }: MappingConfigProps) {
+export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHighlightConsumed, createPrefill, onCreatePrefillConsumed }: MappingConfigProps) {
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -27,11 +35,25 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
   const [importError, setImportError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [moodEnabled, setMoodEnabled] = useState(false);
   const mappingRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   useEffect(() => {
     loadMappings();
   }, []);
+
+  // Handle prefill from other tabs (create mapping)
+  useEffect(() => {
+    if (!createPrefill) return;
+    setShowAdd(true);
+    setMoodEnabled(false);
+    setFormData({
+      name: createPrefill.name,
+      hue_type: createPrefill.hue_type,
+      hue_id: createPrefill.hue_id,
+      loxone_id: '',
+    });
+  }, [createPrefill]);
 
   // Scroll to and highlight a specific mapping when navigated from another tab
   useEffect(() => {
@@ -74,9 +96,35 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
         enabled: true,
         description: formData.description,
       });
-      setMappings([...mappings, newMapping]);
+      const newMappings = [...mappings, newMapping];
+
+      // Auto-create mood scene mappings if enabled
+      if (moodEnabled && formData.hue_type === 'group') {
+        const groupScenes = scenes
+          .filter((s) => s.group_id === formData.hue_id)
+          .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+        for (let i = 0; i < groupScenes.length; i++) {
+          try {
+            const moodMapping = await api.createMapping({
+              name: `${formData.name} - ${groupScenes[i].name}`,
+              loxone_id: `${formData.loxone_id}_mood_${i + 1}`,
+              hue_id: groupScenes[i].id,
+              hue_type: 'scene',
+              enabled: true,
+              description: `Mood ${i + 1} für ${formData.name}`,
+            });
+            newMappings.push(moodMapping);
+          } catch (err) {
+            console.error(`Failed to create mood mapping ${i + 1}:`, err);
+          }
+        }
+      }
+
+      setMappings(newMappings);
       setShowAdd(false);
       setFormData({});
+      setMoodEnabled(false);
+      onCreatePrefillConsumed?.();
     } catch (error) {
       console.error('Failed to create mapping:', error);
     }
@@ -715,6 +763,42 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
                 ))}
             </select>
           </div>
+          {/* Mood checkbox - only for groups */}
+          {formData.hue_type === 'group' && formData.hue_id && (
+            <div className="bg-gray-700/50 rounded-lg p-3 space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={moodEnabled}
+                  onChange={(e) => setMoodEnabled(e.target.checked)}
+                  className="rounded"
+                />
+                <span className="text-sm text-white">Mood-Szenen automatisch erstellen</span>
+              </label>
+              {moodEnabled && formData.loxone_id && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-gray-400">Folgende Szenen-Mappings werden erstellt:</p>
+                  {scenes
+                    .filter((s) => s.group_id === formData.hue_id)
+                    .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+                    .map((s, idx) => (
+                      <div key={s.id} className="flex items-center gap-2 text-xs">
+                        <Play size={10} className="text-hue-orange flex-shrink-0" />
+                        <span className="text-gray-300">{s.name}</span>
+                        <span className="text-gray-500">&rarr;</span>
+                        <code className="text-hue-orange font-mono">{formData.loxone_id}_mood_{idx + 1}</code>
+                      </div>
+                    ))}
+                  {scenes.filter((s) => s.group_id === formData.hue_id).length === 0 && (
+                    <p className="text-xs text-gray-500">Keine Szenen für diese Gruppe gefunden</p>
+                  )}
+                </div>
+              )}
+              {moodEnabled && !formData.loxone_id && (
+                <p className="text-xs text-gray-500">Loxone ID eingeben um Mood-Vorschau zu sehen</p>
+              )}
+            </div>
+          )}
           <textarea
             placeholder="Beschreibung (optional)"
             value={formData.description || ''}
@@ -738,6 +822,8 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
                 onClick={() => {
                   setShowAdd(false);
                   setFormData({});
+                  setMoodEnabled(false);
+                  onCreatePrefillConsumed?.();
                 }}
                 className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600"
               >

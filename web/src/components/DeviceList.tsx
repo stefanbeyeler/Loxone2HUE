@@ -11,6 +11,7 @@ interface DeviceListProps {
   onBrightness: (id: string, brightness: number) => void;
   onRefresh: () => void;
   onNavigateToMapping: (mappingId: string) => void;
+  onCreateMapping: (prefill: { hue_id: string; hue_type: string; name: string }) => void;
 }
 
 export function DeviceList({
@@ -22,6 +23,7 @@ export function DeviceList({
   onBrightness,
   onRefresh,
   onNavigateToMapping,
+  onCreateMapping,
 }: DeviceListProps) {
   if (loading) {
     return (
@@ -108,6 +110,7 @@ export function DeviceList({
                   onToggle={onToggle}
                   onBrightness={onBrightness}
                   onNavigateToMapping={onNavigateToMapping}
+                  onCreateMapping={onCreateMapping}
                 />
               ))}
             </div>
@@ -130,6 +133,8 @@ export function DeviceList({
                 mapping={mappings.find(m => m.hue_id === device.id && m.hue_type === 'light')}
                 onToggle={onToggle}
                 onBrightness={onBrightness}
+                onNavigateToMapping={onNavigateToMapping}
+                onCreateMapping={onCreateMapping}
               />
             ))}
           </div>

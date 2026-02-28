@@ -41,6 +41,7 @@ export function Dashboard() {
   const [showIntervalMenu, setShowIntervalMenu] = useState(false);
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [highlightMappingId, setHighlightMappingId] = useState<string | null>(null);
+  const [createMappingPrefill, setCreateMappingPrefill] = useState<{ hue_id: string; hue_type: string; name: string } | null>(null);
   const intervalMenuRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -124,6 +125,20 @@ export function Dashboard() {
   const navigateToMapping = (mappingId: string) => {
     setHighlightMappingId(mappingId);
     setActiveTab('mappings');
+  };
+
+  const navigateToCreateMapping = (prefill: { hue_id: string; hue_type: string; name: string }) => {
+    setCreateMappingPrefill(prefill);
+    setActiveTab('mappings');
+  };
+
+  const refreshMappings = async () => {
+    try {
+      const data = await api.getMappings();
+      setMappings(data.mappings || []);
+    } catch (err) {
+      console.error('Failed to refresh mappings:', err);
+    }
   };
 
   // Separate rooms and zones
@@ -319,6 +334,7 @@ export function Dashboard() {
             onBrightness={handleLightBrightness}
             onRefresh={refresh}
             onNavigateToMapping={navigateToMapping}
+            onCreateMapping={navigateToCreateMapping}
           />
         )}
 
@@ -330,6 +346,7 @@ export function Dashboard() {
             onToggle={handleGroupToggle}
             onActivateScene={activateScene}
             onNavigateToMapping={navigateToMapping}
+            onCreateMapping={navigateToCreateMapping}
             title="Räume"
           />
         )}
@@ -342,6 +359,7 @@ export function Dashboard() {
             onToggle={handleGroupToggle}
             onActivateScene={activateScene}
             onNavigateToMapping={navigateToMapping}
+            onCreateMapping={navigateToCreateMapping}
             title="Zonen"
           />
         )}
@@ -353,6 +371,7 @@ export function Dashboard() {
             mappings={mappings}
             onActivateScene={activateScene}
             onNavigateToMapping={navigateToMapping}
+            onCreateMapping={navigateToCreateMapping}
           />
         )}
 
@@ -363,6 +382,8 @@ export function Dashboard() {
             scenes={scenes}
             highlightMappingId={highlightMappingId}
             onHighlightConsumed={() => setHighlightMappingId(null)}
+            createPrefill={createMappingPrefill}
+            onCreatePrefillConsumed={() => { setCreateMappingPrefill(null); refreshMappings(); }}
           />
         )}
 
