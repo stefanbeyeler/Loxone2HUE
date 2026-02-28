@@ -84,6 +84,9 @@ func (s *Server) setupRoutes() {
 	api.HandleFunc("/export/inputs", s.handlers.ExportVirtualInputs).Methods("GET")
 	api.HandleFunc("/export/outputs", s.handlers.ExportVirtualOutputs).Methods("GET")
 
+	// Logs endpoint
+	api.HandleFunc("/logs", s.handlers.GetLogs).Methods("GET")
+
 	// Health check
 	api.HandleFunc("/health", s.handlers.Health).Methods("GET")
 
