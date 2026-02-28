@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Mapping, Light, Group, Scene } from '../types';
 import * as api from '../services/api';
-import { Link2, Plus, Trash2, Edit2, Save, X, Lightbulb, Home, Play, Copy, Check, Terminal, ExternalLink, Download, Upload, AlertCircle } from 'lucide-react';
+import { Link2, Plus, Trash2, Edit2, Save, X, Lightbulb, Home, Play, Copy, Check, Terminal, ExternalLink, Download, Upload, AlertCircle, FileDown } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
 interface CreateMappingPrefill {
@@ -18,9 +18,10 @@ interface MappingConfigProps {
   onHighlightConsumed?: () => void;
   createPrefill?: CreateMappingPrefill | null;
   onCreatePrefillConsumed?: () => void;
+  onNavigateToHueElement?: (hueId: string, hueType: string) => void;
 }
 
-export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHighlightConsumed, createPrefill, onCreatePrefillConsumed }: MappingConfigProps) {
+export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHighlightConsumed, createPrefill, onCreatePrefillConsumed, onNavigateToHueElement }: MappingConfigProps) {
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -532,6 +533,68 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
 
   return (
     <div className="space-y-4">
+      {/* Loxone Config XML Export */}
+      <div className="bg-gray-800 rounded-xl p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Download size={20} className="text-hue-orange" />
+          <h3 className="text-lg font-medium text-white">Loxone Config Export</h3>
+        </div>
+        <p className="text-sm text-gray-400">
+          XML-Vorlagen zum Import in Loxone Config. Unter
+          <span className="text-gray-300"> Gerätevorlagen &rarr; Vorlage importieren</span> laden.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Virtual UDP Input */}
+          <div className="bg-gray-700/50 rounded-lg p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <FileDown size={16} className="text-hue-orange" />
+              <h4 className="text-sm font-medium text-white">Virtual UDP Input</h4>
+            </div>
+            <p className="text-xs text-gray-400">
+              Empfängt Status-Feedback (On/Off, Helligkeit, Farbtemperatur, Farbe) für gemappte Geräte.
+            </p>
+            <div className="flex flex-col gap-2">
+              <a
+                href="./api/export/inputs"
+                download="VIU_Loxone2HUE.xml"
+                className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                <Download size={14} />
+                Gemappte Geräte
+              </a>
+              <a
+                href="./api/export/inputs?all=true"
+                download="VIU_Loxone2HUE_all.xml"
+                className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                <Download size={14} />
+                Alle HUE-Geräte
+              </a>
+            </div>
+          </div>
+
+          {/* Virtual HTTP Output */}
+          <div className="bg-gray-700/50 rounded-lg p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <FileDown size={16} className="text-hue-orange" />
+              <h4 className="text-sm font-medium text-white">Virtual HTTP Output</h4>
+            </div>
+            <p className="text-xs text-gray-400">
+              Steuert HUE-Geräte von Loxone aus (Mood-Befehle, Helligkeit). Basierend auf den Mappings.
+            </p>
+            <a
+              href="./api/export/outputs"
+              download="VO_Loxone2HUE.xml"
+              className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+            >
+              <Download size={14} />
+              Ausgänge exportieren
+            </a>
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold text-white">Loxone Mappings</h2>
         <div className="flex gap-2">
@@ -569,6 +632,37 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
           </button>
         </div>
       </div>
+
+      {/* Loxone Config XML Export */}
+      {mappings.length > 0 && (
+        <div className="bg-gray-800 rounded-xl p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <FileDown size={18} className="text-hue-orange flex-shrink-0" />
+            <div>
+              <span className="text-sm text-white font-medium">Loxone Config XML</span>
+              <p className="text-xs text-gray-500">Für den Import in Loxone Config</p>
+            </div>
+          </div>
+          <div className="flex gap-2 flex-shrink-0">
+            <a
+              href="./api/export/outputs"
+              download="VO_Loxone2HUE.xml"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 text-white text-xs rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              <Download size={14} />
+              Virtueller Ausgang
+            </a>
+            <a
+              href="./api/export/inputs"
+              download="VIU_Loxone2HUE.xml"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 text-white text-xs rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              <Download size={14} />
+              Virtueller Eingang
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Import Error Display */}
       {importError && !showImportModal && (
@@ -933,7 +1027,18 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
                     <div>
                       <h3 className="font-medium text-white">{mapping.name}</h3>
                       <p className="text-xs text-gray-400">
-                        {mapping.loxone_id} → {getHueResourceName(mapping.hue_id, mapping.hue_type)}
+                        {mapping.loxone_id} →{' '}
+                        {onNavigateToHueElement ? (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToHueElement(mapping.hue_id, mapping.hue_type)}
+                            className="text-hue-orange hover:underline"
+                          >
+                            {getHueResourceName(mapping.hue_id, mapping.hue_type)}
+                          </button>
+                        ) : (
+                          getHueResourceName(mapping.hue_id, mapping.hue_type)
+                        )}
                       </p>
                       <p className="text-xs text-gray-500">
                         Typ: {getTypeLabel(mapping.hue_type)}

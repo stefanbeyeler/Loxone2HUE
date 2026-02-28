@@ -132,6 +132,17 @@ export function Dashboard() {
     setActiveTab('mappings');
   };
 
+  const navigateToHueElement = (hueId: string, hueType: string) => {
+    if (hueType === 'light') {
+      setActiveTab('devices');
+    } else if (hueType === 'group') {
+      const group = groups.find((g) => g.id === hueId);
+      setActiveTab(group?.type === 'zone' ? 'zones' : 'rooms');
+    } else if (hueType === 'scene') {
+      setActiveTab('scenes');
+    }
+  };
+
   const refreshMappings = async () => {
     try {
       const data = await api.getMappings();
@@ -384,6 +395,7 @@ export function Dashboard() {
             onHighlightConsumed={() => setHighlightMappingId(null)}
             createPrefill={createMappingPrefill}
             onCreatePrefillConsumed={() => { setCreateMappingPrefill(null); refreshMappings(); }}
+            onNavigateToHueElement={navigateToHueElement}
           />
         )}
 
