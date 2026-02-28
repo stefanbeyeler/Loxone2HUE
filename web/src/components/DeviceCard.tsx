@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Lightbulb, Power } from 'lucide-react';
-import { Light } from '../types';
+import { Lightbulb, Power, Link2 } from 'lucide-react';
+import { Light, Mapping } from '../types';
 
 interface DeviceCardProps {
   device: Light;
+  mapping?: Mapping;
   onToggle: (id: string, on: boolean) => void;
   onBrightness: (id: string, brightness: number) => void;
 }
 
-export function DeviceCard({ device, onToggle, onBrightness }: DeviceCardProps) {
+export function DeviceCard({ device, mapping, onToggle, onBrightness }: DeviceCardProps) {
   const [localBrightness, setLocalBrightness] = useState(device.state.brightness);
 
   const handleBrightnessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,6 +61,12 @@ export function DeviceCard({ device, onToggle, onBrightness }: DeviceCardProps) 
             <h3 className="font-medium text-white">{device.name}</h3>
             <p className="text-xs text-gray-400">{device.product_name || device.type}</p>
             <p className="text-xs text-gray-500 font-mono">{device.id}</p>
+            {mapping && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <Link2 size={12} className="text-hue-orange" />
+                <span className="text-xs text-gray-400">{mapping.loxone_id}</span>
+              </div>
+            )}
           </div>
         </div>
 

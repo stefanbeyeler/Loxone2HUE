@@ -1,10 +1,11 @@
-import { Light, Group } from '../types';
+import { Light, Group, Mapping } from '../types';
 import { DeviceCard } from './DeviceCard';
 import { Lightbulb, RefreshCw, Home, HelpCircle } from 'lucide-react';
 
 interface DeviceListProps {
   devices: Light[];
   groups: Group[];
+  mappings: Mapping[];
   loading: boolean;
   onToggle: (id: string, on: boolean) => void;
   onBrightness: (id: string, brightness: number) => void;
@@ -14,6 +15,7 @@ interface DeviceListProps {
 export function DeviceList({
   devices,
   groups,
+  mappings,
   loading,
   onToggle,
   onBrightness,
@@ -100,6 +102,7 @@ export function DeviceList({
                 <DeviceCard
                   key={device.id}
                   device={device}
+                  mapping={mappings.find(m => m.hue_id === device.id && m.hue_type === 'light')}
                   onToggle={onToggle}
                   onBrightness={onBrightness}
                 />
@@ -121,6 +124,7 @@ export function DeviceList({
               <DeviceCard
                 key={device.id}
                 device={device}
+                mapping={mappings.find(m => m.hue_id === device.id && m.hue_type === 'light')}
                 onToggle={onToggle}
                 onBrightness={onBrightness}
               />
