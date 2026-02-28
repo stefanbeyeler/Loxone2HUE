@@ -190,6 +190,51 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
     }
   };
 
+  const handleDeleteGroup = async (parentMapping: Mapping) => {
+    const children = mappings.filter((m) =>
+      m.loxone_id.startsWith(`${parentMapping.loxone_id}_mood_`)
+    );
+    const message = children.length > 0
+      ? `Mapping "${parentMapping.name}" und ${children.length} zugehörige Mood-Mappings löschen?`
+      : 'Mapping wirklich löschen?';
+    if (!confirm(message)) return;
+
+    try {
+      for (const child of children) {
+        await api.deleteMapping(child.id);
+      }
+      await api.deleteMapping(parentMapping.id);
+      const deletedIds = new Set([parentMapping.id, ...children.map((c) => c.id)]);
+      setMappings(mappings.filter((m) => !deletedIds.has(m.id)));
+    } catch (error) {
+      console.error('Failed to delete mapping group:', error);
+    }
+  };
+
+  const handleSwapMoods = async (moodA: Mapping, moodB: Mapping) => {
+    const numA = getMoodNumber(moodA.loxone_id);
+    const numB = getMoodNumber(moodB.loxone_id);
+    const parentLoxoneId = getParentLoxoneId(moodA.loxone_id);
+    if (!parentLoxoneId) return;
+
+    const parentMapping = mappings.find((m) => m.loxone_id === parentLoxoneId);
+    const parentName = parentMapping?.name || parentLoxoneId;
+
+    try {
+      await api.updateMapping(moodA.id, {
+        loxone_id: `${parentLoxoneId}_mood_${numB}`,
+        description: `Mood ${numB} für ${parentName}`,
+      });
+      await api.updateMapping(moodB.id, {
+        loxone_id: `${parentLoxoneId}_mood_${numA}`,
+        description: `Mood ${numA} für ${parentName}`,
+      });
+      await loadMappings();
+    } catch (err) {
+      console.error('Failed to swap mood order:', err);
+    }
+  };
+
   const startEdit = (mapping: Mapping) => {
     setEditingId(mapping.id);
     setFormData(mapping);
@@ -563,6 +608,27 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
       note: 'Erstelle einen Virtuellen Ausgang mit Adresse http://GATEWAY_IP:8080 und füge die Befehle als Virtuelle Ausgang Befehle hinzu.'
     };
   };
+
+  // Mood grouping helpers
+  const isMoodChild = (loxoneId: string) => /_mood_\d+$/.test(loxoneId);
+
+  const getParentLoxoneId = (moodLoxoneId: string) => {
+    const match = moodLoxoneId.match(/^(.+)_mood_\d+$/);
+    return match ? match[1] : null;
+  };
+
+  const getMoodNumber = (loxoneId: string): number => {
+    const match = loxoneId.match(/_mood_(\d+)$/);
+    return match ? parseInt(match[1], 10) : -1;
+  };
+
+  const getMoodChildren = (parentLoxoneId: string): Mapping[] => {
+    return mappings
+      .filter((m) => m.loxone_id.startsWith(`${parentLoxoneId}_mood_`))
+      .sort((a, b) => getMoodNumber(a.loxone_id) - getMoodNumber(b.loxone_id));
+  };
+
+  const topLevelMappings = mappings.filter((m) => !isMoodChild(m.loxone_id));
 
   if (loading) {
     return <div className="text-center py-8 text-gray-400">Lade Mappings...</div>;
@@ -996,11 +1062,14 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
       )}
 
       <div className="space-y-2">
-        {[...mappings].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((mapping) => (
+        {[...topLevelMappings].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((mapping) => {
+          const moodChildren = getMoodChildren(mapping.loxone_id);
+          const hasMoods = moodChildren.length > 0;
+          return (
+          <div key={mapping.id}>
           <div
-            key={mapping.id}
             ref={(el) => { if (el) mappingRefs.current.set(mapping.id, el); }}
-            className={`bg-gray-800 rounded-xl p-4 transition-all ${!mapping.enabled ? 'opacity-50' : ''}`}
+            className={`bg-gray-800 rounded-xl p-4 transition-all ${!mapping.enabled ? 'opacity-50' : ''} ${hasMoods ? 'rounded-b-none' : ''}`}
           >
             {editingId === mapping.id ? (
               <div className="space-y-3">
@@ -1092,7 +1161,14 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
                       {getTypeIcon(mapping.hue_type)}
                     </div>
                     <div>
-                      <h3 className="font-medium text-white">{mapping.name}</h3>
+                      <h3 className="font-medium text-white flex items-center gap-2">
+                        {mapping.name}
+                        {hasMoods && (
+                          <span className="text-[10px] bg-hue-orange/20 text-hue-orange px-1.5 py-0.5 rounded-full font-normal">
+                            {moodChildren.length} Moods
+                          </span>
+                        )}
+                      </h3>
                       <p className="text-xs text-gray-400">
                         {mapping.loxone_id} →{' '}
                         {onNavigateToHueElement ? (
@@ -1133,11 +1209,11 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
                         <Edit2 size={18} />
                       </button>
                     </Tooltip>
-                    <Tooltip content="Löschen" position="bottom">
+                    <Tooltip content={hasMoods ? 'Gruppe löschen' : 'Löschen'} position="bottom">
                       <button
                         type="button"
                         aria-label="Löschen"
-                        onClick={() => handleDelete(mapping.id)}
+                        onClick={() => hasMoods ? handleDeleteGroup(mapping) : handleDelete(mapping.id)}
                         className="p-2 text-gray-400 hover:text-red-400"
                       >
                         <Trash2 size={18} />
@@ -1216,7 +1292,74 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
               </div>
             )}
           </div>
-        ))}
+          {/* Mood children - indented under parent */}
+          {hasMoods && (
+            <div className="bg-gray-800/60 rounded-b-xl border-t border-gray-700 px-4 py-3 space-y-1">
+              <div className="flex items-center gap-2 mb-2">
+                <Play size={14} className="text-hue-orange" />
+                <span className="text-xs font-medium text-gray-400">Mood-Szenen ({moodChildren.length})</span>
+              </div>
+              {moodChildren.map((mood) => {
+                const moodNum = getMoodNumber(mood.loxone_id);
+                const isOff = moodNum === 0;
+                const sceneMoods = moodChildren.filter((m) => getMoodNumber(m.loxone_id) > 0);
+                const sceneIdx = sceneMoods.indexOf(mood);
+                return (
+                  <div key={mood.id} className="flex items-center gap-2 text-sm bg-gray-700/40 rounded-lg px-3 py-2">
+                    <span className={`w-7 text-center text-xs font-mono font-bold rounded px-1 py-0.5 flex-shrink-0 ${isOff ? 'bg-red-900/50 text-red-400' : 'bg-hue-orange/20 text-hue-orange'}`}>
+                      {moodNum}
+                    </span>
+                    {isOff ? (
+                      <Power size={14} className="text-red-400 flex-shrink-0" />
+                    ) : (
+                      <Play size={14} className="text-hue-orange flex-shrink-0" />
+                    )}
+                    <span className="text-gray-300 truncate">
+                      {isOff ? 'Alle Lichter aus' : (
+                        onNavigateToHueElement ? (
+                          <button
+                            type="button"
+                            onClick={() => onNavigateToHueElement(mood.hue_id, mood.hue_type)}
+                            className="text-hue-orange hover:underline"
+                          >
+                            {getHueResourceName(mood.hue_id, mood.hue_type)}
+                          </button>
+                        ) : getHueResourceName(mood.hue_id, mood.hue_type)
+                      )}
+                    </span>
+                    <code className="text-[10px] text-gray-500 font-mono ml-auto flex-shrink-0">
+                      {mood.loxone_id}
+                    </code>
+                    {!isOff && (
+                      <div className="flex flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => sceneIdx > 0 && handleSwapMoods(mood, sceneMoods[sceneIdx - 1])}
+                          disabled={sceneIdx <= 0}
+                          className={`p-0.5 ${sceneIdx <= 0 ? 'text-gray-600' : 'text-gray-400 hover:text-white'}`}
+                          title="Nach oben"
+                        >
+                          <ChevronUp size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => sceneIdx < sceneMoods.length - 1 && handleSwapMoods(mood, sceneMoods[sceneIdx + 1])}
+                          disabled={sceneIdx >= sceneMoods.length - 1}
+                          className={`p-0.5 ${sceneIdx >= sceneMoods.length - 1 ? 'text-gray-600' : 'text-gray-400 hover:text-white'}`}
+                          title="Nach unten"
+                        >
+                          <ChevronDown size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          </div>
+          );
+        })}
 
         {mappings.length === 0 && !showAdd && (
           <div className="text-center py-8">
