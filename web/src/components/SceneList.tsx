@@ -1,16 +1,13 @@
-import { Scene, Group, Mapping } from '../types';
-import { Play, Palette, Home, Link2, Plus } from 'lucide-react';
+import { Scene, Group } from '../types';
+import { Play, Palette, Home } from 'lucide-react';
 
 interface SceneListProps {
   scenes: Scene[];
   groups: Group[];
-  mappings: Mapping[];
   onActivateScene: (id: string) => void;
-  onNavigateToMapping: (mappingId: string) => void;
-  onCreateMapping: (prefill: { hue_id: string; hue_type: string; name: string }) => void;
 }
 
-export function SceneList({ scenes, groups, mappings, onActivateScene, onNavigateToMapping, onCreateMapping }: SceneListProps) {
+export function SceneList({ scenes, groups, onActivateScene }: SceneListProps) {
   const getGroupName = (groupId: string) => {
     const group = groups.find((g) => g.id === groupId);
     return group?.name || 'Unbekannt';
@@ -74,28 +71,6 @@ export function SceneList({ scenes, groups, mappings, onActivateScene, onNavigat
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-white truncate">{scene.name}</h4>
                     <p className="text-xs text-gray-500 font-mono truncate">{scene.id}</p>
-                    {(() => {
-                      const sceneMapping = mappings.find(m => m.hue_id === scene.id && m.hue_type === 'scene');
-                      return sceneMapping ? (
-                        <div
-                          onClick={(e) => { e.stopPropagation(); onNavigateToMapping(sceneMapping.id); }}
-                          className="flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity cursor-pointer"
-                          title="Zum Mapping springen"
-                        >
-                          <Link2 size={12} className="text-hue-orange" />
-                          <span className="text-xs text-hue-orange truncate">{sceneMapping.loxone_id}</span>
-                        </div>
-                      ) : (
-                        <div
-                          onClick={(e) => { e.stopPropagation(); onCreateMapping({ hue_id: scene.id, hue_type: 'scene', name: scene.name }); }}
-                          className="flex items-center gap-1 mt-0.5 text-gray-500 hover:text-hue-orange transition-colors cursor-pointer"
-                          title="Mapping erstellen"
-                        >
-                          <Plus size={12} />
-                          <span className="text-xs">Mapping erstellen</span>
-                        </div>
-                      );
-                    })()}
                   </div>
                   <Play
                     size={18}

@@ -1,29 +1,23 @@
-import { Light, Group, Mapping } from '../types';
+import { Light, Group } from '../types';
 import { DeviceCard } from './DeviceCard';
 import { Lightbulb, RefreshCw, Home, HelpCircle } from 'lucide-react';
 
 interface DeviceListProps {
   devices: Light[];
   groups: Group[];
-  mappings: Mapping[];
   loading: boolean;
   onToggle: (id: string, on: boolean) => void;
   onBrightness: (id: string, brightness: number) => void;
   onRefresh: () => void;
-  onNavigateToMapping: (mappingId: string) => void;
-  onCreateMapping: (prefill: { hue_id: string; hue_type: string; name: string }) => void;
 }
 
 export function DeviceList({
   devices,
   groups,
-  mappings,
   loading,
   onToggle,
   onBrightness,
   onRefresh,
-  onNavigateToMapping,
-  onCreateMapping,
 }: DeviceListProps) {
   if (loading) {
     return (
@@ -106,11 +100,8 @@ export function DeviceList({
                 <DeviceCard
                   key={device.id}
                   device={device}
-                  mapping={mappings.find(m => m.hue_id === device.id && m.hue_type === 'light')}
                   onToggle={onToggle}
                   onBrightness={onBrightness}
-                  onNavigateToMapping={onNavigateToMapping}
-                  onCreateMapping={onCreateMapping}
                 />
               ))}
             </div>
@@ -130,11 +121,8 @@ export function DeviceList({
               <DeviceCard
                 key={device.id}
                 device={device}
-                mapping={mappings.find(m => m.hue_id === device.id && m.hue_type === 'light')}
                 onToggle={onToggle}
                 onBrightness={onBrightness}
-                onNavigateToMapping={onNavigateToMapping}
-                onCreateMapping={onCreateMapping}
               />
             ))}
           </div>
