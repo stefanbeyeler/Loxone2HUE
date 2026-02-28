@@ -7,9 +7,10 @@ interface DeviceCardProps {
   mapping?: Mapping;
   onToggle: (id: string, on: boolean) => void;
   onBrightness: (id: string, brightness: number) => void;
+  onNavigateToMapping?: (mappingId: string) => void;
 }
 
-export function DeviceCard({ device, mapping, onToggle, onBrightness }: DeviceCardProps) {
+export function DeviceCard({ device, mapping, onToggle, onBrightness, onNavigateToMapping }: DeviceCardProps) {
   const [localBrightness, setLocalBrightness] = useState(device.state.brightness);
 
   const handleBrightnessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,10 +63,14 @@ export function DeviceCard({ device, mapping, onToggle, onBrightness }: DeviceCa
             <p className="text-xs text-gray-400">{device.product_name || device.type}</p>
             <p className="text-xs text-gray-500 font-mono">{device.id}</p>
             {mapping && (
-              <div className="flex items-center gap-1 mt-0.5">
+              <button
+                onClick={(e) => { e.stopPropagation(); onNavigateToMapping?.(mapping.id); }}
+                className="flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity"
+                title="Zum Mapping springen"
+              >
                 <Link2 size={12} className="text-hue-orange" />
-                <span className="text-xs text-gray-400">{mapping.loxone_id}</span>
-              </div>
+                <span className="text-xs text-hue-orange">{mapping.loxone_id}</span>
+              </button>
             )}
           </div>
         </div>

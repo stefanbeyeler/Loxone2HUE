@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Mapping, Light, Group, Scene } from '../types';
 import * as api from '../services/api';
 import { Link2, Plus, Trash2, Edit2, Save, X, Lightbulb, Home, Play, Copy, Check, Terminal, ExternalLink, Download, Upload, AlertCircle } from 'lucide-react';
@@ -8,9 +8,11 @@ interface MappingConfigProps {
   lights: Light[];
   groups: Group[];
   scenes: Scene[];
+  highlightMappingId?: string | null;
+  onHighlightConsumed?: () => void;
 }
 
-export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
+export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHighlightConsumed }: MappingConfigProps) {
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -25,10 +27,29 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
   const [importError, setImportError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const mappingRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   useEffect(() => {
     loadMappings();
   }, []);
+
+  // Scroll to and highlight a specific mapping when navigated from another tab
+  useEffect(() => {
+    if (!highlightMappingId || loading) return;
+    setExpandedGuide(highlightMappingId);
+    // Wait for render, then scroll
+    requestAnimationFrame(() => {
+      const el = mappingRefs.current.get(highlightMappingId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-2', 'ring-hue-orange');
+        setTimeout(() => {
+          el.classList.remove('ring-2', 'ring-hue-orange');
+          onHighlightConsumed?.();
+        }, 2000);
+      }
+    });
+  }, [highlightMappingId, loading]);
 
   const loadMappings = async () => {
     try {
@@ -731,7 +752,8 @@ export function MappingConfig({ lights, groups, scenes }: MappingConfigProps) {
         {[...mappings].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((mapping) => (
           <div
             key={mapping.id}
-            className={`bg-gray-800 rounded-xl p-4 ${!mapping.enabled ? 'opacity-50' : ''}`}
+            ref={(el) => { if (el) mappingRefs.current.set(mapping.id, el); }}
+            className={`bg-gray-800 rounded-xl p-4 transition-all ${!mapping.enabled ? 'opacity-50' : ''}`}
           >
             {editingId === mapping.id ? (
               <div className="space-y-3">

@@ -6,9 +6,10 @@ interface SceneListProps {
   groups: Group[];
   mappings: Mapping[];
   onActivateScene: (id: string) => void;
+  onNavigateToMapping: (mappingId: string) => void;
 }
 
-export function SceneList({ scenes, groups, mappings, onActivateScene }: SceneListProps) {
+export function SceneList({ scenes, groups, mappings, onActivateScene, onNavigateToMapping }: SceneListProps) {
   const getGroupName = (groupId: string) => {
     const group = groups.find((g) => g.id === groupId);
     return group?.name || 'Unbekannt';
@@ -75,9 +76,13 @@ export function SceneList({ scenes, groups, mappings, onActivateScene }: SceneLi
                     {(() => {
                       const sceneMapping = mappings.find(m => m.hue_id === scene.id && m.hue_type === 'scene');
                       return sceneMapping ? (
-                        <div className="flex items-center gap-1 mt-0.5">
+                        <div
+                          onClick={(e) => { e.stopPropagation(); onNavigateToMapping(sceneMapping.id); }}
+                          className="flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity cursor-pointer"
+                          title="Zum Mapping springen"
+                        >
                           <Link2 size={12} className="text-hue-orange" />
-                          <span className="text-xs text-gray-400 truncate">{sceneMapping.loxone_id}</span>
+                          <span className="text-xs text-hue-orange truncate">{sceneMapping.loxone_id}</span>
                         </div>
                       ) : null;
                     })()}
