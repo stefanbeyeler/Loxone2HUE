@@ -7,6 +7,7 @@ import { MappingConfig } from './MappingConfig';
 import { LoxoneGuide } from './LoxoneGuide';
 import { SettingsPanel } from './SettingsPanel';
 import * as api from '../services/api';
+import { Mapping } from '../types';
 import {
   Lightbulb,
   Home,
@@ -38,6 +39,7 @@ export function Dashboard() {
   const [bridgeIP, setBridgeIP] = useState<string | null>(null);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(10);
   const [showIntervalMenu, setShowIntervalMenu] = useState(false);
+  const [mappings, setMappings] = useState<Mapping[]>([]);
   const intervalMenuRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -53,7 +55,7 @@ export function Dashboard() {
     activateScene,
   } = useHueDevices();
 
-  // Fetch bridge IP on mount
+  // Fetch bridge IP and mappings on mount
   useEffect(() => {
     const fetchBridgeInfo = async () => {
       try {
@@ -65,7 +67,16 @@ export function Dashboard() {
         console.error('Failed to fetch bridge info:', err);
       }
     };
+    const fetchMappings = async () => {
+      try {
+        const data = await api.getMappings();
+        setMappings(data.mappings || []);
+      } catch (err) {
+        console.error('Failed to fetch mappings:', err);
+      }
+    };
     fetchBridgeInfo();
+    fetchMappings();
   }, []);
 
   // Auto-refresh
@@ -296,6 +307,7 @@ export function Dashboard() {
           <DeviceList
             devices={lights}
             groups={groups}
+            mappings={mappings}
             loading={loading}
             onToggle={handleLightToggle}
             onBrightness={handleLightBrightness}
@@ -307,6 +319,7 @@ export function Dashboard() {
           <GroupList
             groups={rooms}
             scenes={scenes}
+            mappings={mappings}
             onToggle={handleGroupToggle}
             onActivateScene={activateScene}
             title="Räume"
@@ -317,6 +330,7 @@ export function Dashboard() {
           <GroupList
             groups={zones}
             scenes={scenes}
+            mappings={mappings}
             onToggle={handleGroupToggle}
             onActivateScene={activateScene}
             title="Zonen"
@@ -327,6 +341,7 @@ export function Dashboard() {
           <SceneList
             scenes={scenes}
             groups={groups}
+            mappings={mappings}
             onActivateScene={activateScene}
           />
         )}

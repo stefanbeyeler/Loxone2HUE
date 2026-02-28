@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { Group, Scene } from '../types';
-import { Home, Layers, Power, Play } from 'lucide-react';
+import { Group, Scene, Mapping } from '../types';
+import { Home, Layers, Power, Play, Link2 } from 'lucide-react';
 
 interface GroupListProps {
   groups: Group[];
   scenes: Scene[];
+  mappings: Mapping[];
   onToggle: (id: string, on: boolean) => void;
   onActivateScene: (id: string) => void;
   title?: string;
 }
 
-export function GroupList({ groups, scenes, onToggle, onActivateScene, title }: GroupListProps) {
+export function GroupList({ groups, scenes, mappings, onToggle, onActivateScene, title }: GroupListProps) {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   const getGroupScenes = (groupId: string) => {
@@ -60,6 +61,15 @@ export function GroupList({ groups, scenes, onToggle, onActivateScene, title }: 
                     {group.lights.length} Geräte • {groupScenes.length} Szenen
                   </p>
                   <p className="text-xs text-gray-500 font-mono">{group.id}</p>
+                  {(() => {
+                    const groupMapping = mappings.find(m => m.hue_id === group.id && m.hue_type === 'group');
+                    return groupMapping ? (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Link2 size={12} className="text-hue-orange" />
+                        <span className="text-xs text-gray-400">{groupMapping.loxone_id}</span>
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
               </div>
 
@@ -97,6 +107,15 @@ export function GroupList({ groups, scenes, onToggle, onActivateScene, title }: 
                       <div className="min-w-0">
                         <span className="text-sm text-white truncate block">{scene.name}</span>
                         <span className="text-xs text-gray-500 font-mono truncate block">{scene.id}</span>
+                        {(() => {
+                          const sceneMapping = mappings.find(m => m.hue_id === scene.id && m.hue_type === 'scene');
+                          return sceneMapping ? (
+                            <span className="flex items-center gap-1 mt-0.5">
+                              <Link2 size={10} className="text-hue-orange" />
+                              <span className="text-xs text-gray-400">{sceneMapping.loxone_id}</span>
+                            </span>
+                          ) : null;
+                        })()}
                       </div>
                     </button>
                   ))}

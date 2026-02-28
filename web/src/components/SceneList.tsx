@@ -1,13 +1,14 @@
-import { Scene, Group } from '../types';
-import { Play, Palette, Home } from 'lucide-react';
+import { Scene, Group, Mapping } from '../types';
+import { Play, Palette, Home, Link2 } from 'lucide-react';
 
 interface SceneListProps {
   scenes: Scene[];
   groups: Group[];
+  mappings: Mapping[];
   onActivateScene: (id: string) => void;
 }
 
-export function SceneList({ scenes, groups, onActivateScene }: SceneListProps) {
+export function SceneList({ scenes, groups, mappings, onActivateScene }: SceneListProps) {
   const getGroupName = (groupId: string) => {
     const group = groups.find((g) => g.id === groupId);
     return group?.name || 'Unbekannt';
@@ -71,6 +72,15 @@ export function SceneList({ scenes, groups, onActivateScene }: SceneListProps) {
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-white truncate">{scene.name}</h4>
                     <p className="text-xs text-gray-500 font-mono truncate">{scene.id}</p>
+                    {(() => {
+                      const sceneMapping = mappings.find(m => m.hue_id === scene.id && m.hue_type === 'scene');
+                      return sceneMapping ? (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Link2 size={12} className="text-hue-orange" />
+                          <span className="text-xs text-gray-400 truncate">{sceneMapping.loxone_id}</span>
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                   <Play
                     size={18}
