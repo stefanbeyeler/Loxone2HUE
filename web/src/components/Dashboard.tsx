@@ -40,6 +40,7 @@ export function Dashboard() {
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(10);
   const [showIntervalMenu, setShowIntervalMenu] = useState(false);
   const [mappings, setMappings] = useState<Mapping[]>([]);
+  const [highlightMappingId, setHighlightMappingId] = useState<string | null>(null);
   const intervalMenuRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -118,6 +119,11 @@ export function Dashboard() {
 
   const handleGroupToggle = (id: string, on: boolean) => {
     setGroupState(id, on);
+  };
+
+  const navigateToMapping = (mappingId: string) => {
+    setHighlightMappingId(mappingId);
+    setActiveTab('mappings');
   };
 
   // Separate rooms and zones
@@ -312,6 +318,7 @@ export function Dashboard() {
             onToggle={handleLightToggle}
             onBrightness={handleLightBrightness}
             onRefresh={refresh}
+            onNavigateToMapping={navigateToMapping}
           />
         )}
 
@@ -322,6 +329,7 @@ export function Dashboard() {
             mappings={mappings}
             onToggle={handleGroupToggle}
             onActivateScene={activateScene}
+            onNavigateToMapping={navigateToMapping}
             title="Räume"
           />
         )}
@@ -333,6 +341,7 @@ export function Dashboard() {
             mappings={mappings}
             onToggle={handleGroupToggle}
             onActivateScene={activateScene}
+            onNavigateToMapping={navigateToMapping}
             title="Zonen"
           />
         )}
@@ -343,11 +352,18 @@ export function Dashboard() {
             groups={groups}
             mappings={mappings}
             onActivateScene={activateScene}
+            onNavigateToMapping={navigateToMapping}
           />
         )}
 
         {activeTab === 'mappings' && (
-          <MappingConfig lights={lights} groups={groups} scenes={scenes} />
+          <MappingConfig
+            lights={lights}
+            groups={groups}
+            scenes={scenes}
+            highlightMappingId={highlightMappingId}
+            onHighlightConsumed={() => setHighlightMappingId(null)}
+          />
         )}
 
         {activeTab === 'settings' && <SettingsPanel />}

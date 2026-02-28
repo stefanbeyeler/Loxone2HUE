@@ -8,10 +8,11 @@ interface GroupListProps {
   mappings: Mapping[];
   onToggle: (id: string, on: boolean) => void;
   onActivateScene: (id: string) => void;
+  onNavigateToMapping: (mappingId: string) => void;
   title?: string;
 }
 
-export function GroupList({ groups, scenes, mappings, onToggle, onActivateScene, title }: GroupListProps) {
+export function GroupList({ groups, scenes, mappings, onToggle, onActivateScene, onNavigateToMapping, title }: GroupListProps) {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   const getGroupScenes = (groupId: string) => {
@@ -64,10 +65,14 @@ export function GroupList({ groups, scenes, mappings, onToggle, onActivateScene,
                   {(() => {
                     const groupMapping = mappings.find(m => m.hue_id === group.id && m.hue_type === 'group');
                     return groupMapping ? (
-                      <div className="flex items-center gap-1 mt-0.5">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onNavigateToMapping(groupMapping.id); }}
+                        className="flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity"
+                        title="Zum Mapping springen"
+                      >
                         <Link2 size={12} className="text-hue-orange" />
-                        <span className="text-xs text-gray-400">{groupMapping.loxone_id}</span>
-                      </div>
+                        <span className="text-xs text-hue-orange">{groupMapping.loxone_id}</span>
+                      </button>
                     ) : null;
                   })()}
                 </div>
@@ -110,9 +115,13 @@ export function GroupList({ groups, scenes, mappings, onToggle, onActivateScene,
                         {(() => {
                           const sceneMapping = mappings.find(m => m.hue_id === scene.id && m.hue_type === 'scene');
                           return sceneMapping ? (
-                            <span className="flex items-center gap-1 mt-0.5">
+                            <span
+                              onClick={(e) => { e.stopPropagation(); onNavigateToMapping(sceneMapping.id); }}
+                              className="flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity cursor-pointer"
+                              title="Zum Mapping springen"
+                            >
                               <Link2 size={10} className="text-hue-orange" />
-                              <span className="text-xs text-gray-400">{sceneMapping.loxone_id}</span>
+                              <span className="text-xs text-hue-orange">{sceneMapping.loxone_id}</span>
                             </span>
                           ) : null;
                         })()}

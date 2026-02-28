@@ -10,6 +10,7 @@ interface DeviceListProps {
   onToggle: (id: string, on: boolean) => void;
   onBrightness: (id: string, brightness: number) => void;
   onRefresh: () => void;
+  onNavigateToMapping: (mappingId: string) => void;
 }
 
 export function DeviceList({
@@ -20,6 +21,7 @@ export function DeviceList({
   onToggle,
   onBrightness,
   onRefresh,
+  onNavigateToMapping,
 }: DeviceListProps) {
   if (loading) {
     return (
@@ -105,6 +107,7 @@ export function DeviceList({
                   mapping={mappings.find(m => m.hue_id === device.id && m.hue_type === 'light')}
                   onToggle={onToggle}
                   onBrightness={onBrightness}
+                  onNavigateToMapping={onNavigateToMapping}
                 />
               ))}
             </div>
