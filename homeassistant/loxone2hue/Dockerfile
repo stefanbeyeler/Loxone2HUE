@@ -16,9 +16,10 @@ ARG TARGETARCH
 WORKDIR /build
 RUN apk add --no-cache git ca-certificates
 
-# Always clone fresh (ADD with git ref invalidates cache on new commits)
-ADD ${REPO_URL}#${REPO_BRANCH} .
-RUN ls -la cmd/gateway/
+# Fetch current commit ref to bust Docker cache on new commits
+ADD https://api.github.com/repos/stefanbeyeler/Loxone2HUE/git/refs/heads/main /tmp/git-version
+RUN git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} . && \
+    ls -la cmd/gateway/
 
 # Regenerate go.sum and download dependencies
 RUN rm -f go.sum && go mod tidy
@@ -37,9 +38,11 @@ ARG REPO_URL=https://github.com/stefanbeyeler/Loxone2HUE.git
 ARG REPO_BRANCH=main
 
 WORKDIR /build
+RUN apk add --no-cache git
 
-# Always clone fresh (ADD with git ref invalidates cache on new commits)
-ADD ${REPO_URL}#${REPO_BRANCH} .
+# Fetch current commit ref to bust Docker cache on new commits
+ADD https://api.github.com/repos/stefanbeyeler/Loxone2HUE/git/refs/heads/main /tmp/git-version
+RUN git clone --depth 1 --branch ${REPO_BRANCH} ${REPO_URL} .
 
 WORKDIR /build/web
 RUN npm ci --no-audit --no-fund 2>/dev/null && \
@@ -77,7 +80,7 @@ LABEL \
     io.hass.name="Loxone2HUE Gateway" \
     io.hass.description="Gateway für Loxone zu Philips HUE Kommunikation" \
     io.hass.type="addon" \
-    io.hass.version="1.0.33" \
+    io.hass.version="1.0.34" \
     io.hass.arch="aarch64|amd64|armv7"
 
 # Start gateway
