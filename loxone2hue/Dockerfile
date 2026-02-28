@@ -12,7 +12,7 @@ FROM golang:1.22-alpine AS go-builder
 ARG REPO_URL=https://github.com/stefanbeyeler/Loxone2HUE.git
 ARG REPO_BRANCH=main
 ARG TARGETARCH
-ARG CACHE_BUST=1.0.19
+ARG CACHE_BUST=1.0.31
 
 WORKDIR /build
 RUN apk add --no-cache git ca-certificates
@@ -37,7 +37,7 @@ FROM node:20-alpine AS web-builder
 
 ARG REPO_URL=https://github.com/stefanbeyeler/Loxone2HUE.git
 ARG REPO_BRANCH=main
-ARG CACHE_BUST=1.0.19
+ARG CACHE_BUST=1.0.31
 
 WORKDIR /build
 RUN apk add --no-cache git
@@ -82,7 +82,7 @@ LABEL \
     io.hass.name="Loxone2HUE Gateway" \
     io.hass.description="Gateway für Loxone zu Philips HUE Kommunikation" \
     io.hass.type="addon" \
-    io.hass.version="1.0.19" \
+    io.hass.version="1.0.31" \
     io.hass.arch="aarch64|amd64|armv7"
 
 # Start gateway
