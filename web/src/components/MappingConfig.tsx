@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Mapping, Light, Group, Scene } from '../types';
 import * as api from '../services/api';
-import { Link2, Plus, Trash2, Edit2, Save, X, Lightbulb, Home, Play, Copy, Check, Terminal, ExternalLink, Download, Upload, AlertCircle, FileDown } from 'lucide-react';
+import { Link2, Plus, Trash2, Edit2, Save, X, Lightbulb, Home, Play, Copy, Check, Terminal, ExternalLink, Download, Upload, AlertCircle, FileDown, ChevronUp, ChevronDown, Power } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
 interface CreateMappingPrefill {
@@ -37,6 +37,7 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [moodEnabled, setMoodEnabled] = useState(false);
+  const [moodOrder, setMoodOrder] = useState<string[]>([]);
   const mappingRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   useEffect(() => {
@@ -55,6 +56,26 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
       loxone_id: '',
     });
   }, [createPrefill]);
+
+  // Initialize mood order when mood is enabled or group changes
+  useEffect(() => {
+    if (!moodEnabled || formData.hue_type !== 'group' || !formData.hue_id) {
+      setMoodOrder([]);
+      return;
+    }
+    const groupScenes = scenes
+      .filter((s) => s.group_id === formData.hue_id)
+      .sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    setMoodOrder(groupScenes.map((s) => s.id));
+  }, [moodEnabled, formData.hue_id, formData.hue_type, scenes]);
+
+  const moveMoodScene = (index: number, direction: 'up' | 'down') => {
+    const newOrder = [...moodOrder];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newOrder.length) return;
+    [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
+    setMoodOrder(newOrder);
+  };
 
   // Scroll to and highlight a specific mapping when navigated from another tab
   useEffect(() => {
@@ -101,15 +122,30 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
 
       // Auto-create mood scene mappings if enabled
       if (moodEnabled && formData.hue_type === 'group') {
-        const groupScenes = scenes
-          .filter((s) => s.group_id === formData.hue_id)
-          .sort((a, b) => a.name.localeCompare(b.name, 'de'));
-        for (let i = 0; i < groupScenes.length; i++) {
+        // Mood 0: Turn off all lights in group
+        try {
+          const mood0Mapping = await api.createMapping({
+            name: `${formData.name} - Alle Lichter aus`,
+            loxone_id: `${formData.loxone_id}_mood_0`,
+            hue_id: formData.hue_id,
+            hue_type: 'group',
+            enabled: true,
+            description: `Mood 0 für ${formData.name} (Gruppe ausschalten)`,
+          });
+          newMappings.push(mood0Mapping);
+        } catch (err) {
+          console.error('Failed to create mood 0 mapping:', err);
+        }
+
+        // Mood 1..N: scenes in user-defined order
+        for (let i = 0; i < moodOrder.length; i++) {
+          const scene = scenes.find((s) => s.id === moodOrder[i]);
+          if (!scene) continue;
           try {
             const moodMapping = await api.createMapping({
-              name: `${formData.name} - ${groupScenes[i].name}`,
+              name: `${formData.name} - ${scene.name}`,
               loxone_id: `${formData.loxone_id}_mood_${i + 1}`,
-              hue_id: groupScenes[i].id,
+              hue_id: scene.id,
               hue_type: 'scene',
               enabled: true,
               description: `Mood ${i + 1} für ${formData.name}`,
@@ -125,6 +161,7 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
       setShowAdd(false);
       setFormData({});
       setMoodEnabled(false);
+      setMoodOrder([]);
       onCreatePrefillConsumed?.();
     } catch (error) {
       console.error('Failed to create mapping:', error);
@@ -871,19 +908,49 @@ export function MappingConfig({ lights, groups, scenes, highlightMappingId, onHi
               </label>
               {moodEnabled && formData.loxone_id && (
                 <div className="mt-2 space-y-1">
-                  <p className="text-xs text-gray-400">Folgende Szenen-Mappings werden erstellt:</p>
-                  {scenes
-                    .filter((s) => s.group_id === formData.hue_id)
-                    .sort((a, b) => a.name.localeCompare(b.name, 'de'))
-                    .map((s, idx) => (
-                      <div key={s.id} className="flex items-center gap-2 text-xs">
+                  <p className="text-xs text-gray-400">Folgende Mood-Mappings werden erstellt:</p>
+                  {/* Mood 0 - fixed, always first */}
+                  <div className="flex items-center gap-2 text-xs bg-gray-600/30 rounded px-2 py-1.5">
+                    <Power size={10} className="text-red-400 flex-shrink-0" />
+                    <span className="text-gray-300">Alle Lichter aus</span>
+                    <span className="text-gray-500">&rarr;</span>
+                    <code className="text-red-400 font-mono">{formData.loxone_id}_mood_0</code>
+                    <span className="ml-auto text-gray-500 text-[10px]">Gruppe aus</span>
+                  </div>
+                  {/* Mood 1..N - reorderable scenes */}
+                  {moodOrder.map((sceneId, idx) => {
+                    const scene = scenes.find((s) => s.id === sceneId);
+                    if (!scene) return null;
+                    return (
+                      <div key={sceneId} className="flex items-center gap-2 text-xs bg-gray-600/30 rounded px-2 py-1.5">
+                        <div className="flex flex-col gap-0">
+                          <button
+                            type="button"
+                            onClick={() => moveMoodScene(idx, 'up')}
+                            disabled={idx === 0}
+                            className={`p-0 leading-none ${idx === 0 ? 'text-gray-600' : 'text-gray-400 hover:text-white'}`}
+                            title="Nach oben"
+                          >
+                            <ChevronUp size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveMoodScene(idx, 'down')}
+                            disabled={idx === moodOrder.length - 1}
+                            className={`p-0 leading-none ${idx === moodOrder.length - 1 ? 'text-gray-600' : 'text-gray-400 hover:text-white'}`}
+                            title="Nach unten"
+                          >
+                            <ChevronDown size={12} />
+                          </button>
+                        </div>
                         <Play size={10} className="text-hue-orange flex-shrink-0" />
-                        <span className="text-gray-300">{s.name}</span>
+                        <span className="text-gray-300">{scene.name}</span>
                         <span className="text-gray-500">&rarr;</span>
                         <code className="text-hue-orange font-mono">{formData.loxone_id}_mood_{idx + 1}</code>
                       </div>
-                    ))}
-                  {scenes.filter((s) => s.group_id === formData.hue_id).length === 0 && (
+                    );
+                  })}
+                  {moodOrder.length === 0 && (
                     <p className="text-xs text-gray-500">Keine Szenen für diese Gruppe gefunden</p>
                   )}
                 </div>
