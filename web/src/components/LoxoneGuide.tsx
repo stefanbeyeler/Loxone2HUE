@@ -838,11 +838,15 @@ export function LoxoneGuide() {
           </li>
           <li className="flex items-start gap-3">
             <div className="w-5 h-5 rounded border-2 border-gray-600 flex-shrink-0 mt-0.5"></div>
-            <span>Virtueller Ausgang in Loxone Config erstellt</span>
+            <span>UDP-Feedback aktiviert (Einstellungen: IP + Port konfiguriert)</span>
           </li>
           <li className="flex items-start gap-3">
             <div className="w-5 h-5 rounded border-2 border-gray-600 flex-shrink-0 mt-0.5"></div>
-            <span>Virtuelle Ausgang-Befehle mit korrekten Loxone IDs konfiguriert</span>
+            <span>XML-Vorlagen exportiert (Einstellungen → Loxone Config Export)</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <div className="w-5 h-5 rounded border-2 border-gray-600 flex-shrink-0 mt-0.5"></div>
+            <span>XML in Loxone Config importiert (Gerätevorlagen → Vorlage importieren)</span>
           </li>
           <li className="flex items-start gap-3">
             <div className="w-5 h-5 rounded border-2 border-gray-600 flex-shrink-0 mt-0.5"></div>
