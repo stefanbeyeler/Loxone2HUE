@@ -169,6 +169,28 @@ export async function updateConfig(update: { loxone?: LoxoneConfig }): Promise<{
   });
 }
 
+// Logs
+export interface LogEntry {
+  timestamp: string;
+  level: string;
+  message: string;
+  source: string;
+  fields?: Record<string, unknown>;
+}
+
+export async function getLogs(params?: {
+  level?: string;
+  search?: string;
+  limit?: number;
+}): Promise<{ entries: LogEntry[] }> {
+  const query = new URLSearchParams();
+  if (params?.level) query.set('level', params.level);
+  if (params?.search) query.set('search', params.search);
+  if (params?.limit) query.set('limit', String(params.limit));
+  const qs = query.toString();
+  return fetchJSON(`${API_BASE}/logs${qs ? `?${qs}` : ''}`);
+}
+
 // Health check
 export async function getHealth(): Promise<{ status: string; hue_configured: boolean }> {
   return fetchJSON(`${API_BASE}/health`);
