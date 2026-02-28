@@ -1,19 +1,16 @@
 import { useState } from 'react';
-import { Group, Scene, Mapping } from '../types';
-import { Home, Layers, Power, Play, Link2, Plus } from 'lucide-react';
+import { Group, Scene } from '../types';
+import { Home, Layers, Power, Play } from 'lucide-react';
 
 interface GroupListProps {
   groups: Group[];
   scenes: Scene[];
-  mappings: Mapping[];
   onToggle: (id: string, on: boolean) => void;
   onActivateScene: (id: string) => void;
-  onNavigateToMapping: (mappingId: string) => void;
-  onCreateMapping: (prefill: { hue_id: string; hue_type: string; name: string }) => void;
   title?: string;
 }
 
-export function GroupList({ groups, scenes, mappings, onToggle, onActivateScene, onNavigateToMapping, onCreateMapping, title }: GroupListProps) {
+export function GroupList({ groups, scenes, onToggle, onActivateScene, title }: GroupListProps) {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
   const getGroupScenes = (groupId: string) => {
@@ -63,28 +60,6 @@ export function GroupList({ groups, scenes, mappings, onToggle, onActivateScene,
                     {group.lights.length} Geräte • {groupScenes.length} Szenen
                   </p>
                   <p className="text-xs text-gray-500 font-mono">{group.id}</p>
-                  {(() => {
-                    const groupMapping = mappings.find(m => m.hue_id === group.id && m.hue_type === 'group');
-                    return groupMapping ? (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onNavigateToMapping(groupMapping.id); }}
-                        className="flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity"
-                        title="Zum Mapping springen"
-                      >
-                        <Link2 size={12} className="text-hue-orange" />
-                        <span className="text-xs text-hue-orange">{groupMapping.loxone_id}</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onCreateMapping({ hue_id: group.id, hue_type: 'group', name: group.name }); }}
-                        className="flex items-center gap-1 mt-0.5 text-gray-500 hover:text-hue-orange transition-colors"
-                        title="Mapping erstellen"
-                      >
-                        <Plus size={12} />
-                        <span className="text-xs">Mapping erstellen</span>
-                      </button>
-                    );
-                  })()}
                 </div>
               </div>
 
@@ -122,28 +97,6 @@ export function GroupList({ groups, scenes, mappings, onToggle, onActivateScene,
                       <div className="min-w-0">
                         <span className="text-sm text-white truncate block">{scene.name}</span>
                         <span className="text-xs text-gray-500 font-mono truncate block">{scene.id}</span>
-                        {(() => {
-                          const sceneMapping = mappings.find(m => m.hue_id === scene.id && m.hue_type === 'scene');
-                          return sceneMapping ? (
-                            <span
-                              onClick={(e) => { e.stopPropagation(); onNavigateToMapping(sceneMapping.id); }}
-                              className="flex items-center gap-1 mt-0.5 hover:opacity-80 transition-opacity cursor-pointer"
-                              title="Zum Mapping springen"
-                            >
-                              <Link2 size={10} className="text-hue-orange" />
-                              <span className="text-xs text-hue-orange">{sceneMapping.loxone_id}</span>
-                            </span>
-                          ) : (
-                            <span
-                              onClick={(e) => { e.stopPropagation(); onCreateMapping({ hue_id: scene.id, hue_type: 'scene', name: scene.name }); }}
-                              className="flex items-center gap-1 mt-0.5 text-gray-500 hover:text-hue-orange transition-colors cursor-pointer"
-                              title="Mapping erstellen"
-                            >
-                              <Plus size={10} />
-                              <span className="text-xs">Mapping</span>
-                            </span>
-                          );
-                        })()}
                       </div>
                     </button>
                   ))}

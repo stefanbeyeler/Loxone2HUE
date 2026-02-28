@@ -7,7 +7,6 @@ import { MappingConfig } from './MappingConfig';
 import { LoxoneGuide } from './LoxoneGuide';
 import { SettingsPanel } from './SettingsPanel';
 import * as api from '../services/api';
-import { Mapping } from '../types';
 import {
   Lightbulb,
   Home,
@@ -39,9 +38,6 @@ export function Dashboard() {
   const [bridgeIP, setBridgeIP] = useState<string | null>(null);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(10);
   const [showIntervalMenu, setShowIntervalMenu] = useState(false);
-  const [mappings, setMappings] = useState<Mapping[]>([]);
-  const [highlightMappingId, setHighlightMappingId] = useState<string | null>(null);
-  const [createMappingPrefill, setCreateMappingPrefill] = useState<{ hue_id: string; hue_type: string; name: string } | null>(null);
   const intervalMenuRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -69,16 +65,7 @@ export function Dashboard() {
         console.error('Failed to fetch bridge info:', err);
       }
     };
-    const fetchMappings = async () => {
-      try {
-        const data = await api.getMappings();
-        setMappings(data.mappings || []);
-      } catch (err) {
-        console.error('Failed to fetch mappings:', err);
-      }
-    };
     fetchBridgeInfo();
-    fetchMappings();
   }, []);
 
   // Auto-refresh
@@ -122,16 +109,6 @@ export function Dashboard() {
     setGroupState(id, on);
   };
 
-  const navigateToMapping = (mappingId: string) => {
-    setHighlightMappingId(mappingId);
-    setActiveTab('mappings');
-  };
-
-  const navigateToCreateMapping = (prefill: { hue_id: string; hue_type: string; name: string }) => {
-    setCreateMappingPrefill(prefill);
-    setActiveTab('mappings');
-  };
-
   const navigateToHueElement = (hueId: string, hueType: string) => {
     if (hueType === 'light') {
       setActiveTab('devices');
@@ -140,15 +117,6 @@ export function Dashboard() {
       setActiveTab(group?.type === 'zone' ? 'zones' : 'rooms');
     } else if (hueType === 'scene') {
       setActiveTab('scenes');
-    }
-  };
-
-  const refreshMappings = async () => {
-    try {
-      const data = await api.getMappings();
-      setMappings(data.mappings || []);
-    } catch (err) {
-      console.error('Failed to refresh mappings:', err);
     }
   };
 
@@ -339,13 +307,10 @@ export function Dashboard() {
           <DeviceList
             devices={lights}
             groups={groups}
-            mappings={mappings}
             loading={loading}
             onToggle={handleLightToggle}
             onBrightness={handleLightBrightness}
             onRefresh={refresh}
-            onNavigateToMapping={navigateToMapping}
-            onCreateMapping={navigateToCreateMapping}
           />
         )}
 
@@ -353,11 +318,8 @@ export function Dashboard() {
           <GroupList
             groups={rooms}
             scenes={scenes}
-            mappings={mappings}
             onToggle={handleGroupToggle}
             onActivateScene={activateScene}
-            onNavigateToMapping={navigateToMapping}
-            onCreateMapping={navigateToCreateMapping}
             title="Räume"
           />
         )}
@@ -366,11 +328,8 @@ export function Dashboard() {
           <GroupList
             groups={zones}
             scenes={scenes}
-            mappings={mappings}
             onToggle={handleGroupToggle}
             onActivateScene={activateScene}
-            onNavigateToMapping={navigateToMapping}
-            onCreateMapping={navigateToCreateMapping}
             title="Zonen"
           />
         )}
@@ -379,10 +338,7 @@ export function Dashboard() {
           <SceneList
             scenes={scenes}
             groups={groups}
-            mappings={mappings}
             onActivateScene={activateScene}
-            onNavigateToMapping={navigateToMapping}
-            onCreateMapping={navigateToCreateMapping}
           />
         )}
 
@@ -391,10 +347,6 @@ export function Dashboard() {
             lights={lights}
             groups={groups}
             scenes={scenes}
-            highlightMappingId={highlightMappingId}
-            onHighlightConsumed={() => setHighlightMappingId(null)}
-            createPrefill={createMappingPrefill}
-            onCreatePrefillConsumed={() => { setCreateMappingPrefill(null); refreshMappings(); }}
             onNavigateToHueElement={navigateToHueElement}
           />
         )}
