@@ -1,4 +1,5 @@
 import { Light, Group, Scene, Mapping, BridgeInfo, DeviceCommand } from '../types';
+export type { Mapping };
 
 const API_BASE = './api';
 
