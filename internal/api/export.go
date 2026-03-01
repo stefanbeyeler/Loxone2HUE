@@ -155,8 +155,9 @@ func (h *Handlers) ExportVirtualOutputs(w http.ResponseWriter, r *http.Request) 
 
 	// Detect mood base names and collect non-mood mappings
 	type moodGroup struct {
-		BaseName string
-		Count    int
+		BaseName  string
+		GroupName string // display name from the base group mapping
+		Count     int   // number of scene moods (excluding mood_0)
 	}
 	moodGroups := make(map[string]*moodGroup)
 	var directMappings []models.Mapping
@@ -167,13 +168,31 @@ func (h *Handlers) ExportVirtualOutputs(w http.ResponseWriter, r *http.Request) 
 		}
 		if matches := moodPattern.FindStringSubmatch(m.LoxoneID); matches != nil {
 			baseName := matches[1]
+			moodNum := matches[2]
 			if mg, ok := moodGroups[baseName]; ok {
-				mg.Count++
+				if moodNum != "0" {
+					mg.Count++
+				}
 			} else {
-				moodGroups[baseName] = &moodGroup{BaseName: baseName, Count: 1}
+				count := 0
+				if moodNum != "0" {
+					count = 1
+				}
+				moodGroups[baseName] = &moodGroup{BaseName: baseName, Count: count}
 			}
 		} else {
 			directMappings = append(directMappings, m)
+			// If this mapping is a base group for mood entries, store its display name
+			if mg, ok := moodGroups[m.LoxoneID]; ok {
+				mg.GroupName = m.Name
+			}
+		}
+	}
+
+	// Second pass: resolve group names for mood groups that appeared before their base mapping
+	for _, m := range directMappings {
+		if mg, ok := moodGroups[m.LoxoneID]; ok && mg.GroupName == "" {
+			mg.GroupName = m.Name
 		}
 	}
 
@@ -196,15 +215,18 @@ func (h *Handlers) ExportVirtualOutputs(w http.ResponseWriter, r *http.Request) 
 	// Mood commands (0=Aus, 1-N=Szene)
 	for _, baseName := range moodBaseNames {
 		mg := moodGroups[baseName]
-		title := strings.ReplaceAll(baseName, "_", " ")
-		// Capitalize first letter of each word
-		words := strings.Fields(title)
-		for i, w := range words {
-			if len(w) > 0 {
-				words[i] = strings.ToUpper(w[:1]) + w[1:]
+		title := mg.GroupName
+		if title == "" {
+			// Fallback: derive from LoxoneID
+			title = strings.ReplaceAll(baseName, "_", " ")
+			words := strings.Fields(title)
+			for i, w := range words {
+				if len(w) > 0 {
+					words[i] = strings.ToUpper(w[:1]) + w[1:]
+				}
 			}
+			title = strings.Join(words, " ")
 		}
-		title = strings.Join(words, " ")
 
 		comment := fmt.Sprintf("Mood: 0=Aus, 1-%d=Szene", mg.Count)
 		fmt.Fprintf(&buf, "\t<VirtualOutCmd Title=\"%s (Mood)\" Comment=\"%s\" CmdOnMethod=\"GET\" CmdOn=\"/ws?cmd=MOOD %s &lt;v&gt;\" CmdOnHTTP=\"\" CmdOnPost=\"\" CmdOffMethod=\"GET\" CmdOff=\"\" CmdOffHTTP=\"\" CmdOffPost=\"\" CmdAnswer=\"\" HintText=\"\" Analog=\"true\" Repeat=\"0\" RepeatRate=\"0\"/>%s",
