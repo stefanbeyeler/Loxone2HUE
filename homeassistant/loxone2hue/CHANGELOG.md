@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.6
+
+- Loxone Config Export: Mood-Titel verwendet jetzt den Mapping-Namen mit korrekten Umlauten (statt abgeleiteter LoxoneID)
+- Loxone Config Export: Szenen-Zählung im Mood-Kommentar korrigiert (mood_0 wird nicht mehr als Szene gezählt)
+
 ## 1.1.5
 
 - Loxone Config Export: Sonderzeichen (Umlaute ä, ö, ü etc.) werden als XML-Entities kodiert für fehlerfreien Import
