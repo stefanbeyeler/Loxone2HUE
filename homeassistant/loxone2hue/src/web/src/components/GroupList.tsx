@@ -114,6 +114,7 @@ export function GroupList({ groups, scenes, onToggle, onActivateScene, title, ma
                   <UdpInfoSection
                     loxoneId={loxoneId}
                     properties={getGroupUdpProperties(loxoneId)}
+                    miniserverId={mapping?.miniserver_id}
                   />
                 </div>
               );

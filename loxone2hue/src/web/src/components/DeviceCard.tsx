@@ -130,6 +130,7 @@ export function DeviceCard({ device, onToggle, onBrightness, mapping, udpSendAll
           <UdpInfoSection
             loxoneId={loxoneId}
             properties={getUdpProperties(loxoneId, device.capabilities)}
+            miniserverId={mapping?.miniserver_id}
           />
         );
       })()}

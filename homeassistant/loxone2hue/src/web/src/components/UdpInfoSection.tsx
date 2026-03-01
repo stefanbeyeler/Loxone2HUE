@@ -194,7 +194,7 @@ export function UdpInfoSection({ loxoneId, properties, miniserverId }: UdpInfoSe
         </div>
       )}
 
-      <div className="bg-gray-900 rounded-lg overflow-hidden">
+      <div className="bg-gray-900 rounded-lg overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
             <tr className="text-gray-500 border-b border-gray-800">
