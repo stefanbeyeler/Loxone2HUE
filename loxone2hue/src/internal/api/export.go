@@ -239,7 +239,7 @@ func (h *Handlers) ExportVirtualOutputs(w http.ResponseWriter, r *http.Request) 
 	for _, m := range directMappings {
 		switch m.HueType {
 		case "light", "group":
-			fmt.Fprintf(&buf, "\t<VirtualOutCmd Title=\"%s\" Comment=\"%s\" CmdOnMethod=\"GET\" CmdOn=\"/ws?cmd=SET %s BRI &lt;v&gt;\" CmdOnHTTP=\"\" CmdOnPost=\"\" CmdOffMethod=\"GET\" CmdOff=\"\" CmdOffHTTP=\"\" CmdOffPost=\"\" CmdAnswer=\"\" HintText=\"\" Analog=\"true\" Repeat=\"0\" RepeatRate=\"0\"/>%s",
+			fmt.Fprintf(&buf, "\t<VirtualOutCmd Title=\"%s (Br)\" Comment=\"%s\" CmdOnMethod=\"GET\" CmdOn=\"/ws?cmd=SET %s BRI &lt;v&gt;\" CmdOnHTTP=\"\" CmdOnPost=\"\" CmdOffMethod=\"GET\" CmdOff=\"\" CmdOffHTTP=\"\" CmdOffPost=\"\" CmdAnswer=\"\" HintText=\"\" Analog=\"true\" Repeat=\"0\" RepeatRate=\"0\"/>%s",
 				xmlAttr(m.Name), xmlAttr(m.Description), xmlAttr(m.LoxoneID), nl)
 		}
 	}
