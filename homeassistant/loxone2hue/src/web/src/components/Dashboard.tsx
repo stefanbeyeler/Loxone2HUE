@@ -53,7 +53,7 @@ export function Dashboard() {
     activateScene,
   } = useHueDevices();
 
-  // Fetch bridge IP on mount
+  // Fetch bridge IP and mappings on mount
   useEffect(() => {
     const fetchBridgeInfo = async () => {
       try {
@@ -107,6 +107,17 @@ export function Dashboard() {
 
   const handleGroupToggle = (id: string, on: boolean) => {
     setGroupState(id, on);
+  };
+
+  const navigateToHueElement = (hueId: string, hueType: string) => {
+    if (hueType === 'light') {
+      setActiveTab('devices');
+    } else if (hueType === 'group') {
+      const group = groups.find((g) => g.id === hueId);
+      setActiveTab(group?.type === 'zone' ? 'zones' : 'rooms');
+    } else if (hueType === 'scene') {
+      setActiveTab('scenes');
+    }
   };
 
   // Separate rooms and zones
@@ -332,7 +343,12 @@ export function Dashboard() {
         )}
 
         {activeTab === 'mappings' && (
-          <MappingConfig lights={lights} groups={groups} scenes={scenes} />
+          <MappingConfig
+            lights={lights}
+            groups={groups}
+            scenes={scenes}
+            onNavigateToHueElement={navigateToHueElement}
+          />
         )}
 
         {activeTab === 'settings' && <SettingsPanel />}

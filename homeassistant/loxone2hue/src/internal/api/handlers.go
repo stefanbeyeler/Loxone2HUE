@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,6 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/sbeyeler/loxone2hue/internal/config"
 	"github.com/sbeyeler/loxone2hue/internal/hue"
+	"github.com/sbeyeler/loxone2hue/internal/logging"
 	"github.com/sbeyeler/loxone2hue/internal/loxone"
 	"github.com/sbeyeler/loxone2hue/internal/models"
 )
@@ -484,6 +486,25 @@ func (h *Handlers) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// GetLogs returns recent log entries from the in-memory buffer
+func (h *Handlers) GetLogs(w http.ResponseWriter, r *http.Request) {
+	level := r.URL.Query().Get("level")
+	search := r.URL.Query().Get("search")
+	limitStr := r.URL.Query().Get("limit")
+
+	limit := 200
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	entries := logging.Buffer.GetEntries(level, search, limit)
+	jsonResponse(w, http.StatusOK, map[string]interface{}{
+		"entries": entries,
+	})
 }
 
 // MappingsBackup represents a backup of mappings

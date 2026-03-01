@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,6 +14,7 @@ import (
 	"github.com/sbeyeler/loxone2hue/internal/api"
 	"github.com/sbeyeler/loxone2hue/internal/config"
 	"github.com/sbeyeler/loxone2hue/internal/hue"
+	"github.com/sbeyeler/loxone2hue/internal/logging"
 	"github.com/sbeyeler/loxone2hue/internal/loxone"
 )
 
@@ -117,12 +119,17 @@ func setupLogging(level, format string) {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
-	// Set log format
+	// The log buffer always receives JSON, so we create a JSON writer for it.
+	// For stdout, we use the configured format.
+	var stdoutWriter io.Writer = os.Stdout
 	if format == "console" || format == "text" {
-		log.Logger = log.Output(zerolog.ConsoleWriter{
+		stdoutWriter = zerolog.ConsoleWriter{
 			Out:        os.Stdout,
 			TimeFormat: time.RFC3339,
-		})
+		}
 	}
-	// Default is JSON format (zerolog default)
+
+	// MultiWriter: stdout (human-readable or JSON) + in-memory buffer (always JSON)
+	multi := io.MultiWriter(stdoutWriter, logging.Buffer)
+	log.Logger = zerolog.New(multi).With().Timestamp().Logger()
 }

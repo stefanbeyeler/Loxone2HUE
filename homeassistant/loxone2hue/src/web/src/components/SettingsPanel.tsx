@@ -1,7 +1,26 @@
-import { useState, useEffect } from 'react';
-import { Settings, Radio, Save, CheckCircle, AlertCircle, Download, FileDown } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Settings, Radio, Save, CheckCircle, AlertCircle, ScrollText, Search, RefreshCw } from 'lucide-react';
 import * as api from '../services/api';
-import type { UDPFeedbackConfig, LoxoneConfig } from '../services/api';
+import type { UDPFeedbackConfig, LoxoneConfig, LogEntry } from '../services/api';
+
+const LEVEL_STYLES: Record<string, string> = {
+  DEBUG: 'bg-gray-600 text-gray-200',
+  INFO: 'bg-blue-900/80 text-blue-300',
+  WARN: 'bg-yellow-900/80 text-yellow-300',
+  ERROR: 'bg-red-900/80 text-red-300',
+  FATAL: 'bg-red-800 text-red-200',
+};
+
+const LEVEL_FILTERS = ['Alle', 'DEBUG', 'INFO', 'WARN', 'ERROR'] as const;
+
+function formatTimestamp(ts: string): string {
+  const d = new Date(ts);
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const s = String(d.getSeconds()).padStart(2, '0');
+  const ms = String(d.getMilliseconds()).padStart(3, '0');
+  return `${h}:${m}:${s}.${ms}`;
+}
 
 export function SettingsPanel() {
   const [loxoneConfig, setLoxoneConfig] = useState<LoxoneConfig>({
@@ -17,9 +36,47 @@ export function SettingsPanel() {
   const [saveResult, setSaveResult] = useState<'success' | 'error' | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Server logs state
+  const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
+  const [logLevel, setLogLevel] = useState<string>('');
+  const [logSearch, setLogSearch] = useState('');
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const logContainerRef = useRef<HTMLDivElement>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+
   useEffect(() => {
     loadConfig();
   }, []);
+
+  const loadLogs = useCallback(async () => {
+    try {
+      setLogsLoading(true);
+      const result = await api.getLogs({
+        level: logLevel || undefined,
+        search: logSearch || undefined,
+        limit: 200,
+      });
+      setLogEntries(result.entries || []);
+    } catch (err) {
+      console.error('Failed to load logs:', err);
+    } finally {
+      setLogsLoading(false);
+    }
+  }, [logLevel, logSearch]);
+
+  useEffect(() => {
+    loadLogs();
+  }, [loadLogs]);
+
+  useEffect(() => {
+    if (autoRefresh) {
+      intervalRef.current = setInterval(loadLogs, 3000);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [autoRefresh, loadLogs]);
 
   const loadConfig = async () => {
     try {
@@ -198,65 +255,102 @@ export function SettingsPanel() {
         )}
       </div>
 
-      {/* Loxone Config XML Export */}
+      {/* Server Logs */}
       <div className="bg-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
-          <Download size={20} className="text-hue-orange" />
-          <h3 className="text-lg font-medium text-white">Loxone Config Export</h3>
+          <ScrollText size={20} className="text-hue-orange" />
+          <h3 className="text-lg font-medium text-white">Server Logs</h3>
         </div>
-        <p className="text-sm text-gray-400">
-          XML-Vorlagen zum Import in Loxone Config. Unter
-          <span className="text-gray-300"> Gerätevorlagen &rarr; Vorlage importieren</span> laden.
-        </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Virtual UDP Input */}
-          <div className="bg-gray-700/50 rounded-lg p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <FileDown size={16} className="text-hue-orange" />
-              <h4 className="text-sm font-medium text-white">Virtual UDP Input</h4>
-            </div>
-            <p className="text-xs text-gray-400">
-              Empfängt Status-Feedback (On/Off, Helligkeit, Farbtemperatur, Farbe) für gemappte Geräte.
-            </p>
-            <div className="flex flex-col gap-2">
-              <a
-                href="./api/export/inputs"
-                download="loxone2hue_inputs.xml"
-                className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-              >
-                <Download size={14} />
-                Gemappte Geräte
-              </a>
-              <a
-                href="./api/export/inputs?all=true"
-                download="loxone2hue_inputs_all.xml"
-                className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-              >
-                <Download size={14} />
-                Alle HUE-Geräte
-              </a>
-            </div>
-          </div>
-
-          {/* Virtual HTTP Output */}
-          <div className="bg-gray-700/50 rounded-lg p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <FileDown size={16} className="text-hue-orange" />
-              <h4 className="text-sm font-medium text-white">Virtual HTTP Output</h4>
-            </div>
-            <p className="text-xs text-gray-400">
-              Steuert HUE-Geräte von Loxone aus (Mood-Befehle, Helligkeit). Basierend auf den Mappings.
-            </p>
-            <a
-              href="./api/export/outputs"
-              download="loxone2hue_outputs.xml"
-              className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+        {/* Filter bar */}
+        <div className="flex flex-wrap items-center gap-2">
+          {LEVEL_FILTERS.map((lvl) => (
+            <button
+              key={lvl}
+              onClick={() => setLogLevel(lvl === 'Alle' ? '' : lvl)}
+              className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                (lvl === 'Alle' && logLevel === '') || logLevel === lvl
+                  ? 'bg-hue-orange text-gray-900'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
             >
-              <Download size={14} />
-              Ausgänge exportieren
-            </a>
+              {lvl}
+            </button>
+          ))}
+
+          <div className="relative flex-1 min-w-[200px]">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              type="text"
+              value={logSearch}
+              onChange={(e) => setLogSearch(e.target.value)}
+              placeholder="Suche (z.B. 'EventStream')..."
+              className="w-full bg-gray-700 text-white rounded-lg pl-9 pr-4 py-1.5 text-sm border border-gray-600 focus:border-hue-orange focus:outline-none placeholder-gray-500"
+            />
           </div>
+
+          <button
+            onClick={() => setAutoRefresh(!autoRefresh)}
+            title={autoRefresh ? 'Auto-Refresh aktiv (3s)' : 'Auto-Refresh aus'}
+            className={`p-1.5 rounded-md transition-colors ${
+              autoRefresh
+                ? 'bg-hue-orange/20 text-hue-orange'
+                : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+            }`}
+          >
+            <RefreshCw size={16} className={autoRefresh ? 'animate-spin [animation-duration:3s]' : ''} />
+          </button>
+        </div>
+
+        {/* Log entries */}
+        <div
+          ref={logContainerRef}
+          className="bg-gray-900 rounded-lg border border-gray-700 overflow-auto max-h-[420px] font-mono text-[13px] leading-relaxed"
+        >
+          {logsLoading && logEntries.length === 0 ? (
+            <div className="text-gray-500 text-center py-8 text-sm">Lade Logs...</div>
+          ) : logEntries.length === 0 ? (
+            <div className="text-gray-500 text-center py-8 text-sm">Keine Log-Einträge gefunden</div>
+          ) : (
+            <table className="w-full">
+              <tbody>
+                {logEntries.map((entry, i) => (
+                  <tr
+                    key={i}
+                    className="border-b border-gray-800/50 last:border-0 hover:bg-gray-800/40"
+                  >
+                    <td className="px-3 py-1 text-gray-500 whitespace-nowrap align-top">
+                      {formatTimestamp(entry.timestamp)}
+                    </td>
+                    <td className="px-1 py-1 whitespace-nowrap align-top">
+                      <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider bg-gray-700 text-gray-400">
+                        {entry.source}
+                      </span>
+                    </td>
+                    <td className="px-1 py-1 whitespace-nowrap align-top">
+                      <span
+                        className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider ${
+                          LEVEL_STYLES[entry.level] || 'bg-gray-600 text-gray-300'
+                        }`}
+                      >
+                        {entry.level}
+                      </span>
+                    </td>
+                    <td className="px-3 py-1 text-gray-300 break-all">
+                      {entry.message}
+                      {entry.fields && Object.keys(entry.fields).length > 0 && (
+                        <span className="text-gray-500 ml-2">
+                          {Object.entries(entry.fields)
+                            .map(([k, v]) => `${k}=${typeof v === 'object' ? JSON.stringify(v) : v}`)
+                            .join(' ')}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

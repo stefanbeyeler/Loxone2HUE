@@ -15,24 +15,80 @@ logging:
     level: debug
     format: json
 mappings:
-    - id: a09b46de-5ebc-4781-bedb-2d9a4afe2032
-      name: Buero Stefan Mood 1 (Hell)
+    - id: 0e5d9902-5bfb-4acd-8d40-d9bc9c1c7885
+      name: Esszimmer - gedimmt
+      loxoneid: esszimmer_mood_2
+      hueid: 629a4ea9-9367-4546-9a23-47c1813ea481
+      huetype: scene
+      enabled: true
+      description: Gedimmt
+    - id: 3270e500-8e65-4d0a-8fca-23932faf2245
+      name: Esszimmer - Standard
+      loxoneid: esszimmer_mood_1
+      hueid: 651b5bed-b6e1-4a4d-859f-5263ddf1d6b7
+      huetype: scene
+      enabled: true
+      description: Default
+    - id: 9fae4f12-d25b-4015-a046-5ed80aa39eb6
+      name: Wohnzimmer - fernsehen
+      loxoneid: wohnzimmer_mood_1
+      hueid: f254aa3a-74f6-4a1b-baa0-8199cb0e805a
+      huetype: scene
+      enabled: true
+      description: Fernsehen
+    - id: b3eaca59-9772-4f27-9c83-4fcbf9a35d5d
+      name: Wohnzimmer - entspannen
+      loxoneid: wohnzimmer_mood_2
+      hueid: 621e4c7f-982c-4ea3-847f-7832444d8d34
+      huetype: scene
+      enabled: true
+      description: ""
+    - id: b6eaf813-5794-4f52-ad8f-dd43aaf20ede
+      name: Wohnzimmer- hell
+      loxoneid: wohnzimmer_mood_3
+      hueid: c5d85fd1-98ac-4d25-a885-806c0eed0604
+      huetype: scene
+      enabled: true
+      description: ""
+    - id: 0badbff5-eb6e-4bb6-9398-a9efa0deffad
+      name: Büro Stefan
+      loxoneid: buero_stefan
+      hueid: 03091793-bb9e-44d3-a642-cf1b9e80b84c
+      huetype: group
+      enabled: true
+      description: ""
+    - id: 3062e59e-b937-4303-99d6-e0d0c8b1f0af
+      name: Büro Stefan - Alle Lichter aus
+      loxoneid: buero_stefan_mood_0
+      hueid: 03091793-bb9e-44d3-a642-cf1b9e80b84c
+      huetype: group
+      enabled: true
+      description: Mood 0 für Büro Stefan (Gruppe ausschalten)
+    - id: 577aca1d-a622-464f-8944-aa8f1cbb417e
+      name: Büro Stefan - Standard
       loxoneid: buero_stefan_mood_1
-      hueid: 2b7427fa-7e26-4bda-bb69-79898dd4c859
+      hueid: a4001c7d-7f3b-443d-be06-605ed084b689
       huetype: scene
       enabled: true
-      description: Szene "Hell"
-    - id: 57f61681-6895-4998-8304-bda730283806
-      name: Buero Stefan Mood 2 (Kontentration)
+      description: Mood 1 für Büro Stefan
+    - id: 3d971174-4dc0-4c68-aa1c-4965a18692b9
+      name: Büro Stefan - Energie tanken
       loxoneid: buero_stefan_mood_2
-      hueid: ee4fd19a-3ee6-4139-8627-af3345705de4
+      hueid: 9ee25b19-1aa8-4a9a-a366-59f2c6937ff3
       huetype: scene
       enabled: true
-      description: Szene "Kontentration"
-    - id: 45111d22-1e79-4a27-bf62-afd0033d4d2a
-      name: Buero Stefan Mood 3 (Gedimmt)
+      description: Mood 2 für Büro Stefan
+    - id: 7519f9a8-8624-4054-bf9b-d35f6e264614
+      name: Büro Stefan - Entspannen
       loxoneid: buero_stefan_mood_3
-      hueid: a508f2df-4858-4330-a852-8a2c29c20a48
+      hueid: 1120ef17-63d7-4b4d-bffa-b283a599a2eb
       huetype: scene
       enabled: true
-      description: Szene "Gedimmt"
+      description: Mood 3 für Büro Stefan
+    - id: 334262c6-a082-4a68-a8cc-859222d32e0d
+      name: Büro Stefan - Ruhephase
+      loxoneid: buero_stefan_mood_4
+      hueid: 7e1c4bca-69b6-48fc-9e13-b6a6cff092a2
+      huetype: scene
+      enabled: true
+      description: Mood 4 für Büro Stefan
