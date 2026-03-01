@@ -98,25 +98,29 @@ func (h *Handlers) ExportVirtualInputs(w http.ResponseWriter, r *http.Request) {
 		return devices[i].LoxoneID < devices[j].LoxoneID
 	})
 
+	nl := "\r\n" // CRLF required by Loxone Config (Windows)
+
 	var buf bytes.Buffer
-	buf.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
-	fmt.Fprintf(&buf, "<VirtualInUdp Title=\"Loxone2HUE Status\" Port=\"%d\">\n", port)
+	// UTF-8 BOM required by Loxone Config
+	buf.Write([]byte{0xEF, 0xBB, 0xBF})
+	buf.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>" + nl)
+	fmt.Fprintf(&buf, "<VirtualInUdp Title=\"Loxone2HUE Status\" Comment=\"\" Address=\"\" Port=\"%d\">%s", port, nl)
 
 	for _, d := range devices {
 		name := xmlAttr(d.Name)
 		id := xmlAttr(d.LoxoneID)
 
-		fmt.Fprintf(&buf, "\t<VirtualInUdpCmd Title=\"%s On\" Check=\"%s/on:\\v\" Analog=\"true\" DefVal=\"0\" MinVal=\"0\" MaxVal=\"1\"/>\n", name, id)
-		fmt.Fprintf(&buf, "\t<VirtualInUdpCmd Title=\"%s Helligkeit\" Check=\"%s/bri:\\v\" Analog=\"true\" DefVal=\"0\" MinVal=\"0\" MaxVal=\"100\" Unit=\"&lt;v&gt; %%\"/>\n", name, id)
-		fmt.Fprintf(&buf, "\t<VirtualInUdpCmd Title=\"%s Farbtemperatur\" Check=\"%s/ct:\\v\" Analog=\"true\" DefVal=\"0\" MinVal=\"153\" MaxVal=\"500\"/>\n", name, id)
-		fmt.Fprintf(&buf, "\t<VirtualInUdpCmd Title=\"%s Farbe X\" Check=\"%s/color_x:\\v\" Analog=\"true\" DefVal=\"0\" MinVal=\"0\" MaxVal=\"1\"/>\n", name, id)
-		fmt.Fprintf(&buf, "\t<VirtualInUdpCmd Title=\"%s Farbe Y\" Check=\"%s/color_y:\\v\" Analog=\"true\" DefVal=\"0\" MinVal=\"0\" MaxVal=\"1\"/>\n", name, id)
+		fmt.Fprintf(&buf, "\t<VirtualInUdpCmd Title=\"%s On\" Comment=\"\" Address=\"\" Check=\"%s/on:\\v\" Signed=\"true\" Analog=\"true\" SourceValLow=\"0\" DestValLow=\"0\" SourceValHigh=\"1\" DestValHigh=\"1\" DefVal=\"0\" MinVal=\"0\" MaxVal=\"1\" Unit=\"&lt;v&gt;\" HintText=\"\"/>%s", name, id, nl)
+		fmt.Fprintf(&buf, "\t<VirtualInUdpCmd Title=\"%s Helligkeit\" Comment=\"\" Address=\"\" Check=\"%s/bri:\\v\" Signed=\"true\" Analog=\"true\" SourceValLow=\"0\" DestValLow=\"0\" SourceValHigh=\"100\" DestValHigh=\"100\" DefVal=\"0\" MinVal=\"0\" MaxVal=\"100\" Unit=\"&lt;v&gt; %%\" HintText=\"\"/>%s", name, id, nl)
+		fmt.Fprintf(&buf, "\t<VirtualInUdpCmd Title=\"%s Farbtemperatur\" Comment=\"\" Address=\"\" Check=\"%s/ct:\\v\" Signed=\"true\" Analog=\"true\" SourceValLow=\"153\" DestValLow=\"153\" SourceValHigh=\"500\" DestValHigh=\"500\" DefVal=\"0\" MinVal=\"153\" MaxVal=\"500\" Unit=\"&lt;v&gt;\" HintText=\"\"/>%s", name, id, nl)
+		fmt.Fprintf(&buf, "\t<VirtualInUdpCmd Title=\"%s Farbe X\" Comment=\"\" Address=\"\" Check=\"%s/color_x:\\v\" Signed=\"true\" Analog=\"true\" SourceValLow=\"0\" DestValLow=\"0\" SourceValHigh=\"1\" DestValHigh=\"1\" DefVal=\"0\" MinVal=\"0\" MaxVal=\"1\" Unit=\"&lt;v&gt;\" HintText=\"\"/>%s", name, id, nl)
+		fmt.Fprintf(&buf, "\t<VirtualInUdpCmd Title=\"%s Farbe Y\" Comment=\"\" Address=\"\" Check=\"%s/color_y:\\v\" Signed=\"true\" Analog=\"true\" SourceValLow=\"0\" DestValLow=\"0\" SourceValHigh=\"1\" DestValHigh=\"1\" DefVal=\"0\" MinVal=\"0\" MaxVal=\"1\" Unit=\"&lt;v&gt;\" HintText=\"\"/>%s", name, id, nl)
 	}
 
 	buf.WriteString("</VirtualInUdp>")
 
-	w.Header().Set("Content-Type", "text/xml")
-	w.Header().Set("Content-Disposition", "attachment; filename=\"loxone2hue_inputs.xml\"")
+	w.Header().Set("Content-Type", "text/xml; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"VIU_Loxone2HUE.xml\"")
 	w.Write(buf.Bytes())
 }
 
@@ -164,9 +168,13 @@ func (h *Handlers) ExportVirtualOutputs(w http.ResponseWriter, r *http.Request) 
 	}
 	sort.Strings(moodBaseNames)
 
+	nl := "\r\n" // CRLF required by Loxone Config (Windows)
+
 	var buf bytes.Buffer
-	buf.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
-	fmt.Fprintf(&buf, "<VirtualOut Title=\"Loxone2HUE\" Address=\"%s\" CmdInit=\"\" CloseAfterSend=\"true\" CmdSep=\";\">\n", xmlAttr(address))
+	// UTF-8 BOM required by Loxone Config
+	buf.Write([]byte{0xEF, 0xBB, 0xBF})
+	buf.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>" + nl)
+	fmt.Fprintf(&buf, "<VirtualOut Title=\"Loxone2HUE\" Comment=\"\" Address=\"%s\" CmdInit=\"\" HintText=\"\" CloseAfterSend=\"true\" CmdSep=\";\">%s", xmlAttr(address), nl)
 
 	// Mood commands (0=Aus, 1-N=Szene)
 	for _, baseName := range moodBaseNames {
@@ -182,8 +190,8 @@ func (h *Handlers) ExportVirtualOutputs(w http.ResponseWriter, r *http.Request) 
 		title = strings.Join(words, " ")
 
 		comment := fmt.Sprintf("Mood: 0=Aus, 1-%d=Szene", mg.Count)
-		fmt.Fprintf(&buf, "\t<VirtualOutCmd Title=\"%s (Mood)\" Comment=\"%s\" CmdOn=\"/ws?cmd=MOOD %s <v>\" Analog=\"true\"/>\n",
-			xmlAttr(title), xmlAttr(comment), xmlAttr(baseName))
+		fmt.Fprintf(&buf, "\t<VirtualOutCmd Title=\"%s (Mood)\" Comment=\"%s\" CmdOnMethod=\"GET\" CmdOn=\"/ws?cmd=MOOD %s &lt;v&gt;\" CmdOnHTTP=\"\" CmdOnPost=\"\" CmdOffMethod=\"GET\" CmdOff=\"\" CmdOffHTTP=\"\" CmdOffPost=\"\" CmdAnswer=\"\" HintText=\"\" Analog=\"true\" Repeat=\"0\" RepeatRate=\"0\"/>%s",
+			xmlAttr(title), xmlAttr(comment), xmlAttr(baseName), nl)
 	}
 
 	// Direct light/group commands
@@ -194,14 +202,14 @@ func (h *Handlers) ExportVirtualOutputs(w http.ResponseWriter, r *http.Request) 
 	for _, m := range directMappings {
 		switch m.HueType {
 		case "light", "group":
-			fmt.Fprintf(&buf, "\t<VirtualOutCmd Title=\"%s\" Comment=\"%s\" CmdOn=\"/ws?cmd=SET %s BRI <v>\" Analog=\"true\"/>\n",
-				xmlAttr(m.Name), xmlAttr(m.Description), xmlAttr(m.LoxoneID))
+			fmt.Fprintf(&buf, "\t<VirtualOutCmd Title=\"%s\" Comment=\"%s\" CmdOnMethod=\"GET\" CmdOn=\"/ws?cmd=SET %s BRI &lt;v&gt;\" CmdOnHTTP=\"\" CmdOnPost=\"\" CmdOffMethod=\"GET\" CmdOff=\"\" CmdOffHTTP=\"\" CmdOffPost=\"\" CmdAnswer=\"\" HintText=\"\" Analog=\"true\" Repeat=\"0\" RepeatRate=\"0\"/>%s",
+				xmlAttr(m.Name), xmlAttr(m.Description), xmlAttr(m.LoxoneID), nl)
 		}
 	}
 
 	buf.WriteString("</VirtualOut>")
 
-	w.Header().Set("Content-Type", "text/xml")
-	w.Header().Set("Content-Disposition", "attachment; filename=\"loxone2hue_outputs.xml\"")
+	w.Header().Set("Content-Type", "text/xml; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"VO_Loxone2HUE.xml\"")
 	w.Write(buf.Bytes())
 }
