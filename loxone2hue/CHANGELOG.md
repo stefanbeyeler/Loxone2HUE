@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.14
+
+- UDP-Feedback: Szenen-/Mood-Mappings werden nicht mehr per UDP gesendet (kein Empfänger in Loxone)
+
 ## 1.1.13
 
 - UDP-Feedback: Statusänderungen einzelner Lichter werden jetzt auch an Gruppen-Mappings weitergeleitet
