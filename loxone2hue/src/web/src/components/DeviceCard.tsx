@@ -64,7 +64,7 @@ export function DeviceCard({ device, onToggle, onBrightness, mapping, udpSendAll
           <div>
             <h3 className="font-medium text-white">{device.name}</h3>
             <p className="text-xs text-gray-400">{device.product_name || device.type}</p>
-            <p className="text-xs text-gray-500 font-mono">{device.id}</p>
+            <p className="text-xs text-gray-500 font-mono"><span className="text-gray-600">HUE ID:</span> {device.id}</p>
           </div>
         </div>
 
