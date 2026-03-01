@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.7
+
+- Loxone Config Export: Umlaute werden jetzt als native UTF-8-Zeichen statt als numerische XML-Entities ausgegeben (z.B. "Büro" statt "B&#252;ro")
+
 ## 1.1.6
 
 - Loxone Config Export: Mood-Titel verwendet jetzt den Mapping-Namen mit korrekten Umlauten (statt abgeleiteter LoxoneID)
