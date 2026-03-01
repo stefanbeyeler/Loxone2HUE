@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -159,18 +160,18 @@ func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 		return
 	}
 
-	// Collect all LoxoneIDs that should receive this update (skip scene mappings)
+	// Collect all LoxoneIDs that should receive this update (skip scenes and mood mappings)
 	var loxoneIDs []string
 
 	// Direct lookup: event.ID matches a mapping's hue_id (light or group)
-	if mapping := h.mappingManager.GetByHueID(event.ID); mapping != nil && mapping.HueType != "scene" {
+	if mapping := h.mappingManager.GetByHueID(event.ID); mapping != nil && mapping.HueType != "scene" && !strings.Contains(mapping.LoxoneID, "_mood_") {
 		loxoneIDs = append(loxoneIDs, mapping.LoxoneID)
 	}
 
 	// For light events: also send to group mappings that contain this light
 	if event.Type == "light" {
 		for _, groupID := range h.hueClient.GetGroupIDsForLight(event.ID) {
-			if mapping := h.mappingManager.GetByHueID(groupID); mapping != nil && mapping.HueType != "scene" {
+			if mapping := h.mappingManager.GetByHueID(groupID); mapping != nil && mapping.HueType != "scene" && !strings.Contains(mapping.LoxoneID, "_mood_") {
 				loxoneIDs = append(loxoneIDs, mapping.LoxoneID)
 			}
 		}

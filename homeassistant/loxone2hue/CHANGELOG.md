@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.15
+
+- Loxone Config Export: Mood-Mappings (_mood_N) werden nicht mehr als virtuelle UDP-Eingänge exportiert
+- UDP-Feedback: Mood-Mappings erhalten keine UDP-Nachrichten mehr
+
 ## 1.1.14
 
 - UDP-Feedback: Szenen-/Mood-Mappings werden nicht mehr per UDP gesendet (kein Empfänger in Loxone)
