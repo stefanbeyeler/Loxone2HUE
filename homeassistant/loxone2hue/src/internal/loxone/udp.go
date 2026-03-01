@@ -81,7 +81,7 @@ func (s *UDPSender) Send(loxoneID, property string, value interface{}) {
 	if err != nil {
 		log.Warn().Err(err).Str("msg", msg).Msg("Failed to send UDP feedback")
 	} else {
-		log.Debug().Str("msg", msg).Msg("UDP feedback sent")
+		log.Info().Str("msg", msg).Msg("UDP feedback sent")
 	}
 }
 
