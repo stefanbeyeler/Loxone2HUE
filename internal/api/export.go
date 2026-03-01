@@ -61,9 +61,10 @@ var moodPattern = regexp.MustCompile(`^(.+)_mood_(\d+)$`)
 //   - all=true: include all HUE lights, not just mapped ones
 func (h *Handlers) ExportVirtualInputs(w http.ResponseWriter, r *http.Request) {
 	cfg := config.Get()
-	port := cfg.Loxone.UDPFeedback.Port
-	if port == 0 {
-		port = 7777
+	// Use port from first miniserver, or default to 7777
+	port := 7777
+	if len(cfg.Loxone.Miniservers) > 0 && cfg.Loxone.Miniservers[0].Port > 0 {
+		port = cfg.Loxone.Miniservers[0].Port
 	}
 
 	type inputDevice struct {

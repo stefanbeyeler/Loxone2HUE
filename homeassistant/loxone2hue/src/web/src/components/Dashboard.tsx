@@ -65,8 +65,9 @@ export function Dashboard() {
           setBridgeIP(config.hue.bridge_ip);
         }
         setUdpSendAll(
-          config.loxone?.udp_feedback?.enabled === true &&
-          config.loxone?.udp_feedback?.send_all === true
+          (config.loxone?.miniservers || []).some(
+            (ms) => ms.udp_enabled && ms.send_all
+          )
         );
         const result = await api.getMappings();
         setMappings(result.mappings || []);

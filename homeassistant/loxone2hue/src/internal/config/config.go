@@ -4,6 +4,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"github.com/sbeyeler/loxone2hue/internal/models"
 	"gopkg.in/yaml.v3"
@@ -30,18 +31,19 @@ type HueConfig struct {
 	ApplicationKey string `yaml:"application_key" json:"application_key"`
 }
 
-// LoxoneConfig holds Loxone integration settings
-type LoxoneConfig struct {
-	Enabled      bool              `yaml:"enabled" json:"enabled"`
-	MiniserverIP string            `yaml:"miniserver_ip" json:"miniserver_ip"`
-	UDPFeedback  UDPFeedbackConfig `yaml:"udp_feedback" json:"udp_feedback"`
+// MiniserverConfig holds settings for a single Loxone Miniserver
+type MiniserverConfig struct {
+	ID         string `yaml:"id" json:"id"`
+	Name       string `yaml:"name" json:"name"`
+	IP         string `yaml:"ip" json:"ip"`
+	Port       int    `yaml:"port" json:"port"`
+	UDPEnabled bool   `yaml:"udp_enabled" json:"udp_enabled"`
+	SendAll    bool   `yaml:"send_all" json:"send_all"`
 }
 
-// UDPFeedbackConfig holds UDP status feedback settings
-type UDPFeedbackConfig struct {
-	Enabled bool `yaml:"enabled" json:"enabled"`
-	Port    int  `yaml:"port" json:"port"`
-	SendAll bool `yaml:"send_all" json:"send_all"`
+// LoxoneConfig holds Loxone integration settings
+type LoxoneConfig struct {
+	Miniservers []MiniserverConfig `yaml:"miniservers" json:"miniservers"`
 }
 
 // LoggingConfig holds logging settings
@@ -69,18 +71,75 @@ func DefaultConfig() *Config {
 			ApplicationKey: "",
 		},
 		Loxone: LoxoneConfig{
-			Enabled:      true,
-			MiniserverIP: "",
-			UDPFeedback: UDPFeedbackConfig{
-				Enabled: false,
-				Port:    7777,
-			},
+			Miniservers: []MiniserverConfig{},
 		},
 		Logging: LoggingConfig{
 			Level:  "info",
 			Format: "json",
 		},
 		Mappings: []models.Mapping{},
+	}
+}
+
+// legacyLoxoneConfig is used to detect and migrate old config format
+type legacyLoxoneConfig struct {
+	Enabled      *bool `yaml:"enabled"`
+	MiniserverIP string `yaml:"miniserver_ip"`
+	UDPFeedback  *struct {
+		Enabled bool `yaml:"enabled"`
+		Port    int  `yaml:"port"`
+		SendAll bool `yaml:"send_all"`
+	} `yaml:"udp_feedback"`
+	Miniservers []MiniserverConfig `yaml:"miniservers"`
+}
+
+type legacyConfig struct {
+	Loxone legacyLoxoneConfig `yaml:"loxone"`
+}
+
+// migrateConfig checks for old config format and migrates to new format
+func migrateConfig(data []byte, cfg *Config) {
+	var legacy legacyConfig
+	if err := yaml.Unmarshal(data, &legacy); err != nil {
+		return
+	}
+
+	// If new format already has miniservers, no migration needed
+	if len(legacy.Loxone.Miniservers) > 0 {
+		return
+	}
+
+	// Check if old format fields exist
+	if legacy.Loxone.MiniserverIP == "" && legacy.Loxone.UDPFeedback == nil {
+		return
+	}
+
+	log.Info().Msg("Migrating legacy Loxone config to multi-miniserver format")
+
+	ip := legacy.Loxone.MiniserverIP
+	port := 7777
+	udpEnabled := false
+	sendAll := false
+
+	if legacy.Loxone.UDPFeedback != nil {
+		udpEnabled = legacy.Loxone.UDPFeedback.Enabled
+		if legacy.Loxone.UDPFeedback.Port > 0 {
+			port = legacy.Loxone.UDPFeedback.Port
+		}
+		sendAll = legacy.Loxone.UDPFeedback.SendAll
+	}
+
+	if ip != "" {
+		cfg.Loxone.Miniservers = []MiniserverConfig{
+			{
+				ID:         uuid.New().String(),
+				Name:       "Miniserver",
+				IP:         ip,
+				Port:       port,
+				UDPEnabled: udpEnabled,
+				SendAll:    sendAll,
+			},
+		}
 	}
 }
 
@@ -106,6 +165,24 @@ func Load(path string) (*Config, error) {
 
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, err
+	}
+
+	// Migrate legacy config if needed
+	migrateConfig(data, cfg)
+
+	// Ensure miniservers is never nil
+	if cfg.Loxone.Miniservers == nil {
+		cfg.Loxone.Miniservers = []MiniserverConfig{}
+	}
+
+	// Migrate mappings: assign first miniserver to mappings without miniserver_id
+	if len(cfg.Loxone.Miniservers) > 0 {
+		firstID := cfg.Loxone.Miniservers[0].ID
+		for i := range cfg.Mappings {
+			if cfg.Mappings[i].MiniserverID == "" {
+				cfg.Mappings[i].MiniserverID = firstID
+			}
+		}
 	}
 
 	log.Info().Str("path", path).Msg("Configuration loaded")

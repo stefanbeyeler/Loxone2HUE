@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Radio, Send, Check, AlertCircle, Loader2 } from 'lucide-react';
 import type { Capabilities } from '../types';
-import { testUDP } from '../services/api';
+import { testUDP, getConfig } from '../services/api';
+import type { MiniserverConfig } from '../services/api';
 
 /** Converts a HUE device name to a Loxone-safe identifier (mirrors Go sanitizeName in export.go) */
 export function sanitizeName(name: string): string {
@@ -79,7 +80,7 @@ interface RowState {
   message: string;
 }
 
-function TestCell({ loxoneId, prop }: { loxoneId: string; prop: UdpProperty }) {
+function TestCell({ loxoneId, prop, miniserverId }: { loxoneId: string; prop: UdpProperty; miniserverId: string }) {
   const [state, setState] = useState<RowState>({ value: '', status: 'idle', message: '' });
 
   const handleSend = async () => {
@@ -91,7 +92,7 @@ function TestCell({ loxoneId, prop }: { loxoneId: string; prop: UdpProperty }) {
 
     setState(s => ({ ...s, status: 'sending', message: '' }));
     try {
-      const result = await testUDP(loxoneId, prop.property, state.value);
+      const result = await testUDP(loxoneId, prop.property, state.value, miniserverId);
       setState(s => ({ ...s, status: 'sent', message: result.message }));
       setTimeout(() => setState(s => s.status === 'sent' ? { ...s, status: 'idle', message: '' } : s), 3000);
     } catch (e) {
@@ -137,7 +138,29 @@ function TestCell({ loxoneId, prop }: { loxoneId: string; prop: UdpProperty }) {
   );
 }
 
-export function UdpInfoSection({ loxoneId, properties }: { loxoneId: string; properties: UdpProperty[] }) {
+interface UdpInfoSectionProps {
+  loxoneId: string;
+  properties: UdpProperty[];
+  miniserverId?: string;
+}
+
+export function UdpInfoSection({ loxoneId, properties, miniserverId }: UdpInfoSectionProps) {
+  const [miniservers, setMiniservers] = useState<MiniserverConfig[]>([]);
+  const [selectedMs, setSelectedMs] = useState<string>(miniserverId || '');
+
+  useEffect(() => {
+    getConfig().then((cfg) => {
+      const ms = (cfg.loxone?.miniservers || []).filter((m) => m.udp_enabled);
+      setMiniservers(ms);
+      if (!selectedMs && ms.length > 0) {
+        setSelectedMs(miniserverId || ms[0].id);
+      }
+    }).catch(() => {});
+  }, [miniserverId]);
+
+  const activeMs = miniservers.find((m) => m.id === selectedMs);
+  const hasTest = !!activeMs;
+
   return (
     <div className="border-t border-gray-700 pt-3 mt-3">
       <div className="flex items-center gap-2 mb-2">
@@ -148,6 +171,29 @@ export function UdpInfoSection({ loxoneId, properties }: { loxoneId: string; pro
         Loxone ID: <span className="font-mono text-white">{loxoneId}</span>
       </div>
 
+      {miniservers.length > 1 && (
+        <div className="mb-2">
+          <label className="text-xs text-gray-400 mr-2">Miniserver:</label>
+          <select
+            value={selectedMs}
+            onChange={(e) => setSelectedMs(e.target.value)}
+            className="bg-gray-800 text-white text-xs rounded px-2 py-1 border border-gray-700 focus:border-blue-500 focus:outline-none"
+          >
+            {miniservers.map((ms) => (
+              <option key={ms.id} value={ms.id}>
+                {ms.name || ms.ip} ({ms.ip}:{ms.port})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {miniservers.length === 1 && (
+        <div className="text-xs text-gray-500 mb-2">
+          Miniserver: <span className="text-gray-300">{miniservers[0].name || miniservers[0].ip}</span> ({miniservers[0].ip}:{miniservers[0].port})
+        </div>
+      )}
+
       <div className="bg-gray-900 rounded-lg overflow-hidden">
         <table className="w-full text-xs">
           <thead>
@@ -155,7 +201,7 @@ export function UdpInfoSection({ loxoneId, properties }: { loxoneId: string; pro
               <th className="text-left px-3 py-1.5 font-medium">Check-Pattern</th>
               <th className="text-left px-3 py-1.5 font-medium">Eigenschaft</th>
               <th className="text-left px-3 py-1.5 font-medium">Werte</th>
-              <th className="text-left px-3 py-1.5 font-medium">Test</th>
+              {hasTest && <th className="text-left px-3 py-1.5 font-medium">Test</th>}
             </tr>
           </thead>
           <tbody>
@@ -164,7 +210,7 @@ export function UdpInfoSection({ loxoneId, properties }: { loxoneId: string; pro
                 <td className="px-3 py-1.5 font-mono text-green-400">{prop.pattern}</td>
                 <td className="px-3 py-1.5 text-gray-300">{prop.label}</td>
                 <td className="px-3 py-1.5 text-gray-500">{prop.range}</td>
-                <TestCell loxoneId={loxoneId} prop={prop} />
+                {hasTest && <TestCell loxoneId={loxoneId} prop={prop} miniserverId={selectedMs} />}
               </tr>
             ))}
           </tbody>

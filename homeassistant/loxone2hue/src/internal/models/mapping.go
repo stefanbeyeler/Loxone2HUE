@@ -2,13 +2,14 @@ package models
 
 // Mapping represents a mapping between Loxone and HUE resources
 type Mapping struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	LoxoneID    string `json:"loxone_id"`    // Loxone UUID or custom ID
-	HueID       string `json:"hue_id"`       // HUE resource ID
-	HueType     string `json:"hue_type"`     // "light", "group", "scene"
-	Enabled     bool   `json:"enabled"`
-	Description string `json:"description,omitempty"`
+	ID           string `json:"id" yaml:"id"`
+	Name         string `json:"name" yaml:"name"`
+	LoxoneID     string `json:"loxone_id" yaml:"loxone_id"`       // Loxone UUID or custom ID
+	HueID        string `json:"hue_id" yaml:"hue_id"`             // HUE resource ID
+	HueType      string `json:"hue_type" yaml:"hue_type"`         // "light", "group", "scene"
+	Enabled      bool   `json:"enabled" yaml:"enabled"`
+	Description  string `json:"description,omitempty" yaml:"description,omitempty"`
+	MiniserverID string `json:"miniserver_id,omitempty" yaml:"miniserver_id,omitempty"`
 }
 
 // LoxoneCommand represents an incoming command from Loxone

@@ -11,7 +11,6 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
-	"github.com/sbeyeler/loxone2hue/internal/config"
 	"github.com/sbeyeler/loxone2hue/internal/hue"
 	"github.com/sbeyeler/loxone2hue/internal/loxone"
 	"github.com/sbeyeler/loxone2hue/internal/models"
@@ -130,6 +129,12 @@ func (h *WebSocketHub) forwardHueEvents(ctx context.Context) {
 	}
 }
 
+// udpTarget holds a loxoneID and optionally the miniserver to send to
+type udpFeedbackTarget struct {
+	loxoneID     string
+	miniserverID string // empty = send to all (send_all targets)
+}
+
 // sendUDPFeedback extracts changed properties from a HUE event and sends them via UDP
 func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 	// Extract event data fields via JSON roundtrip
@@ -161,21 +166,20 @@ func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 		return
 	}
 
-	// Collect all LoxoneIDs that should receive this update (skip scenes and mood mappings)
-	var loxoneIDs []string
-	sendAll := config.Get().Loxone.UDPFeedback.SendAll
+	// Collect all targets that should receive this update (skip scenes and mood mappings)
+	var targets []udpFeedbackTarget
 
 	// Direct lookup: event.ID matches a mapping's hue_id (light or group)
 	if mapping := h.mappingManager.GetByHueID(event.ID); mapping != nil && mapping.HueType != "scene" && !strings.Contains(mapping.LoxoneID, "_mood_") {
-		loxoneIDs = append(loxoneIDs, mapping.LoxoneID)
-	} else if sendAll {
-		// No mapping found — generate LoxoneID from device name
+		targets = append(targets, udpFeedbackTarget{loxoneID: mapping.LoxoneID, miniserverID: mapping.MiniserverID})
+	} else if h.udpSender.HasSendAll() {
+		// No mapping found — generate LoxoneID from device name, send to all send_all targets
 		if event.Type == "light" {
 			if light, err := h.hueClient.GetLight(event.ID); err == nil {
-				loxoneIDs = append(loxoneIDs, sanitizeName(light.Name))
+				targets = append(targets, udpFeedbackTarget{loxoneID: sanitizeName(light.Name)})
 			}
 		} else if name := h.hueClient.GetGroupName(event.ID); name != "" {
-			loxoneIDs = append(loxoneIDs, sanitizeName(name))
+			targets = append(targets, udpFeedbackTarget{loxoneID: sanitizeName(name)})
 		}
 	}
 
@@ -183,37 +187,45 @@ func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 	if event.Type == "light" {
 		for _, groupID := range h.hueClient.GetGroupIDsForLight(event.ID) {
 			if mapping := h.mappingManager.GetByHueID(groupID); mapping != nil && mapping.HueType != "scene" && !strings.Contains(mapping.LoxoneID, "_mood_") {
-				loxoneIDs = append(loxoneIDs, mapping.LoxoneID)
-			} else if sendAll {
+				targets = append(targets, udpFeedbackTarget{loxoneID: mapping.LoxoneID, miniserverID: mapping.MiniserverID})
+			} else if h.udpSender.HasSendAll() {
 				if name := h.hueClient.GetGroupName(groupID); name != "" {
-					loxoneIDs = append(loxoneIDs, sanitizeName(name))
+					targets = append(targets, udpFeedbackTarget{loxoneID: sanitizeName(name)})
 				}
 			}
 		}
 	}
 
-	if len(loxoneIDs) == 0 {
+	if len(targets) == 0 {
 		return
 	}
 
-	// Send one UDP packet per changed property per LoxoneID
-	for _, loxoneID := range loxoneIDs {
+	// Send one UDP packet per changed property per target
+	for _, target := range targets {
+		send := func(property string, value interface{}) {
+			if target.miniserverID != "" {
+				h.udpSender.Send(target.miniserverID, target.loxoneID, property, value)
+			} else {
+				h.udpSender.SendToAll(target.loxoneID, property, value)
+			}
+		}
+
 		if ed.On != nil {
 			onVal := 0
 			if ed.On.On {
 				onVal = 1
 			}
-			h.udpSender.Send(loxoneID, "on", onVal)
+			send("on", onVal)
 		}
 		if ed.Dimming != nil {
-			h.udpSender.Send(loxoneID, "bri", int(ed.Dimming.Brightness))
+			send("bri", int(ed.Dimming.Brightness))
 		}
 		if ed.ColorTemperature != nil {
-			h.udpSender.Send(loxoneID, "ct", ed.ColorTemperature.Mirek)
+			send("ct", ed.ColorTemperature.Mirek)
 		}
 		if ed.Color != nil {
-			h.udpSender.Send(loxoneID, "color_x", fmt.Sprintf("%.4f", ed.Color.XY.X))
-			h.udpSender.Send(loxoneID, "color_y", fmt.Sprintf("%.4f", ed.Color.XY.Y))
+			send("color_x", fmt.Sprintf("%.4f", ed.Color.XY.X))
+			send("color_y", fmt.Sprintf("%.4f", ed.Color.XY.Y))
 		}
 	}
 }

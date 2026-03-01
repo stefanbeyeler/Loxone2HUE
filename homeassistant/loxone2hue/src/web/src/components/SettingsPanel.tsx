@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Settings, Radio, Save, CheckCircle, AlertCircle, ScrollText, Search, RefreshCw } from 'lucide-react';
+import { Settings, Radio, Save, CheckCircle, AlertCircle, ScrollText, Search, RefreshCw, Plus, Trash2 } from 'lucide-react';
 import * as api from '../services/api';
-import type { UDPFeedbackConfig, LoxoneConfig, LogEntry } from '../services/api';
+import type { MiniserverConfig, LoxoneConfig, LogEntry } from '../services/api';
 
 const LEVEL_STYLES: Record<string, string> = {
   DEBUG: 'bg-gray-600 text-gray-200',
@@ -22,19 +22,18 @@ function formatTimestamp(ts: string): string {
   return `${h}:${m}:${s}.${ms}`;
 }
 
+function generateId(): string {
+  return crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
 export function SettingsPanel() {
   const [loxoneConfig, setLoxoneConfig] = useState<LoxoneConfig>({
-    enabled: true,
-    miniserver_ip: '',
-    udp_feedback: {
-      enabled: false,
-      port: 7777,
-      send_all: false,
-    },
+    miniservers: [],
   });
   const [saving, setSaving] = useState(false);
   const [saveResult, setSaveResult] = useState<'success' | 'error' | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   // Server logs state
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
@@ -83,13 +82,7 @@ export function SettingsPanel() {
     try {
       const config = await api.getConfig();
       setLoxoneConfig({
-        enabled: config.loxone?.enabled ?? true,
-        miniserver_ip: config.loxone?.miniserver_ip || '',
-        udp_feedback: {
-          enabled: config.loxone?.udp_feedback?.enabled ?? false,
-          port: config.loxone?.udp_feedback?.port || 7777,
-          send_all: config.loxone?.udp_feedback?.send_all ?? false,
-        },
+        miniservers: config.loxone?.miniservers || [],
       });
     } catch (err) {
       console.error('Failed to load config:', err);
@@ -113,10 +106,37 @@ export function SettingsPanel() {
     }
   };
 
-  const updateUDP = (update: Partial<UDPFeedbackConfig>) => {
+  const addMiniserver = () => {
     setLoxoneConfig((prev) => ({
       ...prev,
-      udp_feedback: { ...prev.udp_feedback, ...update },
+      miniservers: [
+        ...prev.miniservers,
+        {
+          id: generateId(),
+          name: '',
+          ip: '',
+          port: 7777,
+          udp_enabled: false,
+          send_all: false,
+        },
+      ],
+    }));
+  };
+
+  const removeMiniserver = (id: string) => {
+    setLoxoneConfig((prev) => ({
+      ...prev,
+      miniservers: prev.miniservers.filter((ms) => ms.id !== id),
+    }));
+    setDeleteConfirm(null);
+  };
+
+  const updateMiniserver = (id: string, update: Partial<MiniserverConfig>) => {
+    setLoxoneConfig((prev) => ({
+      ...prev,
+      miniservers: prev.miniservers.map((ms) =>
+        ms.id === id ? { ...ms, ...update } : ms
+      ),
     }));
   };
 
@@ -131,47 +151,19 @@ export function SettingsPanel() {
         <h2 className="text-xl font-semibold text-white">Einstellungen</h2>
       </div>
 
-      {/* Loxone General Settings */}
+      {/* Loxone Miniserver Section */}
       <div className="bg-gray-800 rounded-xl p-6 space-y-4">
-        <h3 className="text-lg font-medium text-white">Loxone Miniserver</h3>
-
-        <label className="flex items-center gap-3 cursor-pointer">
-          <div className="relative">
-            <input
-              type="checkbox"
-              checked={loxoneConfig.enabled}
-              onChange={(e) => setLoxoneConfig({ ...loxoneConfig, enabled: e.target.checked })}
-              className="sr-only peer"
-            />
-            <div className="w-10 h-6 bg-gray-600 rounded-full peer-checked:bg-hue-orange transition-colors"></div>
-            <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
-          </div>
-          <span className="text-gray-300">Loxone-Integration aktiviert</span>
-        </label>
-
-        <div>
-          <label className="block text-sm text-gray-400 mb-1">Miniserver IP</label>
-          <input
-            type="text"
-            value={loxoneConfig.miniserver_ip}
-            onChange={(e) => setLoxoneConfig({ ...loxoneConfig, miniserver_ip: e.target.value })}
-            placeholder="192.168.1.10"
-            disabled={!loxoneConfig.enabled}
-            className="w-full bg-gray-700 text-white rounded-lg px-4 py-2.5 border border-gray-600 focus:border-hue-orange focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed placeholder-gray-500"
-          />
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium text-white">Loxone Miniserver</h3>
+          <button
+            onClick={addMiniserver}
+            className="flex items-center gap-1.5 bg-hue-orange hover:bg-hue-orange/90 text-gray-900 font-medium px-3 py-1.5 rounded-lg text-sm transition-colors"
+          >
+            <Plus size={16} />
+            Hinzufügen
+          </button>
         </div>
-      </div>
 
-      {/* UDP Feedback Section */}
-      <div className="bg-gray-800 rounded-xl p-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <Radio size={20} className="text-hue-orange" />
-          <h3 className="text-lg font-medium text-white">UDP Status-Feedback</h3>
-        </div>
-        <p className="text-sm text-gray-400">
-          Sendet Status-Änderungen von HUE-Geräten per UDP an die oben konfigurierte Miniserver IP.
-          Für jede Eigenschaftsänderung wird ein UDP-Paket gesendet.
-        </p>
         <div className="bg-gray-700/50 rounded-lg p-3">
           <p className="text-xs text-gray-400 font-mono">
             Format: &lt;loxone_id&gt;/&lt;eigenschaft&gt;:&lt;wert&gt;
@@ -181,58 +173,125 @@ export function SettingsPanel() {
           </p>
         </div>
 
-        <label className="flex items-center gap-3 cursor-pointer">
-          <div className="relative">
-            <input
-              type="checkbox"
-              checked={loxoneConfig.udp_feedback.enabled}
-              onChange={(e) => updateUDP({ enabled: e.target.checked })}
-              className="sr-only peer"
-            />
-            <div className="w-10 h-6 bg-gray-600 rounded-full peer-checked:bg-hue-orange transition-colors"></div>
-            <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
-          </div>
-          <span className="text-gray-300">UDP Feedback aktivieren</span>
-        </label>
-
-        <div className="max-w-xs">
-          <label className="block text-sm text-gray-400 mb-1">UDP Port</label>
-          <input
-            type="number"
-            value={loxoneConfig.udp_feedback.port}
-            onChange={(e) => updateUDP({ port: parseInt(e.target.value) || 7777 })}
-            placeholder="7777"
-            min={1}
-            max={65535}
-            disabled={!loxoneConfig.udp_feedback.enabled}
-            className="w-full bg-gray-700 text-white rounded-lg px-4 py-2.5 border border-gray-600 focus:border-hue-orange focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed placeholder-gray-500"
-          />
-        </div>
-
-        <label className="flex items-center gap-3 cursor-pointer">
-          <div className="relative">
-            <input
-              type="checkbox"
-              checked={loxoneConfig.udp_feedback.send_all}
-              onChange={(e) => updateUDP({ send_all: e.target.checked })}
-              disabled={!loxoneConfig.udp_feedback.enabled}
-              className="sr-only peer"
-            />
-            <div className="w-10 h-6 bg-gray-600 rounded-full peer-checked:bg-hue-orange transition-colors peer-disabled:opacity-50"></div>
-            <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
-          </div>
-          <div>
-            <span className="text-gray-300">UDP Feedback für alle Geräte senden</span>
-            <p className="text-xs text-gray-500">Auch für Geräte ohne Mapping (Gerätename wird als Loxone-ID verwendet)</p>
-          </div>
-        </label>
-
-        {loxoneConfig.udp_feedback.enabled && !loxoneConfig.miniserver_ip && (
-          <div className="flex items-center gap-2 text-yellow-400 text-sm">
-            <AlertCircle size={16} />
-            <span>Bitte oben eine Miniserver IP eingeben</span>
+        {loxoneConfig.miniservers.length === 0 && (
+          <div className="text-center py-8 text-gray-500 text-sm">
+            Kein Miniserver konfiguriert. Klicke auf "Hinzufügen" um einen Miniserver zu erfassen.
           </div>
         )}
+
+        {loxoneConfig.miniservers.map((ms) => (
+          <div
+            key={ms.id}
+            className="bg-gray-700/30 border border-gray-700 rounded-xl p-4 space-y-3"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Name</label>
+                  <input
+                    type="text"
+                    value={ms.name}
+                    onChange={(e) => updateMiniserver(ms.id, { name: e.target.value })}
+                    placeholder="z.B. Haupthaus"
+                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-hue-orange focus:outline-none placeholder-gray-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">IP-Adresse</label>
+                  <input
+                    type="text"
+                    value={ms.ip}
+                    onChange={(e) => updateMiniserver(ms.id, { ip: e.target.value })}
+                    placeholder="192.168.1.10"
+                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-hue-orange focus:outline-none placeholder-gray-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">UDP Port</label>
+                  <input
+                    type="number"
+                    value={ms.port}
+                    onChange={(e) => updateMiniserver(ms.id, { port: parseInt(e.target.value) || 7777 })}
+                    placeholder="7777"
+                    min={1}
+                    max={65535}
+                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-hue-orange focus:outline-none placeholder-gray-500 text-sm"
+                  />
+                </div>
+              </div>
+
+              {deleteConfirm === ms.id ? (
+                <div className="flex items-center gap-1.5 shrink-0 mt-6">
+                  <button
+                    onClick={() => removeMiniserver(ms.id)}
+                    className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors"
+                  >
+                    Löschen
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirm(null)}
+                    className="px-2 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setDeleteConfirm(ms.id)}
+                  title="Miniserver entfernen"
+                  className="mt-6 p-1.5 text-gray-500 hover:text-red-400 hover:bg-gray-700 rounded transition-colors shrink-0"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={ms.udp_enabled}
+                    onChange={(e) => updateMiniserver(ms.id, { udp_enabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-6 bg-gray-600 rounded-full peer-checked:bg-hue-orange transition-colors"></div>
+                  <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Radio size={14} className="text-hue-orange" />
+                  <span className="text-gray-300 text-sm">UDP Feedback aktivieren</span>
+                </div>
+              </label>
+
+              {ms.udp_enabled && (
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={ms.send_all}
+                      onChange={(e) => updateMiniserver(ms.id, { send_all: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-10 h-6 bg-gray-600 rounded-full peer-checked:bg-hue-orange transition-colors"></div>
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
+                  </div>
+                  <div>
+                    <span className="text-gray-300 text-sm">Alle Geräte senden</span>
+                    <p className="text-xs text-gray-500">Auch ohne Mapping</p>
+                  </div>
+                </label>
+              )}
+            </div>
+
+            {ms.udp_enabled && !ms.ip && (
+              <div className="flex items-center gap-2 text-yellow-400 text-sm">
+                <AlertCircle size={16} />
+                <span>Bitte eine IP-Adresse eingeben</span>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
       {/* Save Button */}
