@@ -28,6 +28,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
   const [importError, setImportError] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [moodEnabled, setMoodEnabled] = useState(false);
   const [moodOrder, setMoodOrder] = useState<string[]>([]);
 
@@ -135,8 +136,9 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
   };
 
   const handleAdd = async () => {
-    if (!formData.name || !formData.loxone_id || !formData.hue_id) return;
+    if (!formData.name || !formData.loxone_id || !formData.hue_id || isSubmitting) return;
 
+    setIsSubmitting(true);
     try {
       const newMapping = await api.createMapping({
         name: formData.name,
@@ -189,6 +191,8 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
       closeWizard();
     } catch (error) {
       console.error('Failed to create mapping:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1229,10 +1233,11 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                   <button
                     type="button"
                     onClick={handleAdd}
-                    className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors"
+                    disabled={isSubmitting}
+                    className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Save size={18} />
-                    Erstellen
+                    {isSubmitting ? 'Wird erstellt...' : 'Erstellen'}
                   </button>
                 ) : (
                   <button
