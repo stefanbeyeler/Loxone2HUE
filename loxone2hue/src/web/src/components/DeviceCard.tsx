@@ -2,16 +2,17 @@ import { useState } from 'react';
 import { Lightbulb, Power, Radio } from 'lucide-react';
 import { Light } from '../types';
 import type { Mapping } from '../services/api';
-import { UdpInfoSection, getUdpProperties } from './UdpInfoSection';
+import { UdpInfoSection, getUdpProperties, sanitizeName } from './UdpInfoSection';
 
 interface DeviceCardProps {
   device: Light;
   onToggle: (id: string, on: boolean) => void;
   onBrightness: (id: string, brightness: number) => void;
   mapping?: Mapping;
+  udpSendAll?: boolean;
 }
 
-export function DeviceCard({ device, onToggle, onBrightness, mapping }: DeviceCardProps) {
+export function DeviceCard({ device, onToggle, onBrightness, mapping, udpSendAll = false }: DeviceCardProps) {
   const [localBrightness, setLocalBrightness] = useState(device.state.brightness);
   const [showUdp, setShowUdp] = useState(false);
 
@@ -68,7 +69,7 @@ export function DeviceCard({ device, onToggle, onBrightness, mapping }: DeviceCa
         </div>
 
         <div className="flex items-center gap-1">
-          {mapping && (
+          {(mapping || udpSendAll) && (
             <button
               onClick={() => setShowUdp(!showUdp)}
               title="UDP Status-Feedback"
@@ -123,12 +124,15 @@ export function DeviceCard({ device, onToggle, onBrightness, mapping }: DeviceCa
         <p className="text-xs text-red-400 mt-2">Nicht erreichbar</p>
       )}
 
-      {showUdp && mapping && (
-        <UdpInfoSection
-          loxoneId={mapping.loxone_id}
-          properties={getUdpProperties(mapping.loxone_id, device.capabilities)}
-        />
-      )}
+      {showUdp && (mapping || udpSendAll) && (() => {
+        const loxoneId = mapping?.loxone_id ?? sanitizeName(device.name);
+        return (
+          <UdpInfoSection
+            loxoneId={loxoneId}
+            properties={getUdpProperties(loxoneId, device.capabilities)}
+          />
+        );
+      })()}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Group, Scene } from '../types';
 import type { Mapping } from '../services/api';
 import { Home, Layers, Power, Play, Radio } from 'lucide-react';
-import { UdpInfoSection, getGroupUdpProperties } from './UdpInfoSection';
+import { UdpInfoSection, getGroupUdpProperties, sanitizeName } from './UdpInfoSection';
 
 interface GroupListProps {
   groups: Group[];
@@ -11,9 +11,10 @@ interface GroupListProps {
   onActivateScene: (id: string) => void;
   title?: string;
   mappings?: Mapping[];
+  udpSendAll?: boolean;
 }
 
-export function GroupList({ groups, scenes, onToggle, onActivateScene, title, mappings = [] }: GroupListProps) {
+export function GroupList({ groups, scenes, onToggle, onActivateScene, title, mappings = [], udpSendAll = false }: GroupListProps) {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [expandedUdp, setExpandedUdp] = useState<string | null>(null);
 
@@ -70,7 +71,7 @@ export function GroupList({ groups, scenes, onToggle, onActivateScene, title, ma
               </div>
 
               <div className="flex items-center gap-1">
-                {mapping && (
+                {(mapping || udpSendAll) && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -106,14 +107,17 @@ export function GroupList({ groups, scenes, onToggle, onActivateScene, title, ma
               </div>
             </div>
 
-            {isUdpExpanded && mapping && (
-              <div className="px-4 pb-4">
-                <UdpInfoSection
-                  loxoneId={mapping.loxone_id}
-                  properties={getGroupUdpProperties(mapping.loxone_id)}
-                />
-              </div>
-            )}
+            {isUdpExpanded && (mapping || udpSendAll) && (() => {
+              const loxoneId = mapping?.loxone_id ?? sanitizeName(group.name);
+              return (
+                <div className="px-4 pb-4">
+                  <UdpInfoSection
+                    loxoneId={loxoneId}
+                    properties={getGroupUdpProperties(loxoneId)}
+                  />
+                </div>
+              );
+            })()}
 
             {isExpanded && groupScenes.length > 0 && (
               <div className="border-t border-gray-700 p-4">

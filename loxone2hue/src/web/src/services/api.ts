@@ -135,6 +135,7 @@ export async function importMappings(
 export interface UDPFeedbackConfig {
   enabled: boolean;
   port: number;
+  send_all: boolean;
 }
 
 export interface LoxoneConfig {

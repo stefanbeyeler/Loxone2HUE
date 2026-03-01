@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/rs/zerolog/log"
+	"github.com/sbeyeler/loxone2hue/internal/config"
 	"github.com/sbeyeler/loxone2hue/internal/hue"
 	"github.com/sbeyeler/loxone2hue/internal/loxone"
 	"github.com/sbeyeler/loxone2hue/internal/models"
@@ -162,10 +163,20 @@ func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 
 	// Collect all LoxoneIDs that should receive this update (skip scenes and mood mappings)
 	var loxoneIDs []string
+	sendAll := config.Get().Loxone.UDPFeedback.SendAll
 
 	// Direct lookup: event.ID matches a mapping's hue_id (light or group)
 	if mapping := h.mappingManager.GetByHueID(event.ID); mapping != nil && mapping.HueType != "scene" && !strings.Contains(mapping.LoxoneID, "_mood_") {
 		loxoneIDs = append(loxoneIDs, mapping.LoxoneID)
+	} else if sendAll {
+		// No mapping found — generate LoxoneID from device name
+		if event.Type == "light" {
+			if light, err := h.hueClient.GetLight(event.ID); err == nil {
+				loxoneIDs = append(loxoneIDs, sanitizeName(light.Name))
+			}
+		} else if name := h.hueClient.GetGroupName(event.ID); name != "" {
+			loxoneIDs = append(loxoneIDs, sanitizeName(name))
+		}
 	}
 
 	// For light events: also send to group mappings that contain this light
@@ -173,6 +184,10 @@ func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 		for _, groupID := range h.hueClient.GetGroupIDsForLight(event.ID) {
 			if mapping := h.mappingManager.GetByHueID(groupID); mapping != nil && mapping.HueType != "scene" && !strings.Contains(mapping.LoxoneID, "_mood_") {
 				loxoneIDs = append(loxoneIDs, mapping.LoxoneID)
+			} else if sendAll {
+				if name := h.hueClient.GetGroupName(groupID); name != "" {
+					loxoneIDs = append(loxoneIDs, sanitizeName(name))
+				}
 			}
 		}
 	}

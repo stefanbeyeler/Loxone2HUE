@@ -498,6 +498,16 @@ func (c *Client) GetGroupIDsForLight(lightID string) []string {
 	return ids
 }
 
+// GetGroupName returns the name of a group by ID, or empty string if not found
+func (c *Client) GetGroupName(groupID string) string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if g, ok := c.groups[groupID]; ok {
+		return g.Name
+	}
+	return ""
+}
+
 // Events returns the event channel for SSE events
 func (c *Client) Events() <-chan Event {
 	return c.eventChan
