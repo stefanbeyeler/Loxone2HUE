@@ -11,6 +11,7 @@ interface DeviceListProps {
   onBrightness: (id: string, brightness: number) => void;
   onRefresh: () => void;
   mappings?: Mapping[];
+  udpSendAll?: boolean;
 }
 
 export function DeviceList({
@@ -21,6 +22,7 @@ export function DeviceList({
   onBrightness,
   onRefresh,
   mappings = [],
+  udpSendAll = false,
 }: DeviceListProps) {
   if (loading) {
     return (
@@ -106,6 +108,7 @@ export function DeviceList({
                   onToggle={onToggle}
                   onBrightness={onBrightness}
                   mapping={mappings.find(m => m.hue_id === device.id && m.enabled)}
+                  udpSendAll={udpSendAll}
                 />
               ))}
             </div>
@@ -127,6 +130,8 @@ export function DeviceList({
                 device={device}
                 onToggle={onToggle}
                 onBrightness={onBrightness}
+                mapping={mappings.find(m => m.hue_id === device.id && m.enabled)}
+                udpSendAll={udpSendAll}
               />
             ))}
           </div>

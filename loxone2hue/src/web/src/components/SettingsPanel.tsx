@@ -29,6 +29,7 @@ export function SettingsPanel() {
     udp_feedback: {
       enabled: false,
       port: 7777,
+      send_all: false,
     },
   });
   const [saving, setSaving] = useState(false);
@@ -87,6 +88,7 @@ export function SettingsPanel() {
         udp_feedback: {
           enabled: config.loxone?.udp_feedback?.enabled ?? false,
           port: config.loxone?.udp_feedback?.port || 7777,
+          send_all: config.loxone?.udp_feedback?.send_all ?? false,
         },
       });
     } catch (err) {
@@ -206,6 +208,24 @@ export function SettingsPanel() {
             className="w-full bg-gray-700 text-white rounded-lg px-4 py-2.5 border border-gray-600 focus:border-hue-orange focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed placeholder-gray-500"
           />
         </div>
+
+        <label className="flex items-center gap-3 cursor-pointer">
+          <div className="relative">
+            <input
+              type="checkbox"
+              checked={loxoneConfig.udp_feedback.send_all}
+              onChange={(e) => updateUDP({ send_all: e.target.checked })}
+              disabled={!loxoneConfig.udp_feedback.enabled}
+              className="sr-only peer"
+            />
+            <div className="w-10 h-6 bg-gray-600 rounded-full peer-checked:bg-green-600 transition-colors peer-disabled:opacity-50"></div>
+            <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
+          </div>
+          <div>
+            <span className="text-gray-300">Alle Geräte senden</span>
+            <p className="text-xs text-gray-500">Auch für Geräte ohne Mapping (Gerätename wird als Loxone-ID verwendet)</p>
+          </div>
+        </label>
 
         {loxoneConfig.udp_feedback.enabled && !loxoneConfig.miniserver_ip && (
           <div className="flex items-center gap-2 text-yellow-400 text-sm">

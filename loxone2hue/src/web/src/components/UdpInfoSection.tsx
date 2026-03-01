@@ -1,6 +1,14 @@
 import { Radio } from 'lucide-react';
 import type { Capabilities } from '../types';
 
+/** Converts a HUE device name to a Loxone-safe identifier (mirrors Go sanitizeName in export.go) */
+export function sanitizeName(name: string): string {
+  let s = name.toLowerCase();
+  s = s.replace(/[\s-]/g, '_');
+  s = s.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss');
+  return s.replace(/[^a-z0-9_]/g, '');
+}
+
 export interface UdpProperty {
   pattern: string;
   label: string;

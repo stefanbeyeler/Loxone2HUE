@@ -38,6 +38,7 @@ export function Dashboard() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [bridgeIP, setBridgeIP] = useState<string | null>(null);
   const [mappings, setMappings] = useState<Mapping[]>([]);
+  const [udpSendAll, setUdpSendAll] = useState(false);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(10);
   const [showIntervalMenu, setShowIntervalMenu] = useState(false);
   const intervalMenuRef = useRef<HTMLDivElement>(null);
@@ -63,6 +64,10 @@ export function Dashboard() {
         if (config.hue?.bridge_ip) {
           setBridgeIP(config.hue.bridge_ip);
         }
+        setUdpSendAll(
+          config.loxone?.udp_feedback?.enabled === true &&
+          config.loxone?.udp_feedback?.send_all === true
+        );
         const result = await api.getMappings();
         setMappings(result.mappings || []);
       } catch (err) {
@@ -316,6 +321,7 @@ export function Dashboard() {
             onBrightness={handleLightBrightness}
             onRefresh={refresh}
             mappings={mappings}
+            udpSendAll={udpSendAll}
           />
         )}
 
@@ -327,6 +333,7 @@ export function Dashboard() {
             onActivateScene={activateScene}
             title="Räume"
             mappings={mappings}
+            udpSendAll={udpSendAll}
           />
         )}
 
@@ -338,6 +345,7 @@ export function Dashboard() {
             onActivateScene={activateScene}
             title="Zonen"
             mappings={mappings}
+            udpSendAll={udpSendAll}
           />
         )}
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.17
+
+- UDP Status-Feedback: Neue Einstellung "Alle Geräte senden" — sendet UDP auch für Geräte ohne Mapping (Gerätename als Loxone-ID)
+- Geräte-/Gruppen-Kacheln: UDP-Info-Button wird für alle Elemente angezeigt wenn die Einstellung aktiv ist
+
 ## 1.1.16
 
 - Geräte- und Gruppen-Kacheln: Aufklappbarer UDP Status-Feedback Bereich mit Check-Patterns und Loxone Config Anleitung

@@ -41,6 +41,7 @@ type LoxoneConfig struct {
 type UDPFeedbackConfig struct {
 	Enabled bool `yaml:"enabled" json:"enabled"`
 	Port    int  `yaml:"port" json:"port"`
+	SendAll bool `yaml:"send_all" json:"send_all"`
 }
 
 // LoggingConfig holds logging settings
