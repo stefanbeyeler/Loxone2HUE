@@ -130,14 +130,6 @@ func (h *WebSocketHub) forwardHueEvents(ctx context.Context) {
 
 // sendUDPFeedback extracts changed properties from a HUE event and sends them via UDP
 func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
-	// Look up the LoxoneID for this HUE resource
-	mapping := h.mappingManager.GetByHueID(event.ID)
-	if mapping == nil {
-		return
-	}
-
-	loxoneID := mapping.LoxoneID
-
 	// Extract event data fields via JSON roundtrip
 	type eventData struct {
 		On *struct {
@@ -167,23 +159,46 @@ func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 		return
 	}
 
-	// Send one UDP packet per changed property
-	if ed.On != nil {
-		onVal := 0
-		if ed.On.On {
-			onVal = 1
+	// Collect all LoxoneIDs that should receive this update
+	var loxoneIDs []string
+
+	// Direct lookup: event.ID matches a mapping's hue_id (light or group)
+	if mapping := h.mappingManager.GetByHueID(event.ID); mapping != nil {
+		loxoneIDs = append(loxoneIDs, mapping.LoxoneID)
+	}
+
+	// For light events: also send to group mappings that contain this light
+	if event.Type == "light" {
+		for _, groupID := range h.hueClient.GetGroupIDsForLight(event.ID) {
+			if mapping := h.mappingManager.GetByHueID(groupID); mapping != nil {
+				loxoneIDs = append(loxoneIDs, mapping.LoxoneID)
+			}
 		}
-		h.udpSender.Send(loxoneID, "on", onVal)
 	}
-	if ed.Dimming != nil {
-		h.udpSender.Send(loxoneID, "bri", int(ed.Dimming.Brightness))
+
+	if len(loxoneIDs) == 0 {
+		return
 	}
-	if ed.ColorTemperature != nil {
-		h.udpSender.Send(loxoneID, "ct", ed.ColorTemperature.Mirek)
-	}
-	if ed.Color != nil {
-		h.udpSender.Send(loxoneID, "color_x", fmt.Sprintf("%.4f", ed.Color.XY.X))
-		h.udpSender.Send(loxoneID, "color_y", fmt.Sprintf("%.4f", ed.Color.XY.Y))
+
+	// Send one UDP packet per changed property per LoxoneID
+	for _, loxoneID := range loxoneIDs {
+		if ed.On != nil {
+			onVal := 0
+			if ed.On.On {
+				onVal = 1
+			}
+			h.udpSender.Send(loxoneID, "on", onVal)
+		}
+		if ed.Dimming != nil {
+			h.udpSender.Send(loxoneID, "bri", int(ed.Dimming.Brightness))
+		}
+		if ed.ColorTemperature != nil {
+			h.udpSender.Send(loxoneID, "ct", ed.ColorTemperature.Mirek)
+		}
+		if ed.Color != nil {
+			h.udpSender.Send(loxoneID, "color_x", fmt.Sprintf("%.4f", ed.Color.XY.X))
+			h.udpSender.Send(loxoneID, "color_y", fmt.Sprintf("%.4f", ed.Color.XY.Y))
+		}
 	}
 }
 

@@ -481,6 +481,23 @@ func (c *Client) ActivateScene(id string) error {
 	return nil
 }
 
+// GetGroupIDsForLight returns all group (room/zone) IDs that contain the given light ID
+func (c *Client) GetGroupIDsForLight(lightID string) []string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	var ids []string
+	for _, g := range c.groups {
+		for _, lid := range g.Lights {
+			if lid == lightID {
+				ids = append(ids, g.ID)
+				break
+			}
+		}
+	}
+	return ids
+}
+
 // Events returns the event channel for SSE events
 func (c *Client) Events() <-chan Event {
 	return c.eventChan
