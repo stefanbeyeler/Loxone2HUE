@@ -11,7 +11,7 @@ const LEVEL_STYLES: Record<string, string> = {
   FATAL: 'bg-red-800 text-red-200',
 };
 
-const LEVEL_FILTERS = ['Alle', 'DEBUG', 'INFO', 'WARN', 'ERROR'] as const;
+const LEVEL_FILTERS = ['Alle', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'UDP'] as const;
 
 function formatTimestamp(ts: string): string {
   const d = new Date(ts);
@@ -51,9 +51,10 @@ export function SettingsPanel() {
   const loadLogs = useCallback(async () => {
     try {
       setLogsLoading(true);
+      const isUDP = logLevel === 'UDP';
       const result = await api.getLogs({
-        level: logLevel || undefined,
-        search: logSearch || undefined,
+        level: (!isUDP && logLevel) || undefined,
+        search: isUDP ? 'UDP feedback' : logSearch || undefined,
         limit: 200,
       });
       setLogEntries(result.entries || []);
@@ -254,8 +255,12 @@ export function SettingsPanel() {
               onClick={() => setLogLevel(lvl === 'Alle' ? '' : lvl)}
               className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                 (lvl === 'Alle' && logLevel === '') || logLevel === lvl
-                  ? 'bg-hue-orange text-gray-900'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  ? lvl === 'UDP'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-hue-orange text-gray-900'
+                  : lvl === 'UDP'
+                    ? 'bg-green-900/50 text-green-400 hover:bg-green-900/80'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
             >
               {lvl}

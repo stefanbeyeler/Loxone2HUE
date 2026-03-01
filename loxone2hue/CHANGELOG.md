@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.12
+
+- Server Logs: Neuer UDP-Filter-Button zeigt nur UDP-Feedback-Meldungen an
+
 ## 1.1.11
 
 - UDP-Feedback: Gesendete UDP-Meldungen werden jetzt im Server-Log auf INFO-Level protokolliert
