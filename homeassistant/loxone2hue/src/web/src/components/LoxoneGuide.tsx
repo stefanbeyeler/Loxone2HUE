@@ -574,9 +574,9 @@ export function LoxoneGuide() {
             </div>
           </div>
 
-          <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-4">
-            <h4 className="font-medium text-green-400 mb-2">Ergebnis</h4>
-            <ul className="text-sm text-green-300 space-y-1">
+          <div className="bg-hue-orange/10 border border-hue-orange/30 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-2">Ergebnis</h4>
+            <ul className="text-sm text-orange-300 space-y-1">
               <li>• Mood 0 → Wohnzimmer-Gruppe wird ausgeschaltet</li>
               <li>• Mood 1 → Szene "Entspannen" wird aktiviert</li>
               <li>• Mood 2 → Szene "Konzentrieren" wird aktiviert</li>
@@ -656,8 +656,12 @@ export function LoxoneGuide() {
 
           <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4">
             <p className="text-sm text-blue-300">
-              <strong>Hinweis:</strong> Es werden nur Geräte übertragen, für die ein aktives Mapping existiert.
+              <strong>Hinweis:</strong> Standardmässig werden nur Geräte übertragen, für die ein aktives Mapping existiert.
               Die Loxone ID aus dem Mapping wird als Prefix verwendet.
+            </p>
+            <p className="text-sm text-blue-300 mt-2">
+              Mit der Option <strong>UDP Feedback für alle Geräte senden</strong> in den Einstellungen werden
+              auch Geräte ohne Mapping übertragen. In diesem Fall wird der Gerätename als Loxone-ID verwendet.
             </p>
           </div>
         </div>
@@ -671,10 +675,32 @@ export function LoxoneGuide() {
         </h3>
         <div className="space-y-4 text-gray-300">
           <p className="text-sm">
-            XML-Vorlagen zum direkten Import in Loxone Config. Die Dateien können unter
-            <strong> Einstellungen → Loxone Config Export</strong> heruntergeladen und in Loxone Config
-            unter <strong>Gerätevorlagen → Vorlage importieren</strong> geladen werden.
+            XML-Vorlagen für den Import in Loxone Config. Die Dateien können unter
+            <strong> Einstellungen → Loxone Config Export</strong> heruntergeladen werden.
           </p>
+
+          <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-4">
+            <h4 className="font-medium text-yellow-400 mb-2">Import in Loxone Config (2 Schritte)</h4>
+            <ol className="text-sm text-yellow-300 space-y-2 list-decimal list-inside">
+              <li>
+                <strong>Vorlage importieren:</strong> In Loxone Config unter <strong>Gerätevorlagen → Vorlage importieren</strong> die
+                heruntergeladene XML-Datei laden.
+              </li>
+              <li>
+                <strong>Vorlage ausführen:</strong> Den entsprechenden Bereich im Peripheriebaum markieren, dann
+                unter <strong>Gerätevorlagen → Meine Vorlagen</strong> die importierte Vorlage auswählen und ausführen.
+              </li>
+            </ol>
+            <div className="mt-3 space-y-1.5 text-xs text-yellow-200/80">
+              <p>
+                <strong>Virtual UDP Input:</strong> Im Peripheriebaum <strong>Virtuelle Eingänge</strong> markieren
+                und sicherstellen, dass <strong>Vordefinierte UDP-Geräte</strong> ausgewählt ist.
+              </p>
+              <p>
+                <strong>Virtual HTTP Output:</strong> Im Peripheriebaum <strong>Virtuelle Ausgänge</strong> markieren.
+              </p>
+            </div>
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="bg-gray-900 rounded-lg p-4">
@@ -701,13 +727,14 @@ export function LoxoneGuide() {
             </div>
           </div>
 
-          <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-4">
-            <h4 className="font-medium text-green-400 mb-2">Empfohlener Workflow</h4>
-            <ol className="text-sm text-green-300 space-y-1 list-decimal list-inside">
+          <div className="bg-hue-orange/10 border border-hue-orange/30 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-2">Empfohlener Workflow</h4>
+            <ol className="text-sm text-orange-300 space-y-1 list-decimal list-inside">
               <li>Mappings im Tab "Mappings" erstellen</li>
               <li>UDP-Feedback in Einstellungen aktivieren</li>
               <li>XML-Vorlagen herunterladen (Einstellungen → Loxone Config Export)</li>
               <li>In Loxone Config importieren (Gerätevorlagen → Vorlage importieren)</li>
+              <li>Bereich markieren (Virtuelle Eingänge bzw. Virtuelle Ausgänge), dann Vorlage ausführen (Gerätevorlagen → Meine Vorlagen)</li>
               <li>Loxone Config speichern und auf Miniserver übertragen</li>
             </ol>
           </div>
@@ -788,7 +815,7 @@ export function LoxoneGuide() {
               </li>
               <li className="flex items-start gap-2">
                 <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
-                <span>Stelle sicher, dass ein Mapping für das Gerät existiert (nur gemappte Geräte senden UDP)</span>
+                <span>Stelle sicher, dass ein Mapping für das Gerät existiert oder <strong>UDP Feedback für alle Geräte senden</strong> aktiviert ist</span>
               </li>
               <li className="flex items-start gap-2">
                 <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
@@ -847,6 +874,10 @@ export function LoxoneGuide() {
           <li className="flex items-start gap-3">
             <div className="w-5 h-5 rounded border-2 border-gray-600 flex-shrink-0 mt-0.5"></div>
             <span>XML in Loxone Config importiert (Gerätevorlagen → Vorlage importieren)</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <div className="w-5 h-5 rounded border-2 border-gray-600 flex-shrink-0 mt-0.5"></div>
+            <span>Vorlage ausgeführt (Bereich markieren → Gerätevorlagen → Meine Vorlagen)</span>
           </li>
           <li className="flex items-start gap-3">
             <div className="w-5 h-5 rounded border-2 border-gray-600 flex-shrink-0 mt-0.5"></div>

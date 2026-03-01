@@ -1405,6 +1405,10 @@ const openAPISpec = `{
             "example": 7777,
             "minimum": 1,
             "maximum": 65535
+          },
+          "send_all": {
+            "type": "boolean",
+            "description": "UDP Feedback für alle Geräte senden (auch ohne Mapping). Der Gerätename wird als Loxone-ID verwendet."
           }
         }
       },

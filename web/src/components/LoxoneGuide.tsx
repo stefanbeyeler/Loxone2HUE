@@ -574,9 +574,9 @@ export function LoxoneGuide() {
             </div>
           </div>
 
-          <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-4">
-            <h4 className="font-medium text-green-400 mb-2">Ergebnis</h4>
-            <ul className="text-sm text-green-300 space-y-1">
+          <div className="bg-hue-orange/10 border border-hue-orange/30 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-2">Ergebnis</h4>
+            <ul className="text-sm text-orange-300 space-y-1">
               <li>• Mood 0 → Wohnzimmer-Gruppe wird ausgeschaltet</li>
               <li>• Mood 1 → Szene "Entspannen" wird aktiviert</li>
               <li>• Mood 2 → Szene "Konzentrieren" wird aktiviert</li>
@@ -656,8 +656,12 @@ export function LoxoneGuide() {
 
           <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4">
             <p className="text-sm text-blue-300">
-              <strong>Hinweis:</strong> Es werden nur Geräte übertragen, für die ein aktives Mapping existiert.
+              <strong>Hinweis:</strong> Standardmässig werden nur Geräte übertragen, für die ein aktives Mapping existiert.
               Die Loxone ID aus dem Mapping wird als Prefix verwendet.
+            </p>
+            <p className="text-sm text-blue-300 mt-2">
+              Mit der Option <strong>UDP Feedback für alle Geräte senden</strong> in den Einstellungen werden
+              auch Geräte ohne Mapping übertragen. In diesem Fall wird der Gerätename als Loxone-ID verwendet.
             </p>
           </div>
         </div>
@@ -723,9 +727,9 @@ export function LoxoneGuide() {
             </div>
           </div>
 
-          <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-4">
-            <h4 className="font-medium text-green-400 mb-2">Empfohlener Workflow</h4>
-            <ol className="text-sm text-green-300 space-y-1 list-decimal list-inside">
+          <div className="bg-hue-orange/10 border border-hue-orange/30 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-2">Empfohlener Workflow</h4>
+            <ol className="text-sm text-orange-300 space-y-1 list-decimal list-inside">
               <li>Mappings im Tab "Mappings" erstellen</li>
               <li>UDP-Feedback in Einstellungen aktivieren</li>
               <li>XML-Vorlagen herunterladen (Einstellungen → Loxone Config Export)</li>
@@ -811,7 +815,7 @@ export function LoxoneGuide() {
               </li>
               <li className="flex items-start gap-2">
                 <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
-                <span>Stelle sicher, dass ein Mapping für das Gerät existiert (nur gemappte Geräte senden UDP)</span>
+                <span>Stelle sicher, dass ein Mapping für das Gerät existiert oder <strong>UDP Feedback für alle Geräte senden</strong> aktiviert ist</span>
               </li>
               <li className="flex items-start gap-2">
                 <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
