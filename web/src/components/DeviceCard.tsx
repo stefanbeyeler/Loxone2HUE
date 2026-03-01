@@ -1,15 +1,19 @@
 import { useState } from 'react';
-import { Lightbulb, Power } from 'lucide-react';
+import { Lightbulb, Power, Radio } from 'lucide-react';
 import { Light } from '../types';
+import type { Mapping } from '../services/api';
+import { UdpInfoSection, getUdpProperties } from './UdpInfoSection';
 
 interface DeviceCardProps {
   device: Light;
   onToggle: (id: string, on: boolean) => void;
   onBrightness: (id: string, brightness: number) => void;
+  mapping?: Mapping;
 }
 
-export function DeviceCard({ device, onToggle, onBrightness }: DeviceCardProps) {
+export function DeviceCard({ device, onToggle, onBrightness, mapping }: DeviceCardProps) {
   const [localBrightness, setLocalBrightness] = useState(device.state.brightness);
+  const [showUdp, setShowUdp] = useState(false);
 
   const handleBrightnessChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
@@ -63,19 +67,36 @@ export function DeviceCard({ device, onToggle, onBrightness }: DeviceCardProps) 
           </div>
         </div>
 
-        <button
-          onClick={() => onToggle(device.id, !device.state.on)}
-          className={`
-            p-2 rounded-lg transition-colors
-            ${device.state.on
-              ? 'bg-hue-orange text-gray-900'
-              : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-            }
-          `}
-          disabled={!device.state.reachable}
-        >
-          <Power size={20} />
-        </button>
+        <div className="flex items-center gap-1">
+          {mapping && (
+            <button
+              onClick={() => setShowUdp(!showUdp)}
+              title="UDP Status-Feedback"
+              className={`
+                p-2 rounded-lg transition-colors
+                ${showUdp
+                  ? 'bg-green-700 text-white'
+                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white'
+                }
+              `}
+            >
+              <Radio size={16} />
+            </button>
+          )}
+          <button
+            onClick={() => onToggle(device.id, !device.state.on)}
+            className={`
+              p-2 rounded-lg transition-colors
+              ${device.state.on
+                ? 'bg-hue-orange text-gray-900'
+                : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+              }
+            `}
+            disabled={!device.state.reachable}
+          >
+            <Power size={20} />
+          </button>
+        </div>
       </div>
 
       {device.capabilities.supports_dimming && (
@@ -100,6 +121,13 @@ export function DeviceCard({ device, onToggle, onBrightness }: DeviceCardProps) 
 
       {!device.state.reachable && (
         <p className="text-xs text-red-400 mt-2">Nicht erreichbar</p>
+      )}
+
+      {showUdp && mapping && (
+        <UdpInfoSection
+          loxoneId={mapping.loxone_id}
+          properties={getUdpProperties(mapping.loxone_id, device.capabilities)}
+        />
       )}
     </div>
   );

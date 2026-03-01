@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Group, Scene } from '../types';
-import { Home, Layers, Power, Play } from 'lucide-react';
+import type { Mapping } from '../services/api';
+import { Home, Layers, Power, Play, Radio } from 'lucide-react';
+import { UdpInfoSection, getGroupUdpProperties } from './UdpInfoSection';
 
 interface GroupListProps {
   groups: Group[];
@@ -8,10 +10,12 @@ interface GroupListProps {
   onToggle: (id: string, on: boolean) => void;
   onActivateScene: (id: string) => void;
   title?: string;
+  mappings?: Mapping[];
 }
 
-export function GroupList({ groups, scenes, onToggle, onActivateScene, title }: GroupListProps) {
+export function GroupList({ groups, scenes, onToggle, onActivateScene, title, mappings = [] }: GroupListProps) {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [expandedUdp, setExpandedUdp] = useState<string | null>(null);
 
   const getGroupScenes = (groupId: string) => {
     return scenes
@@ -28,6 +32,8 @@ export function GroupList({ groups, scenes, onToggle, onActivateScene, title }: 
       {sortedGroups.map((group) => {
         const groupScenes = getGroupScenes(group.id);
         const isExpanded = expandedGroup === group.id;
+        const mapping = mappings.find(m => m.hue_id === group.id && m.enabled);
+        const isUdpExpanded = expandedUdp === group.id;
 
         return (
           <div
@@ -63,22 +69,51 @@ export function GroupList({ groups, scenes, onToggle, onActivateScene, title }: 
                 </div>
               </div>
 
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggle(group.id, !group.state.any_on);
-                }}
-                className={`
-                  p-2 rounded-lg transition-colors
-                  ${group.state.any_on
-                    ? 'bg-hue-orange text-gray-900'
-                    : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-                  }
-                `}
-              >
-                <Power size={20} />
-              </button>
+              <div className="flex items-center gap-1">
+                {mapping && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandedUdp(isUdpExpanded ? null : group.id);
+                    }}
+                    title="UDP Status-Feedback"
+                    className={`
+                      p-2 rounded-lg transition-colors
+                      ${isUdpExpanded
+                        ? 'bg-green-700 text-white'
+                        : 'bg-gray-700 text-gray-400 hover:bg-gray-600 hover:text-white'
+                      }
+                    `}
+                  >
+                    <Radio size={16} />
+                  </button>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggle(group.id, !group.state.any_on);
+                  }}
+                  className={`
+                    p-2 rounded-lg transition-colors
+                    ${group.state.any_on
+                      ? 'bg-hue-orange text-gray-900'
+                      : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                    }
+                  `}
+                >
+                  <Power size={20} />
+                </button>
+              </div>
             </div>
+
+            {isUdpExpanded && mapping && (
+              <div className="px-4 pb-4">
+                <UdpInfoSection
+                  loxoneId={mapping.loxone_id}
+                  properties={getGroupUdpProperties(mapping.loxone_id)}
+                />
+              </div>
+            )}
 
             {isExpanded && groupScenes.length > 0 && (
               <div className="border-t border-gray-700 p-4">

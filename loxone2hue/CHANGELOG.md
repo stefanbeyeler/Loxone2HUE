@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.16
+
+- Geräte- und Gruppen-Kacheln: Aufklappbarer UDP Status-Feedback Bereich mit Check-Patterns und Loxone Config Anleitung
+
 ## 1.1.15
 
 - Loxone Config Export: Mood-Mappings (_mood_N) werden nicht mehr als virtuelle UDP-Eingänge exportiert
