@@ -218,11 +218,11 @@ export function SettingsPanel() {
               disabled={!loxoneConfig.udp_feedback.enabled}
               className="sr-only peer"
             />
-            <div className="w-10 h-6 bg-gray-600 rounded-full peer-checked:bg-green-600 transition-colors peer-disabled:opacity-50"></div>
+            <div className="w-10 h-6 bg-gray-600 rounded-full peer-checked:bg-hue-orange transition-colors peer-disabled:opacity-50"></div>
             <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
           </div>
           <div>
-            <span className="text-gray-300">Alle Geräte senden</span>
+            <span className="text-gray-300">UDP Feedback für alle Geräte senden</span>
             <p className="text-xs text-gray-500">Auch für Geräte ohne Mapping (Gerätename wird als Loxone-ID verwendet)</p>
           </div>
         </label>
@@ -275,12 +275,8 @@ export function SettingsPanel() {
               onClick={() => setLogLevel(lvl === 'Alle' ? '' : lvl)}
               className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                 (lvl === 'Alle' && logLevel === '') || logLevel === lvl
-                  ? lvl === 'UDP'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-hue-orange text-gray-900'
-                  : lvl === 'UDP'
-                    ? 'bg-green-900/50 text-green-400 hover:bg-green-900/80'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  ? 'bg-hue-orange text-gray-900'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
               }`}
             >
               {lvl}
