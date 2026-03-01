@@ -32,6 +32,7 @@ fi
 cp -r "${PROJECT_ROOT}/cmd" "${ADDON_DIR}/src/"
 cp -r "${PROJECT_ROOT}/internal" "${ADDON_DIR}/src/"
 cp -r "${PROJECT_ROOT}/configs" "${ADDON_DIR}/src/"
+cp "${PROJECT_ROOT}/VERSION" "${ADDON_DIR}/src/"
 
 # Copy web source files
 echo "Copying web source files..."

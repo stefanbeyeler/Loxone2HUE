@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.36
+
+- Mapping-Links aus Geräte-, Raum- und Szenen-Tabs entfernt (Mappings nur noch im Mappings-Tab)
+- Mood-Szenen: Reihenfolge wird beim Erstellen korrekt übernommen
+- Mood-Szenen: Bezeichnungen verschwinden nicht mehr beim nachträglichen Verschieben
+- Gruppen-Löschung und Mood-Tausch in Mapping-Verwaltung
+
 ## 1.1.0
 
 - UDP Status-Feedback: Automatische Rückmeldung von HUE-Statusänderungen an Loxone per UDP
