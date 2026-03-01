@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.36
+## 1.1.1
 
 - Mapping-Links aus Geräte-, Raum- und Szenen-Tabs entfernt (Mappings nur noch im Mappings-Tab)
 - Mood-Szenen: Reihenfolge wird beim Erstellen korrekt übernommen
