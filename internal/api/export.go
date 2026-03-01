@@ -95,10 +95,10 @@ func (h *Handlers) ExportVirtualInputs(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	} else {
-		// Only mapped lights and groups (not scenes)
+		// Only mapped lights and groups (not scenes or mood mappings)
 		mappings := config.GetMappings()
 		for _, m := range mappings {
-			if !m.Enabled || m.HueType == "scene" {
+			if !m.Enabled || m.HueType == "scene" || moodPattern.MatchString(m.LoxoneID) {
 				continue
 			}
 			devices = append(devices, inputDevice{
