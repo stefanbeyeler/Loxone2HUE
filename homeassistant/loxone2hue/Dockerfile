@@ -1,15 +1,15 @@
 # Home Assistant Add-on Dockerfile for Loxone2HUE Gateway
 # Supports multi-architecture builds (aarch64, amd64, armv7)
 
-# Build argument for base image (set by Home Assistant build system)
+# Global build arguments (set by Home Assistant build system)
 ARG BUILD_FROM
-FROM ${BUILD_FROM:-ghcr.io/home-assistant/aarch64-base:3.18} AS base
+ARG BUILD_ARCH=aarch64
 
 #---------------------------------------------
 # Build stage for Go backend
 FROM golang:1.22-alpine AS go-builder
 
-ARG TARGETARCH
+ARG BUILD_ARCH=aarch64
 
 WORKDIR /build
 
@@ -18,11 +18,17 @@ COPY src/ .
 
 RUN apk add --no-cache ca-certificates
 
-# Download dependencies and build
-RUN rm -f go.sum && go mod tidy
-
-RUN VERSION=$(cat VERSION) && BUILD_DATE=$(date -u +%Y-%m-%d) && \
-    CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-arm64} go build \
+# Map HA arch names to Go arch names
+RUN GOARCH_MAP="" && \
+    case "${BUILD_ARCH}" in \
+      aarch64) GOARCH_MAP=arm64 ;; \
+      amd64) GOARCH_MAP=amd64 ;; \
+      armv7) GOARCH_MAP=arm ;; \
+      *) GOARCH_MAP=arm64 ;; \
+    esac && \
+    VERSION=$(cat VERSION) && BUILD_DATE=$(date -u +%Y-%m-%d) && \
+    rm -f go.sum && go mod tidy && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=${GOARCH_MAP} go build \
     -ldflags="-w -s -X main.version=${VERSION} -X main.buildTime=${BUILD_DATE}" \
     -o gateway ./cmd/gateway
 
@@ -44,7 +50,7 @@ RUN VERSION=$(cat /build/VERSION) && BUILD_DATE=$(date -u +%Y-%m-%d) && \
 
 #---------------------------------------------
 # Final stage - Home Assistant base image
-FROM base
+FROM ${BUILD_FROM:-ghcr.io/home-assistant/aarch64-base:3.18}
 
 # Install runtime dependencies
 RUN apk add --no-cache \
