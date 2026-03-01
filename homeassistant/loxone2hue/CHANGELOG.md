@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.13
+
+- UDP-Feedback: Statusänderungen einzelner Lichter werden jetzt auch an Gruppen-Mappings weitergeleitet
+
 ## 1.1.12
 
 - Server Logs: Neuer UDP-Filter-Button zeigt nur UDP-Feedback-Meldungen an
