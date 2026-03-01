@@ -1,8 +1,9 @@
 # Changelog
 
-## 1.1.4
+## 1.1.5
 
 - Loxone Config Export: Sonderzeichen (Umlaute ä, ö, ü etc.) werden als XML-Entities kodiert für fehlerfreien Import
+- Loxone Config Export: Info-Tag mit templateType wieder hinzugefügt, damit Vorlagen beim Import erkannt werden
 
 ## 1.1.3
 
