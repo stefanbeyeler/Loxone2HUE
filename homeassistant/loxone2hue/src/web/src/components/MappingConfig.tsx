@@ -728,6 +728,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
         </div>
       </div>
 
+      <div className="bg-gray-800 rounded-xl p-6 space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold text-white">Loxone Mappings</h2>
         <div className="flex gap-2">
@@ -1563,6 +1564,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
             </p>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

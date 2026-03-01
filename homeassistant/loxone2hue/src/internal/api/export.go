@@ -105,7 +105,6 @@ func (h *Handlers) ExportVirtualInputs(w http.ResponseWriter, r *http.Request) {
 	buf.Write([]byte{0xEF, 0xBB, 0xBF})
 	buf.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>" + nl)
 	fmt.Fprintf(&buf, "<VirtualInUdp Title=\"Loxone2HUE Status\" Comment=\"\" Address=\"\" Port=\"%d\">%s", port, nl)
-	buf.WriteString("\t<Info templateType=\"1\" minVersion=\"14051207\"/>" + nl)
 
 	for _, d := range devices {
 		name := xmlAttr(d.Name)
@@ -176,7 +175,6 @@ func (h *Handlers) ExportVirtualOutputs(w http.ResponseWriter, r *http.Request) 
 	buf.Write([]byte{0xEF, 0xBB, 0xBF})
 	buf.WriteString("<?xml version=\"1.0\" encoding=\"utf-8\"?>" + nl)
 	fmt.Fprintf(&buf, "<VirtualOut Title=\"Loxone2HUE\" Comment=\"\" Address=\"%s\" CmdInit=\"\" HintText=\"\" CloseAfterSend=\"true\" CmdSep=\";\">%s", xmlAttr(address), nl)
-	buf.WriteString("\t<Info templateType=\"3\" minVersion=\"14051207\"/>" + nl)
 
 	// Mood commands (0=Aus, 1-N=Szene)
 	for _, baseName := range moodBaseNames {

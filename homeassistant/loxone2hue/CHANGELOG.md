@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2
+
+- Loxone Config Export: XML-Vorlagen können jetzt fehlerfrei importiert werden (Info-Tag entfernt)
+- Mood-Wizard: Doppelklick-Schutz beim Erstellen verhindert doppelte Einträge
+
 ## 1.1.1
 
 - Mapping-Links aus Geräte-, Raum- und Szenen-Tabs entfernt (Mappings nur noch im Mappings-Tab)
