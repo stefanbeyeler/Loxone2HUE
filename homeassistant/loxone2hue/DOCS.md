@@ -98,8 +98,9 @@ Pro Eigenschaftsänderung wird ein UDP-Paket gesendet:
 Um die UDP-Pakete in Loxone zu empfangen, wird ein **Virtueller UDP Eingang** benötigt. Dieser kann automatisch exportiert werden:
 
 1. Gehe zum Tab **Einstellungen** → **Loxone Config Export**
-2. Klicke auf **Gemappte Geräte** (oder **Alle HUE-Geräte**)
-3. Die heruntergeladene XML-Datei in Loxone Config importieren unter **Gerätevorlagen → Vorlage importieren**
+2. Klicke auf **Gemappte Geräte** (oder **Alle HUE-Geräte**) um die XML-Datei herunterzuladen
+3. **Vorlage importieren:** In Loxone Config unter **Gerätevorlagen → Vorlage importieren** die XML-Datei laden
+4. **Vorlage ausführen:** Im Peripheriebaum **Virtuelle Eingänge** markieren (sicherstellen, dass **Vordefinierte UDP-Geräte** ausgewählt ist), dann unter **Gerätevorlagen → Meine Vorlagen** die importierte Vorlage auswählen und ausführen
 
 ## Loxone Config Export
 
@@ -119,7 +120,14 @@ Erstellt Befehle zur Steuerung von HUE-Geräten aus Loxone:
 - **MOOD-Befehle** für Lichtsteuerungs-Bausteine (automatische Gruppierung)
 - **SET BRI-Befehle** für direkte Lichter/Gruppen
 
-Die Dateien werden unter **Einstellungen → Loxone Config Export** heruntergeladen und in Loxone Config unter **Gerätevorlagen → Vorlage importieren** geladen.
+Die Dateien werden unter **Einstellungen → Loxone Config Export** heruntergeladen.
+
+**Import in Loxone Config (2 Schritte):**
+
+1. **Vorlage importieren:** In Loxone Config unter **Gerätevorlagen → Vorlage importieren** die XML-Datei laden.
+2. **Vorlage ausführen:** Den entsprechenden Bereich im Peripheriebaum markieren, dann unter **Gerätevorlagen → Meine Vorlagen** die importierte Vorlage auswählen und ausführen.
+   - **Virtual UDP Input:** *Virtuelle Eingänge* markieren und sicherstellen, dass *Vordefinierte UDP-Geräte* ausgewählt ist.
+   - **Virtual HTTP Output:** *Virtuelle Ausgänge* markieren.
 
 ## Backup & Restore
 

@@ -133,7 +133,6 @@ export async function importMappings(
 // Config endpoint
 export interface UDPFeedbackConfig {
   enabled: boolean;
-  ip: string;
   port: number;
 }
 

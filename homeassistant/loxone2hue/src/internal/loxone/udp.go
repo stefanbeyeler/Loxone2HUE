@@ -22,8 +22,9 @@ func NewUDPSender() *UDPSender {
 }
 
 // Configure sets up or reconfigures the UDP sender based on current config.
+// The targetIP is the Miniserver IP from the main Loxone config.
 // Call this at startup and whenever the config changes.
-func (s *UDPSender) Configure(cfg config.UDPFeedbackConfig) error {
+func (s *UDPSender) Configure(targetIP string, cfg config.UDPFeedbackConfig) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -34,13 +35,13 @@ func (s *UDPSender) Configure(cfg config.UDPFeedbackConfig) error {
 	}
 
 	s.enabled = cfg.Enabled
-	if !cfg.Enabled || cfg.IP == "" || cfg.Port == 0 {
+	if !cfg.Enabled || targetIP == "" || cfg.Port == 0 {
 		s.enabled = false
 		log.Info().Msg("UDP feedback disabled")
 		return nil
 	}
 
-	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", cfg.IP, cfg.Port))
+	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", targetIP, cfg.Port))
 	if err != nil {
 		return fmt.Errorf("invalid UDP address: %w", err)
 	}

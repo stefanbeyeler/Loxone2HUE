@@ -58,7 +58,7 @@ func main() {
 	// Create UDP sender for Loxone status feedback
 	udpSender := loxone.NewUDPSender()
 	if cfg.Loxone.UDPFeedback.Enabled {
-		if err := udpSender.Configure(cfg.Loxone.UDPFeedback); err != nil {
+		if err := udpSender.Configure(cfg.Loxone.MiniserverIP, cfg.Loxone.UDPFeedback); err != nil {
 			log.Error().Err(err).Msg("Failed to configure UDP feedback")
 		}
 	}

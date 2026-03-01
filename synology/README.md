@@ -100,11 +100,11 @@ Der Gateway kann Status-Änderungen von HUE-Geräten automatisch per UDP an den 
 
 Format: `<loxone_id>/<eigenschaft>:<wert>` (z.B. `Buero_Stefan/on:1`, `Buero_Stefan/bri:80`)
 
-Um die UDP-Pakete in Loxone zu empfangen, unter **Einstellungen → Loxone Config Export** die XML-Vorlage für **Virtual UDP Input** herunterladen und in Loxone Config importieren.
+Um die UDP-Pakete in Loxone zu empfangen, unter **Einstellungen → Loxone Config Export** die XML-Vorlage für **Virtual UDP Input** herunterladen und in Loxone Config importieren (siehe Import-Anleitung unten).
 
 ## Loxone Config Export
 
-XML-Vorlagen zum direkten Import in Loxone Config (**Gerätevorlagen → Vorlage importieren**):
+XML-Vorlagen für den Import in Loxone Config:
 
 | Export | URL | Beschreibung |
 | ------ | --- | ------------ |
@@ -113,6 +113,13 @@ XML-Vorlagen zum direkten Import in Loxone Config (**Gerätevorlagen → Vorlage
 | Virtual HTTP Output | `/api/export/outputs` | HUE-Geräte steuern |
 
 Download über die Web-UI unter **Einstellungen → Loxone Config Export**.
+
+**Import in Loxone Config (2 Schritte):**
+
+1. **Vorlage importieren:** In Loxone Config unter **Gerätevorlagen → Vorlage importieren** die XML-Datei laden.
+2. **Vorlage ausführen:** Den entsprechenden Bereich im Peripheriebaum markieren, dann unter **Gerätevorlagen → Meine Vorlagen** die importierte Vorlage auswählen und ausführen.
+   - **Virtual UDP Input:** *Virtuelle Eingänge* markieren und sicherstellen, dass *Vordefinierte UDP-Geräte* ausgewählt ist.
+   - **Virtual HTTP Output:** *Virtuelle Ausgänge* markieren.
 
 ## Container Manager (DSM 7.2+)
 

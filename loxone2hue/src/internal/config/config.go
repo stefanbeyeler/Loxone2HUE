@@ -39,9 +39,8 @@ type LoxoneConfig struct {
 
 // UDPFeedbackConfig holds UDP status feedback settings
 type UDPFeedbackConfig struct {
-	Enabled bool   `yaml:"enabled" json:"enabled"`
-	IP      string `yaml:"ip" json:"ip"`
-	Port    int    `yaml:"port" json:"port"`
+	Enabled bool `yaml:"enabled" json:"enabled"`
+	Port    int  `yaml:"port" json:"port"`
 }
 
 // LoggingConfig holds logging settings
@@ -73,7 +72,6 @@ func DefaultConfig() *Config {
 			MiniserverIP: "",
 			UDPFeedback: UDPFeedbackConfig{
 				Enabled: false,
-				IP:      "",
 				Port:    7777,
 			},
 		},

@@ -9,7 +9,6 @@ loxone:
     miniserver_ip: 10.1.19.40
     udp_feedback:
         enabled: true
-        ip: 10.1.19.40
         port: 7777
 logging:
     level: debug

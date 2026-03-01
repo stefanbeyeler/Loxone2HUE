@@ -1393,16 +1393,11 @@ const openAPISpec = `{
       },
       "UDPFeedbackConfig": {
         "type": "object",
-        "description": "Konfiguration für UDP Status-Feedback an den Loxone Miniserver. Sendet bei jeder HUE-Statusänderung ein UDP-Paket im Format: <loxone_id>/<eigenschaft>:<wert>",
+        "description": "Konfiguration für UDP Status-Feedback an den Loxone Miniserver. Die Ziel-IP wird automatisch von der Miniserver IP übernommen. Sendet bei jeder HUE-Statusänderung ein UDP-Paket im Format: <loxone_id>/<eigenschaft>:<wert>",
         "properties": {
           "enabled": {
             "type": "boolean",
             "description": "UDP Feedback aktivieren/deaktivieren"
-          },
-          "ip": {
-            "type": "string",
-            "description": "Ziel-IP des Loxone Miniservers",
-            "example": "192.168.1.10"
           },
           "port": {
             "type": "integer",

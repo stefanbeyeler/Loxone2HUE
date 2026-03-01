@@ -115,8 +115,7 @@ loxone:
   enabled: true
   miniserver_ip: ""       # Optional
   udp_feedback:
-    enabled: false        # UDP Status-Feedback aktivieren
-    ip: ""                # Ziel-IP (Loxone Miniserver)
+    enabled: false        # UDP Status-Feedback aktivieren (nutzt miniserver_ip als Ziel)
     port: 7777            # UDP Port
 
 logging:
@@ -174,12 +173,19 @@ Beispiele: `buero_stefan/on:1`, `buero_stefan/bri:80`, `buero_stefan/ct:250`
 
 ### Loxone Config Export
 
-XML-Vorlagen zum direkten Import in Loxone Config (**Gerätevorlagen → Vorlage importieren**):
+XML-Vorlagen für den Import in Loxone Config:
 
 - **Virtual UDP Input** (`GET /api/export/inputs`): Empfängt Status-Feedback
 - **Virtual HTTP Output** (`GET /api/export/outputs`): Steuert HUE-Geräte
 
 Download über die Web UI unter **Einstellungen → Loxone Config Export**.
+
+**Import in Loxone Config (2 Schritte):**
+
+1. **Vorlage importieren:** In Loxone Config unter **Gerätevorlagen → Vorlage importieren** die XML-Datei laden.
+2. **Vorlage ausführen:** Den entsprechenden Bereich im Peripheriebaum markieren, dann unter **Gerätevorlagen → Meine Vorlagen** die importierte Vorlage auswählen und ausführen.
+   - **Virtual UDP Input:** *Virtuelle Eingänge* markieren und sicherstellen, dass *Vordefinierte UDP-Geräte* ausgewählt ist.
+   - **Virtual HTTP Output:** *Virtuelle Ausgänge* markieren.
 
 ### Status-Updates
 
