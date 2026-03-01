@@ -479,7 +479,7 @@ func (h *Handlers) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 
 		// Reconfigure UDP sender on the fly
 		if h.udpSender != nil {
-			if err := h.udpSender.Configure(update.Loxone.UDPFeedback); err != nil {
+			if err := h.udpSender.Configure(update.Loxone.MiniserverIP, update.Loxone.UDPFeedback); err != nil {
 				log.Error().Err(err).Msg("Failed to reconfigure UDP feedback")
 				errorResponse(w, http.StatusInternalServerError, "failed to configure UDP: "+err.Error())
 				return

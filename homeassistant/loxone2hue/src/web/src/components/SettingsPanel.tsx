@@ -28,7 +28,6 @@ export function SettingsPanel() {
     miniserver_ip: '',
     udp_feedback: {
       enabled: false,
-      ip: '',
       port: 7777,
     },
   });
@@ -86,7 +85,6 @@ export function SettingsPanel() {
         miniserver_ip: config.loxone?.miniserver_ip || '',
         udp_feedback: {
           enabled: config.loxone?.udp_feedback?.enabled ?? false,
-          ip: config.loxone?.udp_feedback?.ip || '',
           port: config.loxone?.udp_feedback?.port || 7777,
         },
       });
@@ -168,7 +166,7 @@ export function SettingsPanel() {
           <h3 className="text-lg font-medium text-white">UDP Status-Feedback</h3>
         </div>
         <p className="text-sm text-gray-400">
-          Sendet Status-Änderungen von HUE-Geräten per UDP an den Loxone Miniserver.
+          Sendet Status-Änderungen von HUE-Geräten per UDP an die oben konfigurierte Miniserver IP.
           Für jede Eigenschaftsänderung wird ein UDP-Paket gesendet.
         </p>
         <div className="bg-gray-700/50 rounded-lg p-3">
@@ -194,38 +192,24 @@ export function SettingsPanel() {
           <span className="text-gray-300">UDP Feedback aktivieren</span>
         </label>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">Ziel-IP (Miniserver)</label>
-            <input
-              type="text"
-              value={loxoneConfig.udp_feedback.ip}
-              onChange={(e) => updateUDP({ ip: e.target.value })}
-              placeholder="192.168.1.10"
-              disabled={!loxoneConfig.udp_feedback.enabled}
-              className="w-full bg-gray-700 text-white rounded-lg px-4 py-2.5 border border-gray-600 focus:border-hue-orange focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed placeholder-gray-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-400 mb-1">UDP Port</label>
-            <input
-              type="number"
-              value={loxoneConfig.udp_feedback.port}
-              onChange={(e) => updateUDP({ port: parseInt(e.target.value) || 7777 })}
-              placeholder="7777"
-              min={1}
-              max={65535}
-              disabled={!loxoneConfig.udp_feedback.enabled}
-              className="w-full bg-gray-700 text-white rounded-lg px-4 py-2.5 border border-gray-600 focus:border-hue-orange focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed placeholder-gray-500"
-            />
-          </div>
+        <div className="max-w-xs">
+          <label className="block text-sm text-gray-400 mb-1">UDP Port</label>
+          <input
+            type="number"
+            value={loxoneConfig.udp_feedback.port}
+            onChange={(e) => updateUDP({ port: parseInt(e.target.value) || 7777 })}
+            placeholder="7777"
+            min={1}
+            max={65535}
+            disabled={!loxoneConfig.udp_feedback.enabled}
+            className="w-full bg-gray-700 text-white rounded-lg px-4 py-2.5 border border-gray-600 focus:border-hue-orange focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed placeholder-gray-500"
+          />
         </div>
 
-        {loxoneConfig.udp_feedback.enabled && !loxoneConfig.udp_feedback.ip && (
+        {loxoneConfig.udp_feedback.enabled && !loxoneConfig.miniserver_ip && (
           <div className="flex items-center gap-2 text-yellow-400 text-sm">
             <AlertCircle size={16} />
-            <span>Bitte eine Ziel-IP eingeben</span>
+            <span>Bitte oben eine Miniserver IP eingeben</span>
           </div>
         )}
       </div>

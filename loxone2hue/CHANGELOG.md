@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.10
+
+- Einstellungen: Doppelte Miniserver-IP entfernt – UDP-Feedback verwendet jetzt automatisch die oben konfigurierte Miniserver-IP
+- UDP-Feedback: Separates IP-Feld aus Konfiguration entfernt
+
 ## 1.1.9
 
 - Loxone Config Export: Adresse verwendet jetzt den konfigurierten Server-Port statt den Port aus dem Request (korrigiert falschen Port bei Zugriff über HA-Proxy)
