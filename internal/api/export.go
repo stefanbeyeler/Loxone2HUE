@@ -13,8 +13,8 @@ import (
 )
 
 // xmlAttr escapes a string for safe use in an XML attribute value.
-// Non-ASCII characters are encoded as XML numeric character references
-// (e.g. &#252; for ü) to ensure compatibility with Loxone Config's XML parser.
+// Non-ASCII characters (e.g. umlauts) are passed through as raw UTF-8,
+// relying on the UTF-8 BOM and XML encoding declaration.
 func xmlAttr(s string) string {
 	var b strings.Builder
 	for _, r := range s {
@@ -27,8 +27,6 @@ func xmlAttr(s string) string {
 			b.WriteString("&lt;")
 		case r == '>':
 			b.WriteString("&gt;")
-		case r > 127:
-			fmt.Fprintf(&b, "&#%d;", r)
 		default:
 			b.WriteRune(r)
 		}
