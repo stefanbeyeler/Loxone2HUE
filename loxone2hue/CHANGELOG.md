@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.4
+
+- Loxone Config Export: Sonderzeichen (Umlaute ä, ö, ü etc.) werden als XML-Entities kodiert für fehlerfreien Import
+
 ## 1.1.3
 
 - Backend: Duplikat-Schutz bei Mapping-Erstellung (verhindert doppelte loxone_id)

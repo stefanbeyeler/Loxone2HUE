@@ -12,13 +12,28 @@ import (
 	"github.com/sbeyeler/loxone2hue/internal/models"
 )
 
-// xmlAttr escapes a string for safe use in an XML attribute value
+// xmlAttr escapes a string for safe use in an XML attribute value.
+// Non-ASCII characters are encoded as XML numeric character references
+// (e.g. &#252; for ü) to ensure compatibility with Loxone Config's XML parser.
 func xmlAttr(s string) string {
-	s = strings.ReplaceAll(s, "&", "&amp;")
-	s = strings.ReplaceAll(s, "\"", "&quot;")
-	s = strings.ReplaceAll(s, "<", "&lt;")
-	s = strings.ReplaceAll(s, ">", "&gt;")
-	return s
+	var b strings.Builder
+	for _, r := range s {
+		switch {
+		case r == '&':
+			b.WriteString("&amp;")
+		case r == '"':
+			b.WriteString("&quot;")
+		case r == '<':
+			b.WriteString("&lt;")
+		case r == '>':
+			b.WriteString("&gt;")
+		case r > 127:
+			fmt.Fprintf(&b, "&#%d;", r)
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 // sanitizeName creates a Loxone-safe identifier from a device name
