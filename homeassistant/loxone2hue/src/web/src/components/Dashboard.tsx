@@ -7,6 +7,7 @@ import { MappingConfig } from './MappingConfig';
 import { LoxoneGuide } from './LoxoneGuide';
 import { SettingsPanel } from './SettingsPanel';
 import * as api from '../services/api';
+import type { Mapping } from '../services/api';
 import {
   Lightbulb,
   Home,
@@ -36,6 +37,7 @@ export function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('guide');
   const [menuOpen, setMenuOpen] = useState(false);
   const [bridgeIP, setBridgeIP] = useState<string | null>(null);
+  const [mappings, setMappings] = useState<Mapping[]>([]);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(10);
   const [showIntervalMenu, setShowIntervalMenu] = useState(false);
   const intervalMenuRef = useRef<HTMLDivElement>(null);
@@ -61,6 +63,8 @@ export function Dashboard() {
         if (config.hue?.bridge_ip) {
           setBridgeIP(config.hue.bridge_ip);
         }
+        const result = await api.getMappings();
+        setMappings(result.mappings || []);
       } catch (err) {
         console.error('Failed to fetch bridge info:', err);
       }
@@ -311,6 +315,7 @@ export function Dashboard() {
             onToggle={handleLightToggle}
             onBrightness={handleLightBrightness}
             onRefresh={refresh}
+            mappings={mappings}
           />
         )}
 
@@ -321,6 +326,7 @@ export function Dashboard() {
             onToggle={handleGroupToggle}
             onActivateScene={activateScene}
             title="Räume"
+            mappings={mappings}
           />
         )}
 
@@ -331,6 +337,7 @@ export function Dashboard() {
             onToggle={handleGroupToggle}
             onActivateScene={activateScene}
             title="Zonen"
+            mappings={mappings}
           />
         )}
 
