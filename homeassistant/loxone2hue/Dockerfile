@@ -82,7 +82,7 @@ LABEL \
     io.hass.name="Loxone2HUE Gateway" \
     io.hass.description="Gateway für Loxone zu Philips HUE Kommunikation" \
     io.hass.type="addon" \
-    io.hass.version="1.1.7" \
+    io.hass.version="1.1.8" \
     io.hass.arch="aarch64|amd64|armv7"
 
 # Start gateway

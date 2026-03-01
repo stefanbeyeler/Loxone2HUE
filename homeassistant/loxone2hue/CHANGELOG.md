@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.8
+
+- Loxone Config Export: Helligkeits-Befehle erhalten den Suffix " (Br)" im Titel zur besseren Unterscheidung von Mood-Befehlen
+
 ## 1.1.7
 
 - Loxone Config Export: Umlaute werden jetzt als native UTF-8-Zeichen statt als numerische XML-Entities ausgegeben (z.B. "Büro" statt "B&#252;ro")
