@@ -143,6 +143,61 @@ func migrateConfig(data []byte, cfg *Config) {
 	}
 }
 
+// legacyMapping matches the old YAML field names (without yaml tags, go-yaml lowercases field names)
+type legacyMapping struct {
+	ID           string `yaml:"id"`
+	Name         string `yaml:"name"`
+	LoxoneID     string `yaml:"loxoneid"`
+	HueID        string `yaml:"hueid"`
+	HueType      string `yaml:"huetype"`
+	Enabled      bool   `yaml:"enabled"`
+	Description  string `yaml:"description"`
+	MiniserverID string `yaml:"miniserverid"`
+	// New format fields (for detection)
+	LoxoneIDNew string `yaml:"loxone_id"`
+	HueIDNew    string `yaml:"hue_id"`
+	HueTypeNew  string `yaml:"hue_type"`
+}
+
+type legacyMappingsConfig struct {
+	Mappings []legacyMapping `yaml:"mappings"`
+}
+
+// migrateMappingFields migrates mappings from legacy YAML field names to new format
+// Old format (no yaml tags): loxoneid, hueid, huetype
+// New format (with yaml tags): loxone_id, hue_id, hue_type
+func migrateMappingFields(data []byte, cfg *Config) {
+	var legacy legacyMappingsConfig
+	if err := yaml.Unmarshal(data, &legacy); err != nil {
+		return
+	}
+
+	if len(legacy.Mappings) == 0 || len(legacy.Mappings) != len(cfg.Mappings) {
+		return
+	}
+
+	migrated := false
+	for i, lm := range legacy.Mappings {
+		// If new format fields are empty but old format fields have data, migrate
+		if cfg.Mappings[i].LoxoneID == "" && lm.LoxoneID != "" {
+			cfg.Mappings[i].LoxoneID = lm.LoxoneID
+			migrated = true
+		}
+		if cfg.Mappings[i].HueID == "" && lm.HueID != "" {
+			cfg.Mappings[i].HueID = lm.HueID
+			migrated = true
+		}
+		if cfg.Mappings[i].HueType == "" && lm.HueType != "" {
+			cfg.Mappings[i].HueType = lm.HueType
+			migrated = true
+		}
+	}
+
+	if migrated {
+		log.Info().Msg("Migrated mapping fields from legacy YAML format (loxoneid -> loxone_id, etc.)")
+	}
+}
+
 // Load reads the configuration from a YAML file
 func Load(path string) (*Config, error) {
 	cfgPath = path
@@ -174,6 +229,9 @@ func Load(path string) (*Config, error) {
 	if cfg.Loxone.Miniservers == nil {
 		cfg.Loxone.Miniservers = []MiniserverConfig{}
 	}
+
+	// Migrate mappings from legacy YAML field names (loxoneid -> loxone_id, etc.)
+	migrateMappingFields(data, cfg)
 
 	// Migrate mappings: assign first miniserver to mappings without miniserver_id
 	if len(cfg.Loxone.Miniservers) > 0 {
