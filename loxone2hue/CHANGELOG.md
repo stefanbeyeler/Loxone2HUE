@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.11
+
+- UDP-Feedback: Gesendete UDP-Meldungen werden jetzt im Server-Log auf INFO-Level protokolliert
+
 ## 1.1.10
 
 - Einstellungen: Doppelte Miniserver-IP entfernt – UDP-Feedback verwendet jetzt automatisch die oben konfigurierte Miniserver-IP
