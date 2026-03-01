@@ -80,6 +80,9 @@ func (s *Server) setupRoutes() {
 	api.HandleFunc("/config", s.handlers.GetConfig).Methods("GET")
 	api.HandleFunc("/config", s.handlers.UpdateConfig).Methods("PUT")
 
+	// UDP test endpoint
+	api.HandleFunc("/udp/test", s.handlers.TestUDP).Methods("POST")
+
 	// Loxone XML export endpoints
 	api.HandleFunc("/export/inputs", s.handlers.ExportVirtualInputs).Methods("GET")
 	api.HandleFunc("/export/outputs", s.handlers.ExportVirtualOutputs).Methods("GET")

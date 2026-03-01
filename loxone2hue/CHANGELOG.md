@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.18
+
+- UDP Status-Feedback: Test-Funktion — pro Eigenschaft kann eine Test-UDP-Nachricht an Loxone gesendet werden (mit Werte-Validierung)
+
 ## 1.1.17
 
 - UDP Status-Feedback: Neue Einstellung "Alle Geräte senden" — sendet UDP auch für Geräte ohne Mapping (Gerätename als Loxone-ID)

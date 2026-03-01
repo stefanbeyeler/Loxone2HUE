@@ -521,6 +521,72 @@ type MappingsBackup struct {
 	Mappings  []models.Mapping `json:"mappings"`
 }
 
+// TestUDP sends a test UDP message to the Loxone Miniserver
+func (h *Handlers) TestUDP(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		LoxoneID string `json:"loxone_id"`
+		Property string `json:"property"`
+		Value    string `json:"value"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		errorResponse(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.LoxoneID == "" || req.Property == "" {
+		errorResponse(w, http.StatusBadRequest, "loxone_id and property required")
+		return
+	}
+
+	// Validate property + value
+	valid, errMsg := validateUDPValue(req.Property, req.Value)
+	if !valid {
+		errorResponse(w, http.StatusBadRequest, errMsg)
+		return
+	}
+
+	if h.udpSender == nil || !h.udpSender.IsEnabled() {
+		errorResponse(w, http.StatusBadRequest, "UDP feedback is not enabled")
+		return
+	}
+
+	h.udpSender.Send(req.LoxoneID, req.Property, req.Value)
+
+	jsonResponse(w, http.StatusOK, map[string]interface{}{
+		"status":  "sent",
+		"message": fmt.Sprintf("%s/%s:%s", req.LoxoneID, req.Property, req.Value),
+	})
+}
+
+// validateUDPValue validates a value for a given UDP property
+func validateUDPValue(property, value string) (bool, string) {
+	switch property {
+	case "on":
+		if value != "0" && value != "1" {
+			return false, "on: Wert muss 0 oder 1 sein"
+		}
+	case "bri":
+		v, err := strconv.Atoi(value)
+		if err != nil || v < 0 || v > 100 {
+			return false, "bri: Wert muss eine Ganzzahl zwischen 0 und 100 sein"
+		}
+	case "ct":
+		v, err := strconv.Atoi(value)
+		if err != nil || v < 153 || v > 500 {
+			return false, "ct: Wert muss eine Ganzzahl zwischen 153 und 500 sein"
+		}
+	case "color_x", "color_y":
+		v, err := strconv.ParseFloat(value, 64)
+		if err != nil || v < 0 || v > 1 {
+			return false, property + ": Wert muss eine Dezimalzahl zwischen 0 und 1 sein"
+		}
+	default:
+		return false, "Unbekannte Eigenschaft: " + property
+	}
+	return true, ""
+}
+
 // ExportMappings exports all mappings as a downloadable JSON file
 func (h *Handlers) ExportMappings(w http.ResponseWriter, r *http.Request) {
 	mappings := config.GetMappings()

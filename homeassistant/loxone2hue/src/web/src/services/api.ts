@@ -192,6 +192,19 @@ export async function getLogs(params?: {
   return fetchJSON(`${API_BASE}/logs${qs ? `?${qs}` : ''}`);
 }
 
+// UDP test
+export interface TestUDPResult {
+  status: string;
+  message: string;
+}
+
+export async function testUDP(loxoneId: string, property: string, value: string): Promise<TestUDPResult> {
+  return fetchJSON(`${API_BASE}/udp/test`, {
+    method: 'POST',
+    body: JSON.stringify({ loxone_id: loxoneId, property, value }),
+  });
+}
+
 // Health check
 export async function getHealth(): Promise<{ status: string; hue_configured: boolean }> {
   return fetchJSON(`${API_BASE}/health`);
