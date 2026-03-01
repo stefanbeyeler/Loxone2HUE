@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"net/http"
 	"regexp"
 	"sort"
@@ -142,12 +143,17 @@ func (h *Handlers) ExportVirtualInputs(w http.ResponseWriter, r *http.Request) {
 // This creates commands for controlling HUE devices from Loxone.
 // Mood patterns (_mood_N) are grouped into a single MOOD command per base target.
 func (h *Handlers) ExportVirtualOutputs(w http.ResponseWriter, r *http.Request) {
-	// Determine gateway address from request
+	// Determine gateway address using request hostname and configured server port
 	scheme := "http"
 	if r.TLS != nil {
 		scheme = "https"
 	}
-	address := fmt.Sprintf("%s://%s", scheme, r.Host)
+	host := r.Host
+	if hostname, _, err := net.SplitHostPort(r.Host); err == nil {
+		host = hostname
+	}
+	cfg := config.Get()
+	address := fmt.Sprintf("%s://%s:%d", scheme, host, cfg.Server.Port)
 
 	mappings := config.GetMappings()
 
