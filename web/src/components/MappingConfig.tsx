@@ -31,6 +31,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [moodEnabled, setMoodEnabled] = useState(false);
   const [moodOrder, setMoodOrder] = useState<string[]>([]);
+  const [addingMoodToParent, setAddingMoodToParent] = useState<string | null>(null);
 
   useEffect(() => {
     loadMappings();
@@ -262,6 +263,72 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
       await loadMappings();
     } catch (err) {
       console.error('Failed to swap mood order:', err);
+    }
+  };
+
+  const handleDeleteMoodScene = async (mood: Mapping) => {
+    const moodNum = getMoodNumber(mood.loxone_id);
+    const parentLoxoneId = getParentLoxoneId(mood.loxone_id);
+    if (!parentLoxoneId) return;
+
+    const sceneName = moodNum === 0
+      ? 'Alle Lichter aus'
+      : getHueResourceName(mood.hue_id, mood.hue_type);
+    if (!confirm(`Mood-Szene "${sceneName}" (Mood ${moodNum}) wirklich löschen?`)) return;
+
+    try {
+      await api.deleteMapping(mood.id);
+
+      const parentMapping = mappings.find((m) => m.loxone_id === parentLoxoneId);
+      const parentName = parentMapping?.name || parentLoxoneId;
+      const remaining = getMoodChildren(parentLoxoneId)
+        .filter((m) => m.id !== mood.id && getMoodNumber(m.loxone_id) > 0)
+        .sort((a, b) => getMoodNumber(a.loxone_id) - getMoodNumber(b.loxone_id));
+
+      for (let i = 0; i < remaining.length; i++) {
+        const expectedNum = i + 1;
+        const currentNum = getMoodNumber(remaining[i].loxone_id);
+        if (currentNum !== expectedNum) {
+          await api.updateMapping(remaining[i].id, {
+            ...remaining[i],
+            loxone_id: `${parentLoxoneId}_mood_${expectedNum}`,
+            description: `Mood ${expectedNum} für ${parentName}`,
+          });
+        }
+      }
+
+      await loadMappings();
+    } catch (err) {
+      console.error('Failed to delete mood scene:', err);
+    }
+  };
+
+  const handleAddMoodScene = async (parentLoxoneId: string, sceneId: string) => {
+    const parentMapping = mappings.find((m) => m.loxone_id === parentLoxoneId);
+    if (!parentMapping) return;
+
+    const children = getMoodChildren(parentLoxoneId);
+    const sceneChildren = children.filter((m) => getMoodNumber(m.loxone_id) > 0);
+    const nextNum = sceneChildren.length > 0
+      ? Math.max(...sceneChildren.map((m) => getMoodNumber(m.loxone_id))) + 1
+      : 1;
+
+    const scene = scenes.find((s) => s.id === sceneId);
+    if (!scene) return;
+
+    try {
+      await api.createMapping({
+        name: `${parentMapping.name} - ${scene.name}`,
+        loxone_id: `${parentLoxoneId}_mood_${nextNum}`,
+        hue_id: scene.id,
+        hue_type: 'scene',
+        enabled: true,
+        description: `Mood ${nextNum} für ${parentMapping.name}`,
+      });
+      setAddingMoodToParent(null);
+      await loadMappings();
+    } catch (err) {
+      console.error('Failed to add mood scene:', err);
     }
   };
 
@@ -1492,7 +1559,56 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
               <div className="flex items-center gap-2 mb-2">
                 <Play size={14} className="text-hue-orange" />
                 <span className="text-xs font-medium text-gray-400">Mood-Szenen ({moodChildren.length})</span>
+                <button
+                  type="button"
+                  aria-label="Mood-Szene hinzufügen"
+                  onClick={() => setAddingMoodToParent(
+                    addingMoodToParent === mapping.loxone_id ? null : mapping.loxone_id
+                  )}
+                  className="p-0.5 text-gray-400 hover:text-green-400"
+                  title="Szene hinzufügen"
+                >
+                  <Plus size={14} />
+                </button>
               </div>
+              {addingMoodToParent === mapping.loxone_id && (
+                <div className="bg-gray-700/30 rounded-lg p-3 mb-2 space-y-2">
+                  <p className="text-xs text-gray-400">Szene hinzufügen:</p>
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {scenes
+                      .filter((s) => s.group_id === mapping.hue_id)
+                      .filter((s) => !moodChildren.some((mc) => mc.hue_id === s.id))
+                      .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+                      .map((scene) => (
+                        <button
+                          key={scene.id}
+                          type="button"
+                          onClick={() => handleAddMoodScene(mapping.loxone_id, scene.id)}
+                          className="w-full text-left flex items-center gap-2 px-3 py-2 bg-gray-700/50 rounded-lg hover:bg-gray-600 text-sm text-gray-300 hover:text-white transition-colors"
+                        >
+                          <Play size={12} className="text-hue-orange flex-shrink-0" />
+                          <span className="truncate">{scene.name}</span>
+                        </button>
+                      ))
+                    }
+                    {scenes
+                      .filter((s) => s.group_id === mapping.hue_id)
+                      .filter((s) => !moodChildren.some((mc) => mc.hue_id === s.id))
+                      .length === 0 && (
+                      <p className="text-xs text-gray-500 py-1">
+                        Alle Szenen dieser Gruppe sind bereits zugeordnet.
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAddingMoodToParent(null)}
+                    className="text-xs text-gray-500 hover:text-gray-300"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              )}
               {moodChildren.map((mood) => {
                 const moodNum = getMoodNumber(mood.loxone_id);
                 const isOff = moodNum === 0;
@@ -1546,6 +1662,15 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                         </button>
                       </div>
                     )}
+                    <button
+                      type="button"
+                      aria-label="Mood-Szene löschen"
+                      onClick={() => handleDeleteMoodScene(mood)}
+                      className="p-0.5 text-gray-500 hover:text-red-400 flex-shrink-0"
+                      title="Mood-Szene löschen"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 );
               })}
