@@ -132,16 +132,17 @@ export async function importMappings(
 }
 
 // Config endpoint
-export interface UDPFeedbackConfig {
-  enabled: boolean;
+export interface MiniserverConfig {
+  id: string;
+  name: string;
+  ip: string;
   port: number;
+  udp_enabled: boolean;
   send_all: boolean;
 }
 
 export interface LoxoneConfig {
-  enabled: boolean;
-  miniserver_ip: string;
-  udp_feedback: UDPFeedbackConfig;
+  miniservers: MiniserverConfig[];
 }
 
 export interface ConfigResponse {
@@ -198,10 +199,10 @@ export interface TestUDPResult {
   message: string;
 }
 
-export async function testUDP(loxoneId: string, property: string, value: string): Promise<TestUDPResult> {
+export async function testUDP(loxoneId: string, property: string, value: string, miniserverId: string): Promise<TestUDPResult> {
   return fetchJSON(`${API_BASE}/udp/test`, {
     method: 'POST',
-    body: JSON.stringify({ loxone_id: loxoneId, property, value }),
+    body: JSON.stringify({ loxone_id: loxoneId, property, value, miniserver_id: miniserverId }),
   });
 }
 

@@ -32,9 +32,13 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
   const [moodEnabled, setMoodEnabled] = useState(false);
   const [moodOrder, setMoodOrder] = useState<string[]>([]);
   const [addingMoodToParent, setAddingMoodToParent] = useState<string | null>(null);
+  const [miniservers, setMiniservers] = useState<api.MiniserverConfig[]>([]);
 
   useEffect(() => {
     loadMappings();
+    api.getConfig().then((cfg) => {
+      setMiniservers(cfg.loxone?.miniservers || []);
+    }).catch(() => {});
   }, []);
 
   // Initialize mood order when mood is enabled or group changes
@@ -148,6 +152,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
         hue_type: formData.hue_type || 'light',
         enabled: true,
         description: formData.description,
+        miniserver_id: formData.miniserver_id,
       });
       const newMappings = [...mappings, newMapping];
 
@@ -162,6 +167,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
             hue_type: 'group',
             enabled: true,
             description: `Mood 0 für ${formData.name} (Gruppe ausschalten)`,
+            miniserver_id: formData.miniserver_id,
           });
           newMappings.push(mood0Mapping);
         } catch (err) {
@@ -180,6 +186,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
               hue_type: 'scene',
               enabled: true,
               description: `Mood ${i + 1} für ${formData.name}`,
+              miniserver_id: formData.miniserver_id,
             });
             newMappings.push(moodMapping);
           } catch (err) {
@@ -324,6 +331,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
         hue_type: 'scene',
         enabled: true,
         description: `Mood ${nextNum} für ${parentMapping.name}`,
+        miniserver_id: parentMapping.miniserver_id,
       });
       setAddingMoodToParent(null);
       await loadMappings();
@@ -1104,6 +1112,27 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                   className="w-full bg-gray-700 text-white rounded-lg px-3 py-2"
                   rows={2}
                 />
+                {miniservers.length > 1 && (
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Miniserver</label>
+                    <select
+                      title="Miniserver wählen"
+                      value={formData.miniserver_id || (miniservers.length === 1 ? miniservers[0].id : '')}
+                      onChange={(e) => setFormData({ ...formData, miniserver_id: e.target.value })}
+                      className="w-full bg-gray-700 text-white rounded-lg px-3 py-2"
+                    >
+                      <option value="">Miniserver wählen...</option>
+                      {miniservers.map((ms) => (
+                        <option key={ms.id} value={ms.id}>{ms.name || ms.ip} ({ms.ip}:{ms.port})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {miniservers.length === 1 && (
+                  <div className="text-xs text-gray-500">
+                    Miniserver: <span className="text-gray-300">{miniservers[0].name || miniservers[0].ip}</span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1192,6 +1221,27 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                 <p className="text-xs text-gray-500">
                   Die Loxone ID wird als Basis verwendet. Mood-Szenen erhalten automatisch Suffixe: _mood_0, _mood_1, etc.
                 </p>
+                {miniservers.length > 1 && (
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-1">Miniserver</label>
+                    <select
+                      title="Miniserver wählen"
+                      value={formData.miniserver_id || (miniservers.length === 1 ? miniservers[0].id : '')}
+                      onChange={(e) => setFormData({ ...formData, miniserver_id: e.target.value })}
+                      className="w-full bg-gray-700 text-white rounded-lg px-3 py-2"
+                    >
+                      <option value="">Miniserver wählen...</option>
+                      {miniservers.map((ms) => (
+                        <option key={ms.id} value={ms.id}>{ms.name || ms.ip} ({ms.ip}:{ms.port})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {miniservers.length === 1 && (
+                  <div className="text-xs text-gray-500">
+                    Miniserver: <span className="text-gray-300">{miniservers[0].name || miniservers[0].ip}</span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1393,6 +1443,24 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                   className="w-full bg-gray-700 text-white rounded-lg px-3 py-2"
                   rows={2}
                 />
+                {miniservers.length > 1 && (
+                  <select
+                    title="Miniserver"
+                    value={formData.miniserver_id || ''}
+                    onChange={(e) => setFormData({ ...formData, miniserver_id: e.target.value })}
+                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2"
+                  >
+                    <option value="">Miniserver wählen...</option>
+                    {miniservers.map((ms) => (
+                      <option key={ms.id} value={ms.id}>{ms.name || ms.ip} ({ms.ip}:{ms.port})</option>
+                    ))}
+                  </select>
+                )}
+                {miniservers.length === 1 && (
+                  <div className="text-xs text-gray-500">
+                    Miniserver: <span className="text-gray-300">{miniservers[0].name || miniservers[0].ip}</span>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -1446,6 +1514,10 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                       </p>
                       <p className="text-xs text-gray-500">
                         Typ: {getTypeLabel(mapping.hue_type)}
+                        {mapping.miniserver_id && miniservers.length > 1 && (() => {
+                          const ms = miniservers.find((m) => m.id === mapping.miniserver_id);
+                          return ms ? <> &bull; Miniserver: {ms.name || ms.ip}</> : null;
+                        })()}
                       </p>
                     </div>
                   </div>

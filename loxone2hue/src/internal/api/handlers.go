@@ -362,6 +362,14 @@ func (h *Handlers) CreateMapping(w http.ResponseWriter, r *http.Request) {
 	mapping.ID = uuid.New().String()
 	mapping.Enabled = true
 
+	// Auto-assign miniserver if only one is configured and none was provided
+	if mapping.MiniserverID == "" {
+		cfg := config.Get()
+		if len(cfg.Loxone.Miniservers) == 1 {
+			mapping.MiniserverID = cfg.Loxone.Miniservers[0].ID
+		}
+	}
+
 	mappings = append(mappings, mapping)
 	config.UpdateMappings(mappings)
 
@@ -475,15 +483,14 @@ func (h *Handlers) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	cfg := config.Get()
 
 	if update.Loxone != nil {
+		if update.Loxone.Miniservers == nil {
+			update.Loxone.Miniservers = []config.MiniserverConfig{}
+		}
 		cfg.Loxone = *update.Loxone
 
 		// Reconfigure UDP sender on the fly
 		if h.udpSender != nil {
-			if err := h.udpSender.Configure(update.Loxone.MiniserverIP, update.Loxone.UDPFeedback); err != nil {
-				log.Error().Err(err).Msg("Failed to reconfigure UDP feedback")
-				errorResponse(w, http.StatusInternalServerError, "failed to configure UDP: "+err.Error())
-				return
-			}
+			h.udpSender.Configure(update.Loxone.Miniservers)
 		}
 	}
 
@@ -521,12 +528,13 @@ type MappingsBackup struct {
 	Mappings  []models.Mapping `json:"mappings"`
 }
 
-// TestUDP sends a test UDP message to the Loxone Miniserver
+// TestUDP sends a test UDP message to a specific Loxone Miniserver
 func (h *Handlers) TestUDP(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		LoxoneID string `json:"loxone_id"`
-		Property string `json:"property"`
-		Value    string `json:"value"`
+		LoxoneID     string `json:"loxone_id"`
+		Property     string `json:"property"`
+		Value        string `json:"value"`
+		MiniserverID string `json:"miniserver_id"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -539,6 +547,11 @@ func (h *Handlers) TestUDP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.MiniserverID == "" {
+		errorResponse(w, http.StatusBadRequest, "miniserver_id required")
+		return
+	}
+
 	// Validate property + value
 	valid, errMsg := validateUDPValue(req.Property, req.Value)
 	if !valid {
@@ -546,12 +559,12 @@ func (h *Handlers) TestUDP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.udpSender == nil || !h.udpSender.IsEnabled() {
-		errorResponse(w, http.StatusBadRequest, "UDP feedback is not enabled")
+	if h.udpSender == nil || !h.udpSender.IsEnabledFor(req.MiniserverID) {
+		errorResponse(w, http.StatusBadRequest, "UDP feedback is not enabled for this miniserver")
 		return
 	}
 
-	h.udpSender.Send(req.LoxoneID, req.Property, req.Value)
+	h.udpSender.Send(req.MiniserverID, req.LoxoneID, req.Property, req.Value)
 
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"status":  "sent",

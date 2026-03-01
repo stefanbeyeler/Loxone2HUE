@@ -58,6 +58,7 @@ export interface Mapping {
   hue_type: string;
   enabled: boolean;
   description?: string;
+  miniserver_id?: string;
 }
 
 export interface BridgeInfo {

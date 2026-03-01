@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0
+
+- Mehrere Loxone Miniserver: Dynamische Liste von Miniservers in den Einstellungen (Hinzufügen, Bearbeiten, Löschen)
+- Jeder Miniserver hat eigene IP, Port, UDP-Feedback und "Alle Geräte senden" Einstellungen
+- Mappings: Zuordnung zu einem bestimmten Miniserver (bei nur einem Miniserver automatisch zugewiesen)
+- UDP-Feedback: Nachrichten werden gezielt an den Miniserver des jeweiligen Mappings gesendet
+- Config-Migration: Bestehende Konfiguration wird automatisch ins neue Format konvertiert
+
 ## 1.1.18
 
 - UDP Status-Feedback: Test-Funktion — pro Eigenschaft kann eine Test-UDP-Nachricht an Loxone gesendet werden (mit Werte-Validierung)
