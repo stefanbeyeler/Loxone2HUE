@@ -24,9 +24,9 @@ export function useHueDevices() {
 
   const { isConnected, sendCommand } = useWebSocket({ onMessage: handleMessage });
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       setError(null);
 
       const [devicesRes, groupsRes, scenesRes] = await Promise.all([
@@ -114,6 +114,8 @@ export function useHueDevices() {
     }
   }, []);
 
+  const refresh = useCallback(() => fetchData(false), [fetchData]);
+
   return {
     lights,
     groups,
@@ -121,7 +123,7 @@ export function useHueDevices() {
     loading,
     error,
     isConnected,
-    refresh: fetchData,
+    refresh,
     setLightState,
     setGroupState,
     activateScene,
