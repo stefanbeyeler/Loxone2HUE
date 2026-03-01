@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.3
+
+- Backend: Duplikat-Schutz bei Mapping-Erstellung (verhindert doppelte loxone_id)
+- Mood-Szenen: Einzelne Szenen nachträglich löschen (mit automatischer Neunummerierung)
+- Mood-Szenen: Neue Szenen zu bestehenden Mood-Mappings hinzufügen
+
 ## 1.1.2
 
 - Loxone Config Export: XML-Vorlagen können jetzt fehlerfrei importiert werden (Info-Tag entfernt)

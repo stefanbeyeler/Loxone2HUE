@@ -351,10 +351,17 @@ func (h *Handlers) CreateMapping(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	mappings := config.GetMappings()
+	for _, m := range mappings {
+		if m.LoxoneID == mapping.LoxoneID {
+			errorResponse(w, http.StatusConflict, fmt.Sprintf("mapping with loxone_id '%s' already exists", mapping.LoxoneID))
+			return
+		}
+	}
+
 	mapping.ID = uuid.New().String()
 	mapping.Enabled = true
 
-	mappings := config.GetMappings()
 	mappings = append(mappings, mapping)
 	config.UpdateMappings(mappings)
 
