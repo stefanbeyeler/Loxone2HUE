@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.9
+
+- Loxone Config Export: Adresse verwendet jetzt den konfigurierten Server-Port statt den Port aus dem Request (korrigiert falschen Port bei Zugriff über HA-Proxy)
+
 ## 1.1.8
 
 - Loxone Config Export: Helligkeits-Befehle erhalten den Suffix " (Br)" im Titel zur besseren Unterscheidung von Mood-Befehlen
