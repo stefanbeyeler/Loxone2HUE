@@ -17,7 +17,8 @@
       "Bash(go build:*)",
       "Bash(go run:*)",
       "Bash(docker compose up -d)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "mcp__MCP_DOCKER__browser_select_option"
     ]
   }
 }
