@@ -108,17 +108,23 @@ export function LoxoneGuide() {
           Funktionsweise
         </h3>
         <div className="bg-gray-900 rounded-lg p-4 font-mono text-sm text-gray-300 overflow-x-auto">
-          <pre>{`┌─────────────────┐         ┌─────────────────────────┐         ┌───────────────┐
-│     Loxone      │   WS    │    Loxone2HUE Gateway   │   API   │   HUE Bridge  │
-│   Miniserver    │◄───────►│        (Port 8080)      │◄───────►│               │
-└─────────────────┘         └─────────────────────────┘         └───────────────┘
+          <pre>{`┌─────────────────┐  HTTP   ┌─────────────────────────┐  CLIP  ┌───────────────┐
+│     Loxone      │────────►│    Loxone2HUE Gateway   │◄──────►│   HUE Bridge  │
+│   Miniserver    │◄────────│        (Port 8080)      │  SSE   │               │
+└─────────────────┘   UDP   └─────────────────────────┘        └───────────────┘
                                        │
-                                       │ WebSocket /ws
+                  HTTP: Befehle senden  │ WebSocket /ws
+                  UDP:  Status-Feedback │
                                        ▼
                             ┌─────────────────────────┐
                             │   Frontend (Browser)    │
                             └─────────────────────────┘`}</pre>
         </div>
+        <p className="text-sm text-gray-400 mt-3">
+          Der Gateway unterstützt mehrere Loxone Miniserver gleichzeitig. Jeder Miniserver kann
+          eigene IP, UDP-Port und Feedback-Einstellungen haben. Mappings werden einem bestimmten
+          Miniserver zugeordnet.
+        </p>
       </section>
 
       {/* Mapping erstellen */}
@@ -129,8 +135,10 @@ export function LoxoneGuide() {
         </h3>
         <div className="space-y-4 text-gray-300">
           <p>
-            Ein Mapping verbindet eine <strong>Loxone ID</strong> (frei wählbar) mit einer
-            <strong> HUE Ressource</strong> (Licht, Gruppe oder Szene).
+            Ein Mapping verbindet eine <strong>Loxone ID</strong> mit einer
+            <strong> HUE Ressource</strong> (Licht, Gruppe oder Szene). Die Loxone ID wird automatisch
+            aus dem Namen generiert (Kleinbuchstaben, Umlaute konvertiert, Leerzeichen als Unterstriche)
+            und kann bei Bedarf manuell angepasst werden.
           </p>
 
           <div className="grid gap-4 sm:grid-cols-3">
@@ -169,28 +177,31 @@ export function LoxoneGuide() {
               <thead>
                 <tr className="text-left text-gray-400">
                   <th className="pb-2">Name</th>
-                  <th className="pb-2">Loxone ID</th>
+                  <th className="pb-2">Loxone ID (auto)</th>
                   <th className="pb-2">HUE Ressource</th>
                 </tr>
               </thead>
               <tbody className="text-gray-300">
                 <tr>
                   <td className="py-1">Wohnzimmer Decke</td>
-                  <td className="py-1 font-mono text-xs">wz_decke</td>
+                  <td className="py-1 font-mono text-xs">wohnzimmer_decke</td>
                   <td className="py-1">Deckenlampe (Licht)</td>
                 </tr>
                 <tr>
                   <td className="py-1">Küche komplett</td>
-                  <td className="py-1 font-mono text-xs">kueche_all</td>
+                  <td className="py-1 font-mono text-xs">kueche_komplett</td>
                   <td className="py-1">Küche (Gruppe)</td>
                 </tr>
                 <tr>
-                  <td className="py-1">Abend-Stimmung</td>
-                  <td className="py-1 font-mono text-xs">sz_relax</td>
-                  <td className="py-1">Relax (Szene)</td>
+                  <td className="py-1">Büro Stefan</td>
+                  <td className="py-1 font-mono text-xs">buero_stefan</td>
+                  <td className="py-1">Büro Stefan (Gruppe)</td>
                 </tr>
               </tbody>
             </table>
+            <p className="text-xs text-gray-500 mt-2">
+              Die Loxone ID wird beim Erstellen automatisch aus dem Namen abgeleitet: Kleinbuchstaben, ä→ae, ö→oe, ü→ue, ß→ss, Leerzeichen→Unterstrich.
+            </p>
           </div>
         </div>
       </section>
