@@ -6,6 +6,7 @@ import { SceneList } from './SceneList';
 import { MappingConfig } from './MappingConfig';
 import { LoxoneGuide } from './LoxoneGuide';
 import { SettingsPanel } from './SettingsPanel';
+import { ReleaseNotes } from './ReleaseNotes';
 import * as api from '../services/api';
 import type { Mapping } from '../services/api';
 import {
@@ -36,6 +37,7 @@ type Tab = 'devices' | 'rooms' | 'zones' | 'scenes' | 'mappings' | 'settings' | 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('guide');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showReleaseNotes, setShowReleaseNotes] = useState(false);
   const [bridgeIP, setBridgeIP] = useState<string | null>(null);
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [udpSendAll, setUdpSendAll] = useState(false);
@@ -157,7 +159,13 @@ export function Dashboard() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-white">Loxone2HUE</h1>
-                <p className="text-xs text-gray-400">Gateway Service v{VERSION}</p>
+                <button
+                  onClick={() => setShowReleaseNotes(true)}
+                  className="text-xs text-gray-400 hover:text-hue-orange transition-colors cursor-pointer"
+                  title="Release Notes anzeigen"
+                >
+                  Gateway Service v{VERSION}
+                </button>
               </div>
             </div>
 
@@ -386,13 +394,27 @@ export function Dashboard() {
       <footer className="border-t border-gray-800 py-4 mt-8">
         <div className="max-w-6xl mx-auto px-4 text-center text-xs text-gray-500 space-y-1">
           <div>
-            Loxone2HUE Gateway v{VERSION} &bull; Build {BUILD_DATE}
+            <button
+              onClick={() => setShowReleaseNotes(true)}
+              className="hover:text-hue-orange transition-colors cursor-pointer"
+            >
+              Loxone2HUE Gateway v{VERSION}
+            </button>
+            {' '}&bull; Build {BUILD_DATE}
           </div>
           <div className="text-gray-600">
             &copy; 2026 Stefan Beyeler
           </div>
         </div>
       </footer>
+
+      {/* Release Notes Modal */}
+      {showReleaseNotes && (
+        <ReleaseNotes
+          currentVersion={VERSION}
+          onClose={() => setShowReleaseNotes(false)}
+        />
+      )}
     </div>
   );
 }
