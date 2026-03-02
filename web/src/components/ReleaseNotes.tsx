@@ -7,6 +7,13 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: '1.2.2',
+    items: [
+      'Release Notes: Klickbare Versionsnummer öffnet Popup mit komplettem Release-Verlauf',
+      'Mapping-Wizard: Loxone ID wird automatisch aus dem Namen generiert (Kleinbuchstaben, Umlaute konvertiert, Leerzeichen → Unterstriche)',
+    ],
+  },
+  {
     version: '1.2.1',
     items: [
       'Fix: Config-Migration für bestehende Mappings (loxoneid → loxone_id YAML-Feldnamen)',
