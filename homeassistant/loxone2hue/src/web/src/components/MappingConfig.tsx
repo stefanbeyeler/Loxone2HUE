@@ -1081,7 +1081,15 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                         name = gn ? `${gn} - ${sc.name}` : sc.name;
                       }
                     }
-                    setFormData((prev) => ({ ...prev, hue_id: hueId, name: prev.name || name }));
+                    setFormData((prev) => {
+                      const finalName = prev.name || name;
+                      return {
+                        ...prev,
+                        hue_id: hueId,
+                        name: finalName,
+                        ...(!loxoneIdManual && finalName ? { loxone_id: nameToLoxoneId(finalName) } : {}),
+                      };
+                    });
                   }}
                   className="w-full bg-gray-700 text-white rounded-lg px-3 py-2.5"
                 >
@@ -1203,7 +1211,16 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                   onChange={(e) => {
                     const hueId = e.target.value;
                     const group = groups.find((g) => g.id === hueId);
-                    setFormData((prev) => ({ ...prev, hue_id: hueId, hue_type: 'group', name: prev.name || group?.name || '' }));
+                    setFormData((prev) => {
+                      const name = prev.name || group?.name || '';
+                      return {
+                        ...prev,
+                        hue_id: hueId,
+                        hue_type: 'group',
+                        name,
+                        ...(!loxoneIdManual && name ? { loxone_id: nameToLoxoneId(name) } : {}),
+                      };
+                    });
                   }}
                   className="w-full bg-gray-700 text-white rounded-lg px-3 py-2.5"
                 >
