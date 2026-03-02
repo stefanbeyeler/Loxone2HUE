@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.2
+
+- Release Notes: Klickbare Versionsnummer öffnet Popup mit komplettem Release-Verlauf
+- Mapping-Wizard: Loxone ID wird automatisch aus dem Namen generiert (Kleinbuchstaben, Umlaute konvertiert, Leerzeichen → Unterstriche)
+
 ## 1.2.1
 
 - Fix: Config-Migration für bestehende Mappings (loxoneid → loxone_id YAML-Feldnamen)
