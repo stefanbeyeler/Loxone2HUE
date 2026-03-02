@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.3
+
+- Anleitung: Architektur-Diagramm mit UDP-Feedback erweitert, Multi-Miniserver und Auto-ID-Generierung dokumentiert
+- API-Dokumentation: Swagger-Schemas für Multi-Miniserver und miniserver_id in Mappings aktualisiert
+- Fix: Loxone ID wird jetzt auch bei vorausgefülltem Namen aus Ressourcen-Auswahl automatisch generiert
+
 ## 1.2.2
 
 - Release Notes: Klickbare Versionsnummer öffnet Popup mit komplettem Release-Verlauf

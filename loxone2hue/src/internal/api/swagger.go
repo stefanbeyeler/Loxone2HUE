@@ -1215,7 +1215,7 @@ const openAPISpec = `{
           },
           "loxone_id": {
             "type": "string",
-            "description": "Loxone Identifikator für dieses Mapping"
+            "description": "Loxone Identifikator für dieses Mapping. Wird automatisch aus dem Namen generiert (Kleinbuchstaben, Umlaute konvertiert, Leerzeichen als Unterstriche)."
           },
           "hue_id": {
             "type": "string",
@@ -1231,6 +1231,10 @@ const openAPISpec = `{
           },
           "description": {
             "type": "string"
+          },
+          "miniserver_id": {
+            "type": "string",
+            "description": "ID des zugeordneten Loxone Miniservers. Bei nur einem Miniserver automatisch zugewiesen."
           }
         }
       },
@@ -1242,7 +1246,8 @@ const openAPISpec = `{
             "type": "string"
           },
           "loxone_id": {
-            "type": "string"
+            "type": "string",
+            "description": "Wird automatisch aus dem Namen generiert, kann aber manuell überschrieben werden."
           },
           "hue_id": {
             "type": "string"
@@ -1253,6 +1258,10 @@ const openAPISpec = `{
           },
           "description": {
             "type": "string"
+          },
+          "miniserver_id": {
+            "type": "string",
+            "description": "ID des Miniservers. Optional, wird automatisch zugewiesen wenn nur ein Miniserver konfiguriert ist."
           }
         }
       },
@@ -1359,14 +1368,12 @@ const openAPISpec = `{
           "loxone": {
             "type": "object",
             "properties": {
-              "enabled": {
-                "type": "boolean"
-              },
-              "miniserver_ip": {
-                "type": "string"
-              },
-              "udp_feedback": {
-                "$ref": "#/components/schemas/UDPFeedbackConfig"
+              "miniservers": {
+                "type": "array",
+                "description": "Liste der konfigurierten Loxone Miniserver",
+                "items": {
+                  "$ref": "#/components/schemas/MiniserverConfig"
+                }
               }
             }
           }
@@ -1378,33 +1385,44 @@ const openAPISpec = `{
           "loxone": {
             "type": "object",
             "properties": {
-              "enabled": {
-                "type": "boolean"
-              },
-              "miniserver_ip": {
-                "type": "string"
-              },
-              "udp_feedback": {
-                "$ref": "#/components/schemas/UDPFeedbackConfig"
+              "miniservers": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/MiniserverConfig"
+                }
               }
             }
           }
         }
       },
-      "UDPFeedbackConfig": {
+      "MiniserverConfig": {
         "type": "object",
-        "description": "Konfiguration für UDP Status-Feedback an den Loxone Miniserver. Die Ziel-IP wird automatisch von der Miniserver IP übernommen. Sendet bei jeder HUE-Statusänderung ein UDP-Paket im Format: <loxone_id>/<eigenschaft>:<wert>",
+        "description": "Konfiguration eines einzelnen Loxone Miniservers. Mehrere Miniserver können gleichzeitig konfiguriert werden, jeweils mit eigenen UDP-Feedback-Einstellungen.",
         "properties": {
-          "enabled": {
-            "type": "boolean",
-            "description": "UDP Feedback aktivieren/deaktivieren"
+          "id": {
+            "type": "string",
+            "description": "Eindeutige ID des Miniservers (UUID)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Anzeigename des Miniservers",
+            "example": "Haupthaus"
+          },
+          "ip": {
+            "type": "string",
+            "description": "IP-Adresse des Miniservers",
+            "example": "10.1.19.40"
           },
           "port": {
             "type": "integer",
-            "description": "UDP Zielport (Standard: 7777)",
+            "description": "UDP-Port für Status-Feedback (Standard: 7777)",
             "example": 7777,
             "minimum": 1,
             "maximum": 65535
+          },
+          "udp_enabled": {
+            "type": "boolean",
+            "description": "UDP Status-Feedback für diesen Miniserver aktivieren"
           },
           "send_all": {
             "type": "boolean",

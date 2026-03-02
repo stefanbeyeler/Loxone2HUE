@@ -7,6 +7,14 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: '1.2.3',
+    items: [
+      'Anleitung: Architektur-Diagramm mit UDP-Feedback erweitert, Multi-Miniserver und Auto-ID-Generierung dokumentiert',
+      'API-Dokumentation: Swagger-Schemas für Multi-Miniserver und miniserver_id in Mappings aktualisiert',
+      'Fix: Loxone ID wird jetzt auch bei vorausgefülltem Namen aus Ressourcen-Auswahl automatisch generiert',
+    ],
+  },
+  {
     version: '1.2.2',
     items: [
       'Release Notes: Klickbare Versionsnummer öffnet Popup mit komplettem Release-Verlauf',
