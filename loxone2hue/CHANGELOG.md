@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1
+
+- Fix: Config-Migration für bestehende Mappings (loxoneid → loxone_id YAML-Feldnamen)
+- Fix: Auto-Refresh schliesst aufgeklappte UDP-Bereiche nicht mehr
+- Fix: UDP Test-Spalten (Werte/Test) in Geräte- und Gruppen-Kacheln sichtbar
+- Fix: miniserverId an UdpInfoSection in DeviceCard und GroupList übergeben
+
 ## 1.2.0
 
 - Mehrere Loxone Miniserver: Dynamische Liste von Miniservers in den Einstellungen (Hinzufügen, Bearbeiten, Löschen)
