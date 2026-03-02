@@ -29,6 +29,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loxoneIdManual, setLoxoneIdManual] = useState(false);
   const [moodEnabled, setMoodEnabled] = useState(false);
   const [moodOrder, setMoodOrder] = useState<string[]>([]);
   const [addingMoodToParent, setAddingMoodToParent] = useState<string | null>(null);
@@ -55,6 +56,19 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [moodEnabled, formData.hue_id, formData.hue_type]);
 
+  const nameToLoxoneId = (name: string): string => {
+    const umlautMap: Record<string, string> = {
+      'ä': 'ae', 'ö': 'oe', 'ü': 'ue',
+      'Ä': 'ae', 'Ö': 'oe', 'Ü': 'ue',
+      'ß': 'ss',
+    };
+    return name
+      .replace(/[äöüÄÖÜß]/g, (ch) => umlautMap[ch] || ch)
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '');
+  };
+
   const moveMoodScene = (index: number, direction: 'up' | 'down') => {
     const newOrder = [...moodOrder];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
@@ -69,6 +83,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
     setWizardMode(null);
     setWizardStep(0);
     setFormData({});
+    setLoxoneIdManual(false);
     setMoodEnabled(false);
     setMoodOrder([]);
   };
@@ -1095,14 +1110,22 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                   type="text"
                   placeholder="Name"
                   value={formData.name || ''}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    const update: Partial<Mapping> = { ...formData, name };
+                    if (!loxoneIdManual) update.loxone_id = nameToLoxoneId(name);
+                    setFormData(update);
+                  }}
                   className="w-full bg-gray-700 text-white rounded-lg px-3 py-2"
                 />
                 <input
                   type="text"
                   placeholder="Loxone ID"
                   value={formData.loxone_id || ''}
-                  onChange={(e) => setFormData({ ...formData, loxone_id: e.target.value })}
+                  onChange={(e) => {
+                    setLoxoneIdManual(true);
+                    setFormData({ ...formData, loxone_id: e.target.value });
+                  }}
                   className="w-full bg-gray-700 text-white rounded-lg px-3 py-2"
                 />
                 <textarea
@@ -1208,14 +1231,22 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                   type="text"
                   placeholder="Name"
                   value={formData.name || ''}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    const update: Partial<Mapping> = { ...formData, name };
+                    if (!loxoneIdManual) update.loxone_id = nameToLoxoneId(name);
+                    setFormData(update);
+                  }}
                   className="w-full bg-gray-700 text-white rounded-lg px-3 py-2"
                 />
                 <input
                   type="text"
                   placeholder="Loxone ID (Basis)"
                   value={formData.loxone_id || ''}
-                  onChange={(e) => setFormData({ ...formData, loxone_id: e.target.value })}
+                  onChange={(e) => {
+                    setLoxoneIdManual(true);
+                    setFormData({ ...formData, loxone_id: e.target.value });
+                  }}
                   className="w-full bg-gray-700 text-white rounded-lg px-3 py-2"
                 />
                 <p className="text-xs text-gray-500">
