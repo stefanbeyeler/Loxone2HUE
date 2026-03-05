@@ -144,11 +144,11 @@ export function Dashboard() {
   const tabs = [
     { id: 'guide' as Tab, label: 'Anleitung', icon: BookOpen },
     { id: 'mappings' as Tab, label: 'Mappings', icon: Link2 },
-    { id: 'devices' as Tab, label: 'Geräte', icon: Lightbulb, count: lights.length },
+    { id: 'devices' as Tab, label: 'Aktoren', icon: Lightbulb, count: lights.length },
+    { id: 'sensors' as Tab, label: 'Sensoren', icon: Activity, count: sensors.length },
     { id: 'rooms' as Tab, label: 'Räume', icon: Home, count: rooms.length },
     { id: 'zones' as Tab, label: 'Zonen', icon: Layers, count: zones.length },
     { id: 'scenes' as Tab, label: 'Szenen', icon: Palette, count: scenes.length },
-    { id: 'sensors' as Tab, label: 'Sensoren', icon: Activity, count: sensors.length },
     { id: 'settings' as Tab, label: 'Einstellungen', icon: Settings },
     { id: 'api' as Tab, label: 'API', icon: Code2 },
   ];

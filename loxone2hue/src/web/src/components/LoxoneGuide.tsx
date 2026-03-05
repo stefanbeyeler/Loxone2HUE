@@ -111,10 +111,10 @@ export function LoxoneGuide() {
           <pre>{`┌─────────────────┐  HTTP   ┌─────────────────────────┐  CLIP  ┌───────────────┐
 │     Loxone      │────────►│    Loxone2HUE Gateway   │◄──────►│   HUE Bridge  │
 │   Miniserver    │◄────────│        (Port 8080)      │  SSE   │               │
-└─────────────────┘   UDP   └─────────────────────────┘        └───────────────┘
+└─────────────────┘UDP/HTTP └─────────────────────────┘        └───────────────┘
                                        │
                   HTTP: Befehle senden  │ WebSocket /ws
-                  UDP:  Status-Feedback │
+                  UDP/HTTP: Feedback    │
                                        ▼
                             ┌─────────────────────────┐
                             │   Frontend (Browser)    │
@@ -597,42 +597,72 @@ export function LoxoneGuide() {
         </div>
       </section>
 
-      {/* UDP Status-Feedback */}
+      {/* Status-Feedback */}
       <section className="bg-gray-800 rounded-xl p-6">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <Radio size={20} className="text-hue-orange" />
-          UDP Status-Feedback
+          Status-Feedback (UDP &amp; HTTP)
         </h3>
         <div className="space-y-4 text-gray-300">
           <p className="text-sm">
-            Der Gateway sendet Status-Änderungen von HUE-Geräten automatisch per UDP an den Loxone Miniserver.
-            So erhält Loxone Echtzeit-Rückmeldungen über den Zustand der Lampen.
+            Der Gateway sendet Status-Änderungen von HUE-Geräten automatisch per <strong>UDP</strong> und/oder <strong>HTTP</strong> an den Loxone Miniserver.
+            So erhält Loxone Echtzeit-Rückmeldungen über den Zustand der Lampen und Sensoren.
           </p>
 
           <div className="bg-gray-900 rounded-lg p-4">
-            <h4 className="font-medium text-hue-orange mb-3">Aktivierung</h4>
+            <h4 className="font-medium text-hue-orange mb-3">Aktivierung (Einstellungen)</h4>
             <ol className="list-decimal list-inside space-y-2 text-sm ml-4">
               <li>Gehe zum Tab <strong>Einstellungen</strong></li>
-              <li>Aktiviere <strong>UDP Feedback</strong></li>
-              <li>Gib die <strong>Miniserver-IP</strong> und den <strong>UDP-Port</strong> ein (Standard: 7777)</li>
+              <li>Aktiviere <strong>UDP Feedback</strong> und/oder <strong>HTTP Feedback</strong> pro Miniserver</li>
+              <li>Für UDP: Gib die <strong>Miniserver-IP</strong> und den <strong>UDP-Port</strong> ein (Standard: 7777)</li>
+              <li>Für HTTP: Gib die <strong>Ziel-URL</strong> ein (z.B. <code>https://192.168.1.7:443/request.php</code>) sowie Benutzer/Passwort</li>
               <li>Klicke auf <strong>Speichern</strong></li>
             </ol>
           </div>
 
           <div className="bg-gray-900 rounded-lg p-4">
-            <h4 className="font-medium text-hue-orange mb-3">Nachrichtenformat</h4>
+            <h4 className="font-medium text-hue-orange mb-3">Pro-Mapping Protokollwahl</h4>
+            <p className="text-sm text-gray-400 mb-2">
+              Beim Erstellen oder Bearbeiten eines Mappings kann das Feedback-Protokoll pro Mapping gewählt werden:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-sm ml-4 text-gray-400">
+              <li><strong>UDP</strong> — Klassisches UDP-Paket an den Miniserver</li>
+              <li><strong>HTTP</strong> — HTTP GET-Request an den virtuellen HTTP-Eingang</li>
+              <li><strong>Beide</strong> — Standard, wenn keine explizite Auswahl getroffen wird</li>
+            </ul>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-3">UDP-Format</h4>
             <p className="text-sm text-gray-400 mb-3">
               Pro Eigenschaftsänderung wird ein UDP-Paket gesendet:
             </p>
             <div className="bg-gray-800 rounded-lg p-3 font-mono text-sm mb-3">
               <code>&lt;loxone_id&gt;/&lt;eigenschaft&gt;:&lt;wert&gt;</code>
             </div>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-3">HTTP-Format</h4>
+            <p className="text-sm text-gray-400 mb-3">
+              Pro Eigenschaftsänderung wird ein HTTP GET-Request gesendet:
+            </p>
+            <div className="bg-gray-800 rounded-lg p-3 font-mono text-sm mb-3">
+              <code>&lt;ziel_url&gt;/dev/sps/io/&lt;loxone_id&gt;_&lt;eigenschaft&gt;/&lt;wert&gt;</code>
+            </div>
+            <p className="text-sm text-gray-400">
+              Beispiel: <code className="text-xs">https://192.168.1.7/dev/sps/io/buero_stefan_on/1</code>
+            </p>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-3">Eigenschaften</h4>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-400 border-b border-gray-700">
                   <th className="pb-2 pr-4">Eigenschaft</th>
                   <th className="pb-2 pr-4">Wertebereich</th>
-                  <th className="pb-2">Beispiel</th>
+                  <th className="pb-2">Beispiel (UDP)</th>
                 </tr>
               </thead>
               <tbody>
@@ -671,7 +701,7 @@ export function LoxoneGuide() {
               Die Loxone ID aus dem Mapping wird als Prefix verwendet.
             </p>
             <p className="text-sm text-blue-300 mt-2">
-              Mit der Option <strong>UDP Feedback für alle Geräte senden</strong> in den Einstellungen werden
+              Mit der Option <strong>Alle Geräte senden</strong> in den Einstellungen werden
               auch Geräte ohne Mapping übertragen. In diesem Fall wird der Gerätename als Loxone-ID verwendet.
             </p>
           </div>
@@ -742,7 +772,7 @@ export function LoxoneGuide() {
             <h4 className="font-medium text-hue-orange mb-2">Empfohlener Workflow</h4>
             <ol className="text-sm text-orange-300 space-y-1 list-decimal list-inside">
               <li>Mappings im Tab "Mappings" erstellen</li>
-              <li>UDP-Feedback in Einstellungen aktivieren</li>
+              <li>Feedback (UDP/HTTP) in Einstellungen aktivieren</li>
               <li>XML-Vorlagen herunterladen (Einstellungen → Loxone Config Export)</li>
               <li>In Loxone Config importieren (Gerätevorlagen → Vorlage importieren)</li>
               <li>Bereich markieren (Virtuelle Eingänge bzw. Virtuelle Ausgänge), dann Vorlage ausführen (Gerätevorlagen → Meine Vorlagen)</li>
@@ -814,23 +844,31 @@ export function LoxoneGuide() {
           </div>
 
           <div className="bg-gray-900 rounded-lg p-4">
-            <h4 className="font-medium text-yellow-400 mb-2">UDP-Feedback kommt nicht an</h4>
+            <h4 className="font-medium text-yellow-400 mb-2">Feedback (UDP/HTTP) kommt nicht an</h4>
             <ul className="text-sm text-gray-300 space-y-2">
               <li className="flex items-start gap-2">
                 <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
-                <span>Prüfe, ob UDP-Feedback in den Einstellungen aktiviert ist</span>
+                <span>Prüfe, ob UDP- und/oder HTTP-Feedback in den Einstellungen aktiviert ist</span>
               </li>
               <li className="flex items-start gap-2">
                 <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
-                <span>Prüfe die Ziel-IP und den Port (Standard: 7777)</span>
+                <span>Für UDP: Prüfe die Ziel-IP und den Port (Standard: 7777)</span>
               </li>
               <li className="flex items-start gap-2">
                 <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
-                <span>Stelle sicher, dass ein Mapping für das Gerät existiert oder <strong>UDP Feedback für alle Geräte senden</strong> aktiviert ist</span>
+                <span>Für HTTP: Prüfe die Ziel-URL und die Zugangsdaten</span>
               </li>
               <li className="flex items-start gap-2">
                 <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
-                <span>Prüfe die Firewall: UDP-Port muss am Miniserver offen sein</span>
+                <span>Prüfe, ob das gewünschte Protokoll im Mapping aktiviert ist (UDP/HTTP Checkboxen)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Stelle sicher, dass ein Mapping für das Gerät existiert oder <strong>Alle Geräte senden</strong> aktiviert ist</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Für UDP: Prüfe die Firewall — UDP-Port muss am Miniserver offen sein</span>
               </li>
             </ul>
           </div>
@@ -876,7 +914,7 @@ export function LoxoneGuide() {
           </li>
           <li className="flex items-start gap-3">
             <div className="w-5 h-5 rounded border-2 border-gray-600 flex-shrink-0 mt-0.5"></div>
-            <span>UDP-Feedback aktiviert (Einstellungen: IP + Port konfiguriert)</span>
+            <span>Feedback aktiviert (Einstellungen: UDP und/oder HTTP konfiguriert)</span>
           </li>
           <li className="flex items-start gap-3">
             <div className="w-5 h-5 rounded border-2 border-gray-600 flex-shrink-0 mt-0.5"></div>

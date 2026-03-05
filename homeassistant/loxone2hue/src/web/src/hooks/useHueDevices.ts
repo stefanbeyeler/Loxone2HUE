@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Light, Group, Scene, Sensor, StatusMessage } from '../types';
+import { Light, Group, Scene, Sensor, WSMessage } from '../types';
 import * as api from '../services/api';
 import { useWebSocket } from './useWebSocket';
 
@@ -11,13 +11,19 @@ export function useHueDevices() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const handleMessage = useCallback((message: StatusMessage) => {
+  const handleMessage = useCallback((message: WSMessage) => {
     if (message.type === 'status') {
       setLights((prev) =>
         prev.map((light) =>
           light.id === message.device
             ? { ...light, state: { ...light.state, ...message.state } }
             : light
+        )
+      );
+    } else if (message.type === 'sensor_update') {
+      setSensors((prev) =>
+        prev.map((s) =>
+          s.id === message.sensor.id ? message.sensor : s
         )
       );
     }

@@ -268,12 +268,17 @@ func (c *Client) updateFromEvent(item EventItem) {
 }
 
 func (c *Client) updateSensorFromEvent(sensor *models.Sensor, item EventItem) {
+	now := time.Now().UTC().Format(time.RFC3339)
+
 	switch item.Type {
 	case "motion":
 		if item.Motion != nil {
 			motion := item.Motion.Motion
 			if item.Motion.MotionReport != nil {
 				motion = item.Motion.MotionReport.Motion
+				sensor.State.LastUpdated = item.Motion.MotionReport.Changed
+			} else {
+				sensor.State.LastUpdated = now
 			}
 			sensor.State.Motion = &motion
 		}
@@ -283,6 +288,9 @@ func (c *Client) updateSensorFromEvent(sensor *models.Sensor, item EventItem) {
 			temp := item.Temperature.Temperature
 			if item.Temperature.TemperatureReport != nil {
 				temp = item.Temperature.TemperatureReport.Temperature
+				sensor.State.LastUpdated = item.Temperature.TemperatureReport.Changed
+			} else {
+				sensor.State.LastUpdated = now
 			}
 			sensor.State.Temperature = &temp
 		}
@@ -292,6 +300,9 @@ func (c *Client) updateSensorFromEvent(sensor *models.Sensor, item EventItem) {
 			level := item.LightSensor.LightLevel
 			if item.LightSensor.LightLevelReport != nil {
 				level = item.LightSensor.LightLevelReport.LightLevel
+				sensor.State.LastUpdated = item.LightSensor.LightLevelReport.Changed
+			} else {
+				sensor.State.LastUpdated = now
 			}
 			sensor.State.LightLevel = &level
 		}
@@ -301,6 +312,9 @@ func (c *Client) updateSensorFromEvent(sensor *models.Sensor, item EventItem) {
 			event := item.Button.LastEvent
 			if item.Button.ButtonReport != nil {
 				event = item.Button.ButtonReport.Event
+				sensor.State.LastUpdated = item.Button.ButtonReport.Updated
+			} else {
+				sensor.State.LastUpdated = now
 			}
 			if event != "" {
 				sensor.State.ButtonEvent = &event
@@ -310,6 +324,7 @@ func (c *Client) updateSensorFromEvent(sensor *models.Sensor, item EventItem) {
 	case "contact":
 		if item.ContactReport != nil {
 			sensor.State.ContactState = &item.ContactReport.State
+			sensor.State.LastUpdated = item.ContactReport.Changed
 		}
 
 	case "relative_rotary":
@@ -320,12 +335,14 @@ func (c *Client) updateSensorFromEvent(sensor *models.Sensor, item EventItem) {
 				steps = -steps
 			}
 			sensor.State.RotarySteps = &steps
+			sensor.State.LastUpdated = item.RelativeRotary.RotaryReport.Updated
 		}
 
 	case "device_power":
 		if item.PowerState != nil {
 			sensor.State.BatteryLevel = &item.PowerState.BatteryLevel
 			sensor.State.BatteryState = &item.PowerState.BatteryState
+			sensor.State.LastUpdated = now
 		}
 	}
 }

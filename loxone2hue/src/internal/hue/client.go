@@ -24,6 +24,7 @@ type Client struct {
 	lights   map[string]*models.Light
 	groups   map[string]*models.Group
 	scenes   map[string]*models.Scene
+	sensors  map[string]*models.Sensor
 	mu       sync.RWMutex
 
 	eventChan chan Event
@@ -57,6 +58,7 @@ func NewClient(bridgeIP, applicationKey string) *Client {
 		lights:    make(map[string]*models.Light),
 		groups:    make(map[string]*models.Group),
 		scenes:    make(map[string]*models.Scene),
+		sensors:   make(map[string]*models.Sensor),
 		eventChan: make(chan Event, 100),
 		stopChan:  make(chan struct{}),
 	}
@@ -508,6 +510,91 @@ func (c *Client) GetGroupName(groupID string) string {
 	return ""
 }
 
+// GetSensors fetches all sensors (motion, temperature, light_level, button, contact, rotary, device_power) from the bridge
+func (c *Client) GetSensors() ([]*models.Sensor, error) {
+	// First build device ID → name mapping via /clip/v2/resource/device
+	deviceNames := make(map[string]string)
+	devResp, err := c.request("GET", "/clip/v2/resource/device", nil)
+	if err == nil {
+		var devResult struct {
+			Data []struct {
+				ID       string `json:"id"`
+				Metadata struct {
+					Name string `json:"name"`
+				} `json:"metadata"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(devResp, &devResult); err == nil {
+			for _, d := range devResult.Data {
+				deviceNames[d.ID] = d.Metadata.Name
+			}
+		}
+	}
+
+	sensors := make([]*models.Sensor, 0)
+
+	type sensorEndpoint struct {
+		path       string
+		sensorType string
+	}
+
+	endpoints := []sensorEndpoint{
+		{"/clip/v2/resource/motion", "motion"},
+		{"/clip/v2/resource/temperature", "temperature"},
+		{"/clip/v2/resource/light_level", "light_level"},
+		{"/clip/v2/resource/button", "button"},
+		{"/clip/v2/resource/contact", "contact"},
+		{"/clip/v2/resource/relative_rotary", "relative_rotary"},
+		{"/clip/v2/resource/device_power", "device_power"},
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for _, ep := range endpoints {
+		resp, err := c.request("GET", ep.path, nil)
+		if err != nil {
+			log.Debug().Err(err).Str("type", ep.sensorType).Msg("Sensor type not available on this bridge")
+			continue
+		}
+
+		var result struct {
+			Data []json.RawMessage `json:"data"`
+		}
+		if err := json.Unmarshal(resp, &result); err != nil {
+			continue
+		}
+
+		for _, raw := range result.Data {
+			sensor := convertHueSensor(raw, ep.sensorType, deviceNames)
+			if sensor != nil {
+				c.sensors[sensor.ID] = sensor
+				sensors = append(sensors, sensor)
+			}
+		}
+	}
+
+	log.Debug().Int("count", len(sensors)).Msg("Fetched sensors from bridge")
+	return sensors, nil
+}
+
+// GetSensor returns a cached sensor by ID
+func (c *Client) GetSensor(id string) *models.Sensor {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.sensors[id]
+}
+
+// GetSensorName returns the name of a sensor by ID, or empty string
+func (c *Client) GetSensorName(sensorID string) string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if s, ok := c.sensors[sensorID]; ok {
+		return s.Name
+	}
+	return ""
+}
+
 // Events returns the event channel for SSE events
 func (c *Client) Events() <-chan Event {
 	return c.eventChan
@@ -646,4 +733,202 @@ func convertHueScene(hs hueScene) *models.Scene {
 		GroupID: hs.Group.RID,
 		Type:    hs.Group.RType,
 	}
+}
+
+// convertHueSensor converts raw JSON sensor data into a Sensor model
+func convertHueSensor(raw json.RawMessage, sensorType string, deviceNames map[string]string) *models.Sensor {
+	// Common fields present in all sensor types
+	var base struct {
+		ID    string `json:"id"`
+		Owner *struct {
+			RID   string `json:"rid"`
+			RType string `json:"rtype"`
+		} `json:"owner,omitempty"`
+		Enabled bool `json:"enabled"`
+	}
+	if err := json.Unmarshal(raw, &base); err != nil {
+		return nil
+	}
+
+	sensor := &models.Sensor{
+		ID:   base.ID,
+		Type: sensorType,
+		State: models.SensorState{
+			Enabled: base.Enabled,
+		},
+	}
+
+	if base.Owner != nil {
+		sensor.DeviceID = base.Owner.RID
+		if name, ok := deviceNames[base.Owner.RID]; ok {
+			sensor.Owner = name
+			sensor.Name = name
+		}
+	}
+
+	switch sensorType {
+	case "motion":
+		var m struct {
+			Motion struct {
+				Motion      bool   `json:"motion"`
+				MotionValid bool   `json:"motion_valid"`
+				MotionReport *struct {
+					Changed string `json:"changed"`
+					Motion  bool   `json:"motion"`
+				} `json:"motion_report,omitempty"`
+			} `json:"motion"`
+			Enabled bool `json:"enabled"`
+		}
+		if err := json.Unmarshal(raw, &m); err == nil {
+			motion := m.Motion.Motion
+			sensor.State.Motion = &motion
+			sensor.State.Enabled = m.Enabled
+			if m.Motion.MotionReport != nil {
+				sensor.State.LastUpdated = m.Motion.MotionReport.Changed
+			}
+			sensor.Name = sensor.Name + " Motion"
+		}
+
+	case "temperature":
+		var t struct {
+			Temperature struct {
+				Temperature      float64 `json:"temperature"`
+				TemperatureValid bool    `json:"temperature_valid"`
+				TemperatureReport *struct {
+					Changed     string  `json:"changed"`
+					Temperature float64 `json:"temperature"`
+				} `json:"temperature_report,omitempty"`
+			} `json:"temperature"`
+			Enabled bool `json:"enabled"`
+		}
+		if err := json.Unmarshal(raw, &t); err == nil {
+			temp := t.Temperature.Temperature
+			sensor.State.Temperature = &temp
+			sensor.State.Enabled = t.Enabled
+			if t.Temperature.TemperatureReport != nil {
+				sensor.State.LastUpdated = t.Temperature.TemperatureReport.Changed
+			}
+			sensor.Name = sensor.Name + " Temperature"
+		}
+
+	case "light_level":
+		var l struct {
+			Light struct {
+				LightLevel      int  `json:"light_level"`
+				LightLevelValid bool `json:"light_level_valid"`
+				LightLevelReport *struct {
+					Changed    string `json:"changed"`
+					LightLevel int    `json:"light_level"`
+				} `json:"light_level_report,omitempty"`
+			} `json:"light"`
+			Enabled bool `json:"enabled"`
+		}
+		if err := json.Unmarshal(raw, &l); err == nil {
+			level := l.Light.LightLevel
+			sensor.State.LightLevel = &level
+			sensor.State.Enabled = l.Enabled
+			if l.Light.LightLevelReport != nil {
+				sensor.State.LastUpdated = l.Light.LightLevelReport.Changed
+			}
+			sensor.Name = sensor.Name + " Light Level"
+		}
+
+	case "button":
+		var b struct {
+			Metadata struct {
+				ControlID int `json:"control_id"`
+			} `json:"metadata"`
+			Button struct {
+				ButtonReport *struct {
+					Updated string `json:"updated"`
+					Event   string `json:"event"`
+				} `json:"button_report,omitempty"`
+				LastEvent string `json:"last_event"`
+			} `json:"button"`
+		}
+		if err := json.Unmarshal(raw, &b); err == nil {
+			controlID := b.Metadata.ControlID
+			sensor.State.ControlID = &controlID
+			event := b.Button.LastEvent
+			if b.Button.ButtonReport != nil {
+				event = b.Button.ButtonReport.Event
+				sensor.State.LastUpdated = b.Button.ButtonReport.Updated
+			}
+			if event != "" {
+				sensor.State.ButtonEvent = &event
+			}
+			sensor.Name = fmt.Sprintf("%s Button %d", sensor.Name, controlID)
+		}
+
+	case "contact":
+		var ct struct {
+			ContactReport *struct {
+				Changed string `json:"changed"`
+				State   string `json:"state"`
+			} `json:"contact_report,omitempty"`
+			Enabled bool `json:"enabled"`
+		}
+		if err := json.Unmarshal(raw, &ct); err == nil {
+			sensor.State.Enabled = ct.Enabled
+			if ct.ContactReport != nil {
+				sensor.State.ContactState = &ct.ContactReport.State
+				sensor.State.LastUpdated = ct.ContactReport.Changed
+			}
+			sensor.Name = sensor.Name + " Contact"
+		}
+
+	case "relative_rotary":
+		var rr struct {
+			RelativeRotary struct {
+				RotaryReport *struct {
+					Updated  string `json:"updated"`
+					Action   string `json:"action"`
+					Rotation struct {
+						Direction string `json:"direction"`
+						Steps     int    `json:"steps"`
+						Duration  int    `json:"duration"`
+					} `json:"rotation"`
+				} `json:"rotary_report,omitempty"`
+				LastEvent *struct {
+					Action   string `json:"action"`
+					Rotation struct {
+						Direction string `json:"direction"`
+						Steps     int    `json:"steps"`
+					} `json:"rotation"`
+				} `json:"last_event,omitempty"`
+			} `json:"relative_rotary"`
+		}
+		if err := json.Unmarshal(raw, &rr); err == nil {
+			if rr.RelativeRotary.RotaryReport != nil {
+				sensor.State.RotaryAction = &rr.RelativeRotary.RotaryReport.Action
+				steps := rr.RelativeRotary.RotaryReport.Rotation.Steps
+				if rr.RelativeRotary.RotaryReport.Rotation.Direction == "counter_clockwise" {
+					steps = -steps
+				}
+				sensor.State.RotarySteps = &steps
+				sensor.State.LastUpdated = rr.RelativeRotary.RotaryReport.Updated
+			}
+			sensor.Name = sensor.Name + " Rotary"
+		}
+
+	case "device_power":
+		var dp struct {
+			PowerState struct {
+				BatteryLevel int    `json:"battery_level"`
+				BatteryState string `json:"battery_state"`
+			} `json:"power_state"`
+		}
+		if err := json.Unmarshal(raw, &dp); err == nil {
+			sensor.State.BatteryLevel = &dp.PowerState.BatteryLevel
+			sensor.State.BatteryState = &dp.PowerState.BatteryState
+			sensor.Name = sensor.Name + " Battery"
+		}
+	}
+
+	// Fallback name if device not found
+	if sensor.Name == "" {
+		sensor.Name = fmt.Sprintf("Sensor %s", sensor.ID[:8])
+	}
+
+	return sensor
 }

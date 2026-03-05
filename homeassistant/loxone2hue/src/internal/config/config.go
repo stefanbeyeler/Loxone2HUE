@@ -33,12 +33,16 @@ type HueConfig struct {
 
 // MiniserverConfig holds settings for a single Loxone Miniserver
 type MiniserverConfig struct {
-	ID         string `yaml:"id" json:"id"`
-	Name       string `yaml:"name" json:"name"`
-	IP         string `yaml:"ip" json:"ip"`
-	Port       int    `yaml:"port" json:"port"`
-	UDPEnabled bool   `yaml:"udp_enabled" json:"udp_enabled"`
-	SendAll    bool   `yaml:"send_all" json:"send_all"`
+	ID           string `yaml:"id" json:"id"`
+	Name         string `yaml:"name" json:"name"`
+	IP           string `yaml:"ip" json:"ip"`
+	Port         int    `yaml:"port" json:"port"`
+	UDPEnabled   bool   `yaml:"udp_enabled" json:"udp_enabled"`
+	HTTPEnabled  bool   `yaml:"http_enabled" json:"http_enabled"`
+	HTTPURL      string `yaml:"http_url" json:"http_url"`
+	HTTPUser     string `yaml:"http_user" json:"http_user"`
+	HTTPPassword string `yaml:"http_password" json:"http_password"`
+	SendAll      bool   `yaml:"send_all" json:"send_all"`
 }
 
 // LoxoneConfig holds Loxone integration settings
