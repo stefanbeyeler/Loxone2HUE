@@ -41,6 +41,16 @@ const sensorTypeIcons: Record<string, typeof Activity> = {
   device_power: Battery,
 };
 
+function formatDateTime(isoString: string | undefined): string | null {
+  if (!isoString) return null;
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return null;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  const date = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+  return `${date} ${time}`;
+}
+
 function formatSensorValue(sensor: Sensor): string {
   const s = sensor.state;
   switch (sensor.type) {
@@ -205,6 +215,9 @@ export function SensorList({ sensors, loading, mappings = [], udpSendAll = false
                   <div className="text-right flex flex-col items-end gap-1">
                     <span className="text-sm text-gray-300">{formatSensorValue(sensor)}</span>
                     <SensorStateIndicator sensor={sensor} />
+                    {sensor.state.last_updated && (
+                      <span className="text-xs text-gray-500">{formatDateTime(sensor.state.last_updated)}</span>
+                    )}
                   </div>
                 </div>
               );
@@ -230,7 +243,12 @@ export function SensorList({ sensors, loading, mappings = [], udpSendAll = false
                     <span className="text-white text-sm">{sensor.name}</span>
                     <div className="text-xs text-gray-500 font-mono">{sensor.id}</div>
                   </div>
-                  <span className="text-sm text-gray-300">{formatSensorValue(sensor)}</span>
+                  <div className="text-right flex flex-col items-end gap-1">
+                    <span className="text-sm text-gray-300">{formatSensorValue(sensor)}</span>
+                    {sensor.state.last_updated && (
+                      <span className="text-xs text-gray-500">{formatDateTime(sensor.state.last_updated)}</span>
+                    )}
+                  </div>
                 </div>
               );
             })}

@@ -121,6 +121,19 @@ func (h *WebSocketHub) forwardHueEvents(ctx context.Context) {
 
 			h.broadcast <- data
 
+			// For sensor events, also broadcast the full updated sensor object
+			if hue.IsSensorType(event.Type) {
+				if sensor := h.hueClient.GetSensor(event.ID); sensor != nil {
+					sensorMsg := map[string]interface{}{
+						"type":   "sensor_update",
+						"sensor": sensor,
+					}
+					if sData, err := json.Marshal(sensorMsg); err == nil {
+						h.broadcast <- sData
+					}
+				}
+			}
+
 			// Send UDP feedback to Loxone Miniserver
 			if h.udpSender != nil && h.udpSender.IsEnabled() {
 				h.sendUDPFeedback(event)
