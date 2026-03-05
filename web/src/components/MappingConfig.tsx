@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Mapping, Light, Group, Scene } from '../types';
+import { Mapping, Light, Group, Scene, Sensor } from '../types';
 import * as api from '../services/api';
-import { Link2, Plus, Trash2, Edit2, Save, X, Lightbulb, Home, Play, Copy, Check, Terminal, ExternalLink, Download, Upload, AlertCircle, FileDown, ChevronUp, ChevronDown, Power, Layers } from 'lucide-react';
+import { Link2, Plus, Trash2, Edit2, Save, X, Lightbulb, Home, Play, Copy, Check, Terminal, ExternalLink, Download, Upload, AlertCircle, FileDown, ChevronUp, ChevronDown, Power, Layers, WifiOff, Sun, SunDim, PowerOff, Activity } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
 interface MappingConfigProps {
   lights: Light[];
   groups: Group[];
   scenes: Scene[];
+  sensors?: Sensor[];
   onNavigateToHueElement?: (hueId: string, hueType: string) => void;
 }
 
-export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }: MappingConfigProps) {
+export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigateToHueElement }: MappingConfigProps) {
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -456,6 +457,10 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
       }
       return hueId;
     }
+    if (hueType === 'sensor') {
+      const sensor = sensors.find((s) => s.id === hueId);
+      return sensor?.name || hueId;
+    }
     const light = lights.find((l) => l.id === hueId);
     return light?.name || hueId;
   };
@@ -466,6 +471,8 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
         return <Home size={20} className="text-hue-orange" />;
       case 'scene':
         return <Play size={20} className="text-hue-orange" />;
+      case 'sensor':
+        return <Activity size={20} className="text-hue-orange" />;
       default:
         return <Lightbulb size={20} className="text-hue-orange" />;
     }
@@ -477,6 +484,8 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
         return 'Gruppe';
       case 'scene':
         return 'Szene';
+      case 'sensor':
+        return 'Sensor';
       default:
         return 'Licht';
     }
@@ -487,20 +496,26 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
     return group?.name || '';
   };
 
-  const getHueResourceStatus = (hueId: string, hueType: string): { color: string; label: string } | null => {
+  const getHueResourceStatus = (hueId: string, hueType: string): { icon: React.ReactNode; label: string } | null => {
     if (hueType === 'light') {
       const light = lights.find((l) => l.id === hueId);
       if (!light) return null;
-      if (!light.state.reachable) return { color: 'bg-gray-500', label: 'Nicht erreichbar' };
-      if (light.state.on) return { color: 'bg-green-500', label: `An (${light.state.brightness}%)` };
-      return { color: 'bg-red-500/70', label: 'Aus' };
+      if (!light.state.reachable) return { icon: <WifiOff size={14} className="text-gray-500" />, label: 'Nicht erreichbar' };
+      if (light.state.on) return { icon: <Sun size={14} className="text-green-400" />, label: `An (${light.state.brightness}%)` };
+      return { icon: <PowerOff size={14} className="text-red-400/70" />, label: 'Aus' };
     }
     if (hueType === 'group') {
       const group = groups.find((g) => g.id === hueId);
       if (!group) return null;
-      if (group.state.all_on) return { color: 'bg-green-500', label: `Alle an${group.state.brightness != null ? ` (${group.state.brightness}%)` : ''}` };
-      if (group.state.any_on) return { color: 'bg-yellow-500', label: 'Teilweise an' };
-      return { color: 'bg-red-500/70', label: 'Aus' };
+      if (group.state.all_on) return { icon: <Sun size={14} className="text-green-400" />, label: `Alle an${group.state.brightness != null ? ` (${group.state.brightness}%)` : ''}` };
+      if (group.state.any_on) return { icon: <SunDim size={14} className="text-yellow-400" />, label: 'Teilweise an' };
+      return { icon: <PowerOff size={14} className="text-red-400/70" />, label: 'Aus' };
+    }
+    if (hueType === 'sensor') {
+      const sensor = sensors.find((s) => s.id === hueId);
+      if (!sensor) return null;
+      if (sensor.state.enabled) return { icon: <Activity size={14} className="text-green-400" />, label: 'Aktiv' };
+      return { icon: <PowerOff size={14} className="text-gray-500" />, label: 'Deaktiviert' };
     }
     // Scenes don't have a persistent active state
     return null;
@@ -1064,8 +1079,8 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
             {wizardMode === 'single' && wizardStep === 1 && (
               <div className="space-y-3">
                 <p className="text-sm text-gray-400">Wähle den Typ und die HUE-Ressource:</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['light', 'group', 'scene'] as const).map((type) => (
+                <div className="grid grid-cols-4 gap-2">
+                  {(['light', 'group', 'scene', 'sensor'] as const).map((type) => (
                     <button
                       key={type}
                       type="button"
@@ -1079,6 +1094,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                       {type === 'light' && <Lightbulb size={20} className="mx-auto mb-1" />}
                       {type === 'group' && <Home size={20} className="mx-auto mb-1" />}
                       {type === 'scene' && <Play size={20} className="mx-auto mb-1" />}
+                      {type === 'sensor' && <Activity size={20} className="mx-auto mb-1" />}
                       <span className="text-sm block">{getTypeLabel(type)}</span>
                     </button>
                   ))}
@@ -1099,6 +1115,8 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                         const gn = getGroupNameForScene(sc);
                         name = gn ? `${gn} - ${sc.name}` : sc.name;
                       }
+                    } else if (formData.hue_type === 'sensor') {
+                      name = sensors.find((s) => s.id === hueId)?.name || '';
                     }
                     setFormData((prev) => {
                       const finalName = prev.name || name;
@@ -1121,7 +1139,11 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                     getScenesWithGroupName().map((s) => (
                       <option key={s.id} value={s.id}>{s.groupName ? `${s.groupName} - ${s.name}` : s.name}</option>
                     ))}
-                  {formData.hue_type !== 'group' && formData.hue_type !== 'scene' &&
+                  {formData.hue_type === 'sensor' &&
+                    [...sensors].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((s) => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.type})</option>
+                    ))}
+                  {formData.hue_type !== 'group' && formData.hue_type !== 'scene' && formData.hue_type !== 'sensor' &&
                     [...lights].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((l) => (
                       <option key={l.id} value={l.id}>{l.name}</option>
                     ))}
@@ -1475,6 +1497,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                     <option value="light">Licht</option>
                     <option value="group">Gruppe/Raum</option>
                     <option value="scene">Szene</option>
+                    <option value="sensor">Sensor</option>
                   </select>
                   <select
                     title="HUE Ressource"
@@ -1495,7 +1518,13 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                           {s.groupName ? `${s.groupName} - ${s.name}` : s.name}
                         </option>
                       ))}
-                    {formData.hue_type !== 'group' && formData.hue_type !== 'scene' &&
+                    {formData.hue_type === 'sensor' &&
+                      [...sensors].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.type})
+                        </option>
+                      ))}
+                    {formData.hue_type !== 'group' && formData.hue_type !== 'scene' && formData.hue_type !== 'sensor' &&
                       [...lights].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((l) => (
                         <option key={l.id} value={l.id}>
                           {l.name}
@@ -1559,7 +1588,9 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                         const status = getHueResourceStatus(mapping.hue_id, mapping.hue_type);
                         return status ? (
                           <Tooltip content={status.label} position="top">
-                            <span className={`absolute -top-0.5 -right-0.5 w-3.5 h-3.5 ${status.color} rounded-full border-2 border-gray-800`} />
+                            <span className="absolute -top-1 -right-1 bg-gray-800 rounded-full p-0.5 border border-gray-700">
+                              {status.icon}
+                            </span>
                           </Tooltip>
                         ) : null;
                       })()}

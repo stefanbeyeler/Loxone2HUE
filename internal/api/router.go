@@ -68,6 +68,9 @@ func (s *Server) setupRoutes() {
 	api.HandleFunc("/scenes", s.handlers.GetScenes).Methods("GET")
 	api.HandleFunc("/scenes/{id}/activate", s.handlers.ActivateScene).Methods("POST")
 
+	// Sensor endpoints
+	api.HandleFunc("/sensors", s.handlers.GetSensors).Methods("GET")
+
 	// Mapping endpoints
 	api.HandleFunc("/mappings", s.handlers.GetMappings).Methods("GET")
 	api.HandleFunc("/mappings", s.handlers.CreateMapping).Methods("POST")

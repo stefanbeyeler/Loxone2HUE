@@ -309,6 +309,19 @@ func (h *Handlers) SetGroup(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// GetSensors returns all sensors
+func (h *Handlers) GetSensors(w http.ResponseWriter, r *http.Request) {
+	sensors, err := h.hueClient.GetSensors()
+	if err != nil {
+		errorResponse(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	jsonResponse(w, http.StatusOK, map[string]interface{}{
+		"sensors": sensors,
+	})
+}
+
 // GetScenes returns all scenes
 func (h *Handlers) GetScenes(w http.ResponseWriter, r *http.Request) {
 	scenes, err := h.hueClient.GetScenes()

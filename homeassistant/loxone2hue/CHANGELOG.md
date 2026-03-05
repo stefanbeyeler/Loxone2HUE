@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.3.0
+
+- Sensoren & Taster: Vollstaendige Unterstuetzung fuer HUE Sensoren, Taster und Zubehoer
+  - Bewegungsmelder, Temperatursensoren, Helligkeitssensoren
+  - Taster (Hue Dimmer Switch, Hue Tap, etc.)
+  - Kontaktsensoren, Drehregler (Hue Tap Dial)
+  - Batteriestand-Anzeige
+- Neuer Sensoren-Tab im Dashboard mit Live-Status und Geraete-Gruppierung
+- Sensor-Mappings: Sensoren koennen als HUE-Ressource in Mappings verwendet werden
+- UDP-Feedback fuer Sensoren: Automatische Weiterleitung von Sensor-Events an Loxone
+  - motion:0/1, temperature:22.5, light_level:1234, button:0-4, contact:0/1, rotary:steps, battery:0-100
+- API: Neuer GET /api/sensors Endpoint
+- SSE Event Stream: Sensor-Events werden erkannt und verarbeitet
+
 ## 1.2.3
 
 - Anleitung: Architektur-Diagramm mit UDP-Feedback erweitert, Multi-Miniserver und Auto-ID-Generierung dokumentiert
