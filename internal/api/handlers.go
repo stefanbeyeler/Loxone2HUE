@@ -24,14 +24,16 @@ type Handlers struct {
 	hueClient      *hue.Client
 	mappingManager *loxone.MappingManager
 	udpSender      *loxone.UDPSender
+	httpSender     *loxone.HTTPSender
 }
 
 // NewHandlers creates a new handlers instance
-func NewHandlers(hueClient *hue.Client, mappingManager *loxone.MappingManager, udpSender *loxone.UDPSender) *Handlers {
+func NewHandlers(hueClient *hue.Client, mappingManager *loxone.MappingManager, udpSender *loxone.UDPSender, httpSender *loxone.HTTPSender) *Handlers {
 	return &Handlers{
 		hueClient:      hueClient,
 		mappingManager: mappingManager,
 		udpSender:      udpSender,
+		httpSender:     httpSender,
 	}
 }
 
@@ -504,6 +506,11 @@ func (h *Handlers) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		// Reconfigure UDP sender on the fly
 		if h.udpSender != nil {
 			h.udpSender.Configure(update.Loxone.Miniservers)
+		}
+
+		// Reconfigure HTTP sender on the fly
+		if h.httpSender != nil {
+			h.httpSender.Configure(update.Loxone.Miniservers)
 		}
 	}
 

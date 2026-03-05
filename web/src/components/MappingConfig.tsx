@@ -36,6 +36,10 @@ export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigate
   const [addingMoodToParent, setAddingMoodToParent] = useState<string | null>(null);
   const [miniservers, setMiniservers] = useState<api.MiniserverConfig[]>([]);
 
+  const hasUDP = miniservers.some((ms) => ms.udp_enabled);
+  const hasHTTP = miniservers.some((ms) => ms.http_enabled);
+  const hasAnyFeedback = hasUDP || hasHTTP;
+
   useEffect(() => {
     loadMappings();
     api.getConfig().then((cfg) => {
@@ -167,6 +171,8 @@ export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigate
         hue_id: formData.hue_id,
         hue_type: formData.hue_type || 'light',
         enabled: true,
+        feedback_udp: formData.feedback_udp,
+        feedback_http: formData.feedback_http,
         description: formData.description,
         miniserver_id: formData.miniserver_id,
       });
@@ -183,6 +189,8 @@ export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigate
             hue_type: 'group',
             enabled: true,
             description: `Mood 0 für ${formData.name} (Gruppe ausschalten)`,
+            feedback_udp: formData.feedback_udp,
+            feedback_http: formData.feedback_http,
             miniserver_id: formData.miniserver_id,
           });
           newMappings.push(mood0Mapping);
@@ -202,6 +210,8 @@ export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigate
               hue_type: 'scene',
               enabled: true,
               description: `Mood ${i + 1} für ${formData.name}`,
+              feedback_udp: formData.feedback_udp,
+              feedback_http: formData.feedback_http,
               miniserver_id: formData.miniserver_id,
             });
             newMappings.push(moodMapping);
@@ -347,6 +357,8 @@ export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigate
         hue_type: 'scene',
         enabled: true,
         description: `Mood ${nextNum} für ${parentMapping.name}`,
+        feedback_udp: parentMapping.feedback_udp,
+        feedback_http: parentMapping.feedback_http,
         miniserver_id: parentMapping.miniserver_id,
       });
       setAddingMoodToParent(null);
@@ -596,6 +608,11 @@ export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigate
     const loxoneId = mapping.loxone_id;
     const hueType = mapping.hue_type;
 
+    // Sensors don't have test URLs — they send data TO Loxone, not receive commands
+    if (hueType === 'sensor') {
+      return [];
+    }
+
     if (hueType === 'scene') {
       return [
         {
@@ -667,9 +684,46 @@ export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigate
     ];
   };
 
+  const getSensorFeedbackInfo = (sensorType: string): { property: string; range: string; example: string }[] => {
+    switch (sensorType) {
+      case 'motion':
+        return [{ property: 'motion', range: '0 / 1', example: 'motion:1' }];
+      case 'temperature':
+        return [{ property: 'temperature', range: 'z.B. 21.5 (°C)', example: 'temperature:21.5' }];
+      case 'light_level':
+        return [{ property: 'light_level', range: '0–100000 (Lux)', example: 'light_level:12500' }];
+      case 'button':
+        return [{ property: 'button', range: '0=press, 2=short, 3=long_release, 4=long_press', example: 'button:2' }];
+      case 'contact':
+        return [{ property: 'contact', range: '0=geschlossen, 1=offen', example: 'contact:0' }];
+      case 'relative_rotary':
+        return [{ property: 'rotary', range: 'Schritte (positiv/negativ)', example: 'rotary:3' }];
+      case 'device_power':
+        return [{ property: 'battery', range: '0–100 (%)', example: 'battery:85' }];
+      default:
+        return [{ property: sensorType, range: 'variabel', example: `${sensorType}:<wert>` }];
+    }
+  };
+
   const getLoxoneGuide = (mapping: Mapping) => {
     const loxoneId = mapping.loxone_id;
     const hueType = mapping.hue_type;
+
+    if (hueType === 'sensor') {
+      const sensor = sensors.find((s) => s.id === mapping.hue_id);
+      const sensorType = sensor?.type || 'unknown';
+      const feedbackProps = getSensorFeedbackInfo(sensorType);
+
+      return {
+        title: `Sensor-Feedback (${sensorType})`,
+        commands: feedbackProps.map((fp) => ({
+          label: `UDP: ${loxoneId}/${fp.property}:<wert>`,
+          value: `${loxoneId}/${fp.property}:${fp.example.split(':')[1]}`,
+          description: `Wertebereich: ${fp.range}`
+        })),
+        note: 'Sensoren senden Werte automatisch per UDP/HTTP an Loxone. Erstelle einen Virtuellen UDP-Eingang mit passender Befehls-Erkennung, um die Werte in Loxone zu empfangen. Es werden keine Befehle an den Sensor gesendet.'
+      };
+    }
 
     if (hueType === 'scene') {
       // Check if this is a mood scene mapping
@@ -1205,6 +1259,35 @@ export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigate
                     Miniserver: <span className="text-gray-300">{miniservers[0].name || miniservers[0].ip}</span>
                   </div>
                 )}
+                {hasAnyFeedback && (
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Feedback-Protokoll</label>
+                    <div className="flex items-center gap-4">
+                      {hasUDP && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.feedback_udp !== false}
+                            onChange={(e) => setFormData({ ...formData, feedback_udp: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-600 text-hue-orange focus:ring-hue-orange bg-gray-700"
+                          />
+                          <span className="text-gray-300 text-sm">UDP</span>
+                        </label>
+                      )}
+                      {hasHTTP && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.feedback_http !== false}
+                            onChange={(e) => setFormData({ ...formData, feedback_http: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-600 text-hue-orange focus:ring-hue-orange bg-gray-700"
+                          />
+                          <span className="text-gray-300 text-sm">HTTP</span>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1329,6 +1412,35 @@ export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigate
                 {miniservers.length === 1 && (
                   <div className="text-xs text-gray-500">
                     Miniserver: <span className="text-gray-300">{miniservers[0].name || miniservers[0].ip}</span>
+                  </div>
+                )}
+                {hasAnyFeedback && (
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Feedback-Protokoll</label>
+                    <div className="flex items-center gap-4">
+                      {hasUDP && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.feedback_udp !== false}
+                            onChange={(e) => setFormData({ ...formData, feedback_udp: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-600 text-hue-orange focus:ring-hue-orange bg-gray-700"
+                          />
+                          <span className="text-gray-300 text-sm">UDP</span>
+                        </label>
+                      )}
+                      {hasHTTP && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.feedback_http !== false}
+                            onChange={(e) => setFormData({ ...formData, feedback_http: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-600 text-hue-orange focus:ring-hue-orange bg-gray-700"
+                          />
+                          <span className="text-gray-300 text-sm">HTTP</span>
+                        </label>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1557,6 +1669,35 @@ export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigate
                     Miniserver: <span className="text-gray-300">{miniservers[0].name || miniservers[0].ip}</span>
                   </div>
                 )}
+                {hasAnyFeedback && (
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Feedback-Protokoll</label>
+                    <div className="flex items-center gap-4">
+                      {hasUDP && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.feedback_udp !== false}
+                            onChange={(e) => setFormData({ ...formData, feedback_udp: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-600 text-hue-orange focus:ring-hue-orange bg-gray-700"
+                          />
+                          <span className="text-gray-300 text-sm">UDP</span>
+                        </label>
+                      )}
+                      {hasHTTP && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.feedback_http !== false}
+                            onChange={(e) => setFormData({ ...formData, feedback_http: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-600 text-hue-orange focus:ring-hue-orange bg-gray-700"
+                          />
+                          <span className="text-gray-300 text-sm">HTTP</span>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -1630,6 +1771,12 @@ export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigate
                           const ms = miniservers.find((m) => m.id === mapping.miniserver_id);
                           return ms ? <> &bull; Miniserver: {ms.name || ms.ip}</> : null;
                         })()}
+                        {hasAnyFeedback && (mapping.feedback_udp === false || mapping.feedback_http === false) && (
+                          <> &bull; Feedback: {[
+                            mapping.feedback_udp !== false && hasUDP ? 'UDP' : '',
+                            mapping.feedback_http !== false && hasHTTP ? 'HTTP' : '',
+                          ].filter(Boolean).join(', ') || 'keins'}</>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1698,7 +1845,8 @@ export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigate
                       </p>
                     </div>
 
-                    {/* Test URLs */}
+                    {/* Test URLs — only for actuators (not sensors) */}
+                    {getTestUrls(mapping).length > 0 && (
                     <div className="mt-4 border-t border-gray-700 pt-3">
                       <div className="flex items-center gap-2 mb-3">
                         <ExternalLink size={16} className="text-green-500" />
@@ -1732,6 +1880,7 @@ export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigate
                         ))}
                       </div>
                     </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -36,6 +36,7 @@ type WebSocketHub struct {
 	mappingManager *loxone.MappingManager
 	commandParser  *loxone.CommandParser
 	udpSender      *loxone.UDPSender
+	httpSender     *loxone.HTTPSender
 }
 
 // WebSocketClient represents a connected WebSocket client
@@ -48,7 +49,7 @@ type WebSocketClient struct {
 }
 
 // NewWebSocketHub creates a new WebSocket hub
-func NewWebSocketHub(hueClient *hue.Client, mappingManager *loxone.MappingManager, udpSender *loxone.UDPSender) *WebSocketHub {
+func NewWebSocketHub(hueClient *hue.Client, mappingManager *loxone.MappingManager, udpSender *loxone.UDPSender, httpSender *loxone.HTTPSender) *WebSocketHub {
 	return &WebSocketHub{
 		clients:        make(map[*WebSocketClient]bool),
 		broadcast:      make(chan []byte, 256),
@@ -58,6 +59,7 @@ func NewWebSocketHub(hueClient *hue.Client, mappingManager *loxone.MappingManage
 		mappingManager: mappingManager,
 		commandParser:  loxone.NewCommandParser(),
 		udpSender:      udpSender,
+		httpSender:     httpSender,
 	}
 }
 
@@ -134,25 +136,44 @@ func (h *WebSocketHub) forwardHueEvents(ctx context.Context) {
 				}
 			}
 
-			// Send UDP feedback to Loxone Miniserver
-			if h.udpSender != nil && h.udpSender.IsEnabled() {
-				h.sendUDPFeedback(event)
-			}
+			// Send feedback (UDP and/or HTTP) to Loxone Miniserver
+			h.sendFeedback(event)
 		}
 	}
 }
 
-// udpTarget holds a loxoneID and optionally the miniserver to send to
-type udpFeedbackTarget struct {
+// feedbackTarget holds a loxoneID and optionally the miniserver to send to
+type feedbackTarget struct {
 	loxoneID     string
 	miniserverID string // empty = send to all (send_all targets)
+	feedbackUDP  bool   // whether to send UDP feedback
+	feedbackHTTP bool   // whether to send HTTP feedback
 }
 
-// sendUDPFeedback extracts changed properties from a HUE event and sends them via UDP
-func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
+// targetFromMapping creates a feedbackTarget from a mapping, using the mapping's feedback flags.
+func targetFromMapping(m *models.Mapping) feedbackTarget {
+	return feedbackTarget{
+		loxoneID:     m.LoxoneID,
+		miniserverID: m.MiniserverID,
+		feedbackUDP:  m.ShouldFeedbackUDP(),
+		feedbackHTTP: m.ShouldFeedbackHTTP(),
+	}
+}
+
+// targetSendAll creates a feedbackTarget for send_all (no mapping, both protocols enabled).
+func targetSendAll(loxoneID string) feedbackTarget {
+	return feedbackTarget{
+		loxoneID:     loxoneID,
+		feedbackUDP:  true,
+		feedbackHTTP: true,
+	}
+}
+
+// sendFeedback extracts changed properties from a HUE event and sends them via UDP and/or HTTP
+func (h *WebSocketHub) sendFeedback(event hue.Event) {
 	// Handle sensor events separately
 	if hue.IsSensorType(event.Type) {
-		h.sendSensorUDPFeedback(event)
+		h.sendSensorFeedback(event)
 		return
 	}
 
@@ -185,20 +206,26 @@ func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 		return
 	}
 
+	udpEnabled := h.udpSender != nil && h.udpSender.IsEnabled()
+	httpEnabled := h.httpSender != nil && h.httpSender.IsEnabled()
+	if !udpEnabled && !httpEnabled {
+		return
+	}
+
 	// Collect all targets that should receive this update (skip scenes and mood mappings)
-	var targets []udpFeedbackTarget
+	var targets []feedbackTarget
 
 	// Direct lookup: event.ID matches a mapping's hue_id (light or group)
 	if mapping := h.mappingManager.GetByHueID(event.ID); mapping != nil && mapping.HueType != "scene" && !strings.Contains(mapping.LoxoneID, "_mood_") {
-		targets = append(targets, udpFeedbackTarget{loxoneID: mapping.LoxoneID, miniserverID: mapping.MiniserverID})
-	} else if h.udpSender.HasSendAll() {
+		targets = append(targets, targetFromMapping(mapping))
+	} else if (udpEnabled && h.udpSender.HasSendAll()) || (httpEnabled && h.httpSender.HasSendAll()) {
 		// No mapping found — generate LoxoneID from device name, send to all send_all targets
 		if event.Type == "light" {
 			if light, err := h.hueClient.GetLight(event.ID); err == nil {
-				targets = append(targets, udpFeedbackTarget{loxoneID: sanitizeName(light.Name)})
+				targets = append(targets, targetSendAll(sanitizeName(light.Name)))
 			}
 		} else if name := h.hueClient.GetGroupName(event.ID); name != "" {
-			targets = append(targets, udpFeedbackTarget{loxoneID: sanitizeName(name)})
+			targets = append(targets, targetSendAll(sanitizeName(name)))
 		}
 	}
 
@@ -206,10 +233,10 @@ func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 	if event.Type == "light" {
 		for _, groupID := range h.hueClient.GetGroupIDsForLight(event.ID) {
 			if mapping := h.mappingManager.GetByHueID(groupID); mapping != nil && mapping.HueType != "scene" && !strings.Contains(mapping.LoxoneID, "_mood_") {
-				targets = append(targets, udpFeedbackTarget{loxoneID: mapping.LoxoneID, miniserverID: mapping.MiniserverID})
-			} else if h.udpSender.HasSendAll() {
+				targets = append(targets, targetFromMapping(mapping))
+			} else if (udpEnabled && h.udpSender.HasSendAll()) || (httpEnabled && h.httpSender.HasSendAll()) {
 				if name := h.hueClient.GetGroupName(groupID); name != "" {
-					targets = append(targets, udpFeedbackTarget{loxoneID: sanitizeName(name)})
+					targets = append(targets, targetSendAll(sanitizeName(name)))
 				}
 			}
 		}
@@ -219,13 +246,22 @@ func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 		return
 	}
 
-	// Send one UDP packet per changed property per target
+	// Send per changed property per target via UDP and/or HTTP
 	for _, target := range targets {
 		send := func(property string, value interface{}) {
-			if target.miniserverID != "" {
-				h.udpSender.Send(target.miniserverID, target.loxoneID, property, value)
-			} else {
-				h.udpSender.SendToAll(target.loxoneID, property, value)
+			if udpEnabled && target.feedbackUDP {
+				if target.miniserverID != "" {
+					h.udpSender.Send(target.miniserverID, target.loxoneID, property, value)
+				} else {
+					h.udpSender.SendToAll(target.loxoneID, property, value)
+				}
+			}
+			if httpEnabled && target.feedbackHTTP {
+				if target.miniserverID != "" {
+					h.httpSender.Send(target.miniserverID, target.loxoneID, property, value)
+				} else {
+					h.httpSender.SendToAll(target.loxoneID, property, value)
+				}
 			}
 		}
 
@@ -249,16 +285,22 @@ func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 	}
 }
 
-// sendSensorUDPFeedback handles UDP feedback for sensor events
-func (h *WebSocketHub) sendSensorUDPFeedback(event hue.Event) {
+// sendSensorFeedback handles feedback for sensor events via UDP and/or HTTP
+func (h *WebSocketHub) sendSensorFeedback(event hue.Event) {
+	udpEnabled := h.udpSender != nil && h.udpSender.IsEnabled()
+	httpEnabled := h.httpSender != nil && h.httpSender.IsEnabled()
+	if !udpEnabled && !httpEnabled {
+		return
+	}
+
 	// Find target for this sensor
-	var targets []udpFeedbackTarget
+	var targets []feedbackTarget
 
 	if mapping := h.mappingManager.GetByHueID(event.ID); mapping != nil && !strings.Contains(mapping.LoxoneID, "_mood_") {
-		targets = append(targets, udpFeedbackTarget{loxoneID: mapping.LoxoneID, miniserverID: mapping.MiniserverID})
-	} else if h.udpSender.HasSendAll() {
+		targets = append(targets, targetFromMapping(mapping))
+	} else if (udpEnabled && h.udpSender.HasSendAll()) || (httpEnabled && h.httpSender.HasSendAll()) {
 		if name := h.hueClient.GetSensorName(event.ID); name != "" {
-			targets = append(targets, udpFeedbackTarget{loxoneID: sanitizeName(name)})
+			targets = append(targets, targetSendAll(sanitizeName(name)))
 		}
 	}
 
@@ -279,10 +321,19 @@ func (h *WebSocketHub) sendSensorUDPFeedback(event hue.Event) {
 
 	for _, target := range targets {
 		send := func(property string, value interface{}) {
-			if target.miniserverID != "" {
-				h.udpSender.Send(target.miniserverID, target.loxoneID, property, value)
-			} else {
-				h.udpSender.SendToAll(target.loxoneID, property, value)
+			if udpEnabled && target.feedbackUDP {
+				if target.miniserverID != "" {
+					h.udpSender.Send(target.miniserverID, target.loxoneID, property, value)
+				} else {
+					h.udpSender.SendToAll(target.loxoneID, property, value)
+				}
+			}
+			if httpEnabled && target.feedbackHTTP {
+				if target.miniserverID != "" {
+					h.httpSender.Send(target.miniserverID, target.loxoneID, property, value)
+				} else {
+					h.httpSender.SendToAll(target.loxoneID, property, value)
+				}
 			}
 		}
 
