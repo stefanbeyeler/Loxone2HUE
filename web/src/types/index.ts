@@ -108,3 +108,10 @@ export interface StatusMessage {
   device: string;
   state: LightState;
 }
+
+export interface SensorUpdateMessage {
+  type: 'sensor_update';
+  sensor: Sensor;
+}
+
+export type WSMessage = StatusMessage | SensorUpdateMessage;

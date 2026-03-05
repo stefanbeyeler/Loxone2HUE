@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { StatusMessage } from '../types';
+import { WSMessage } from '../types';
 
 interface UseWebSocketOptions {
-  onMessage?: (message: StatusMessage) => void;
+  onMessage?: (message: WSMessage) => void;
   reconnectInterval?: number;
 }
 
@@ -41,7 +41,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
     ws.onmessage = (event) => {
       try {
-        const message = JSON.parse(event.data) as StatusMessage;
+        const message = JSON.parse(event.data) as WSMessage;
         onMessage?.(message);
       } catch (error) {
         console.error('Failed to parse WebSocket message:', error);
