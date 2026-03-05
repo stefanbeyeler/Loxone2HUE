@@ -487,6 +487,25 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
     return group?.name || '';
   };
 
+  const getHueResourceStatus = (hueId: string, hueType: string): { color: string; label: string } | null => {
+    if (hueType === 'light') {
+      const light = lights.find((l) => l.id === hueId);
+      if (!light) return null;
+      if (!light.state.reachable) return { color: 'bg-gray-500', label: 'Nicht erreichbar' };
+      if (light.state.on) return { color: 'bg-green-500', label: `An (${light.state.brightness}%)` };
+      return { color: 'bg-red-500/70', label: 'Aus' };
+    }
+    if (hueType === 'group') {
+      const group = groups.find((g) => g.id === hueId);
+      if (!group) return null;
+      if (group.state.all_on) return { color: 'bg-green-500', label: `Alle an${group.state.brightness != null ? ` (${group.state.brightness}%)` : ''}` };
+      if (group.state.any_on) return { color: 'bg-yellow-500', label: 'Teilweise an' };
+      return { color: 'bg-red-500/70', label: 'Aus' };
+    }
+    // Scenes don't have a persistent active state
+    return null;
+  };
+
   const getScenesWithGroupName = () => {
     return [...scenes]
       .map((s) => ({
@@ -1534,8 +1553,16 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
+                    <div className="relative w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
                       {getTypeIcon(mapping.hue_type)}
+                      {(() => {
+                        const status = getHueResourceStatus(mapping.hue_id, mapping.hue_type);
+                        return status ? (
+                          <Tooltip content={status.label} position="top">
+                            <span className={`absolute -top-0.5 -right-0.5 w-3.5 h-3.5 ${status.color} rounded-full border-2 border-gray-800`} />
+                          </Tooltip>
+                        ) : null;
+                      })()}
                     </div>
                     <div>
                       <h3 className="font-medium text-white flex items-center gap-2">
@@ -1545,6 +1572,12 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                             {moodChildren.length} Moods
                           </span>
                         )}
+                        {(() => {
+                          const status = getHueResourceStatus(mapping.hue_id, mapping.hue_type);
+                          return status ? (
+                            <span className="text-[10px] text-gray-500 font-normal">{status.label}</span>
+                          ) : null;
+                        })()}
                       </h3>
                       <p className="text-xs text-gray-400">
                         {mapping.loxone_id} →{' '}
