@@ -713,15 +713,38 @@ export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigate
       const sensor = sensors.find((s) => s.id === mapping.hue_id);
       const sensorType = sensor?.type || 'unknown';
       const feedbackProps = getSensorFeedbackInfo(sensorType);
+      const showUDP = hasUDP && mapping.feedback_udp !== false;
+      const showHTTP = hasHTTP && mapping.feedback_http !== false;
+
+      const commands: { label: string; value: string; description: string }[] = [];
+      for (const fp of feedbackProps) {
+        const exampleValue = fp.example.split(':')[1];
+        if (showUDP) {
+          commands.push({
+            label: `UDP: ${loxoneId}/${fp.property}:<wert>`,
+            value: `${loxoneId}/${fp.property}:${exampleValue}`,
+            description: `Wertebereich: ${fp.range}`
+          });
+        }
+        if (showHTTP) {
+          commands.push({
+            label: `HTTP: /dev/sps/io/${loxoneId}_${fp.property}/<wert>`,
+            value: `/dev/sps/io/${loxoneId}_${fp.property}/${exampleValue}`,
+            description: `Wertebereich: ${fp.range}`
+          });
+        }
+      }
+
+      const protocols = [showUDP && 'UDP', showHTTP && 'HTTP'].filter(Boolean).join(' & ');
+      const noteLines = [`Sensoren senden Werte automatisch per ${protocols || 'UDP/HTTP'} an Loxone.`];
+      if (showUDP) noteLines.push('Erstelle einen Virtuellen UDP-Eingang mit passender Befehls-Erkennung.');
+      if (showHTTP) noteLines.push('Erstelle einen Virtuellen HTTP-Eingang.');
+      noteLines.push('Es werden keine Befehle an den Sensor gesendet.');
 
       return {
         title: `Sensor-Feedback (${sensorType})`,
-        commands: feedbackProps.map((fp) => ({
-          label: `UDP: ${loxoneId}/${fp.property}:<wert>`,
-          value: `${loxoneId}/${fp.property}:${fp.example.split(':')[1]}`,
-          description: `Wertebereich: ${fp.range}`
-        })),
-        note: 'Sensoren senden Werte automatisch per UDP/HTTP an Loxone. Erstelle einen Virtuellen UDP-Eingang mit passender Befehls-Erkennung, um die Werte in Loxone zu empfangen. Es werden keine Befehle an den Sensor gesendet.'
+        commands,
+        note: noteLines.join(' ')
       };
     }
 
