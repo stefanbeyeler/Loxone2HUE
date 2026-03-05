@@ -50,6 +50,30 @@ export interface Scene {
   type: string;
 }
 
+export interface Sensor {
+  id: string;
+  name: string;
+  type: string; // "motion", "temperature", "light_level", "button", "contact", "relative_rotary", "device_power"
+  device_id?: string;
+  owner?: string;
+  state: SensorState;
+}
+
+export interface SensorState {
+  motion?: boolean;
+  temperature?: number;
+  light_level?: number;
+  button_event?: string;
+  control_id?: number;
+  contact_state?: string;
+  rotary_action?: string;
+  rotary_steps?: number;
+  battery_level?: number;
+  battery_state?: string;
+  enabled: boolean;
+  last_updated?: string;
+}
+
 export interface Mapping {
   id: string;
   name: string;

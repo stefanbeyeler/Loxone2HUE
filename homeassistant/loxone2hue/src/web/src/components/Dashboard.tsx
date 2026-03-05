@@ -3,6 +3,7 @@ import { useHueDevices } from '../hooks/useHueDevices';
 import { DeviceList } from './DeviceList';
 import { GroupList } from './GroupList';
 import { SceneList } from './SceneList';
+import { SensorList } from './SensorList';
 import { MappingConfig } from './MappingConfig';
 import { LoxoneGuide } from './LoxoneGuide';
 import { SettingsPanel } from './SettingsPanel';
@@ -26,13 +27,14 @@ import {
   Router,
   Timer,
   ChevronDown,
+  Activity,
 } from 'lucide-react';
 
 // Version info - injected at build time via Vite define
 const VERSION = __APP_VERSION__;
 const BUILD_DATE = __BUILD_DATE__;
 
-type Tab = 'devices' | 'rooms' | 'zones' | 'scenes' | 'mappings' | 'settings' | 'guide' | 'api';
+type Tab = 'devices' | 'rooms' | 'zones' | 'scenes' | 'sensors' | 'mappings' | 'settings' | 'guide' | 'api';
 
 export function Dashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('guide');
@@ -49,6 +51,7 @@ export function Dashboard() {
     lights,
     groups,
     scenes,
+    sensors,
     loading,
     error,
     isConnected,
@@ -129,6 +132,8 @@ export function Dashboard() {
       setActiveTab(group?.type === 'zone' ? 'zones' : 'rooms');
     } else if (hueType === 'scene') {
       setActiveTab('scenes');
+    } else if (hueType === 'sensor') {
+      setActiveTab('sensors');
     }
   };
 
@@ -143,6 +148,7 @@ export function Dashboard() {
     { id: 'rooms' as Tab, label: 'Räume', icon: Home, count: rooms.length },
     { id: 'zones' as Tab, label: 'Zonen', icon: Layers, count: zones.length },
     { id: 'scenes' as Tab, label: 'Szenen', icon: Palette, count: scenes.length },
+    { id: 'sensors' as Tab, label: 'Sensoren', icon: Activity, count: sensors.length },
     { id: 'settings' as Tab, label: 'Einstellungen', icon: Settings },
     { id: 'api' as Tab, label: 'API', icon: Code2 },
   ];
@@ -366,11 +372,21 @@ export function Dashboard() {
           />
         )}
 
+        {activeTab === 'sensors' && (
+          <SensorList
+            sensors={sensors}
+            loading={loading}
+            mappings={mappings}
+            udpSendAll={udpSendAll}
+          />
+        )}
+
         {activeTab === 'mappings' && (
           <MappingConfig
             lights={lights}
             groups={groups}
             scenes={scenes}
+            sensors={sensors}
             onNavigateToHueElement={navigateToHueElement}
           />
         )}

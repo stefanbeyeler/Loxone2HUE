@@ -1,4 +1,4 @@
-import { Light, Group, Scene, Mapping, BridgeInfo, DeviceCommand } from '../types';
+import { Light, Group, Scene, Sensor, Mapping, BridgeInfo, DeviceCommand } from '../types';
 export type { Mapping };
 
 const API_BASE = './api';
@@ -73,6 +73,11 @@ export async function activateScene(id: string): Promise<void> {
   await fetchJSON(`${API_BASE}/scenes/${id}/activate`, {
     method: 'POST',
   });
+}
+
+// Sensor endpoints
+export async function getSensors(): Promise<{ sensors: Sensor[] }> {
+  return fetchJSON(`${API_BASE}/sensors`);
 }
 
 // Mapping endpoints

@@ -137,6 +137,12 @@ type udpFeedbackTarget struct {
 
 // sendUDPFeedback extracts changed properties from a HUE event and sends them via UDP
 func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
+	// Handle sensor events separately
+	if hue.IsSensorType(event.Type) {
+		h.sendSensorUDPFeedback(event)
+		return
+	}
+
 	// Extract event data fields via JSON roundtrip
 	type eventData struct {
 		On *struct {
@@ -227,6 +233,133 @@ func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 			send("color_x", fmt.Sprintf("%.4f", ed.Color.XY.X))
 			send("color_y", fmt.Sprintf("%.4f", ed.Color.XY.Y))
 		}
+	}
+}
+
+// sendSensorUDPFeedback handles UDP feedback for sensor events
+func (h *WebSocketHub) sendSensorUDPFeedback(event hue.Event) {
+	// Find target for this sensor
+	var targets []udpFeedbackTarget
+
+	if mapping := h.mappingManager.GetByHueID(event.ID); mapping != nil && !strings.Contains(mapping.LoxoneID, "_mood_") {
+		targets = append(targets, udpFeedbackTarget{loxoneID: mapping.LoxoneID, miniserverID: mapping.MiniserverID})
+	} else if h.udpSender.HasSendAll() {
+		if name := h.hueClient.GetSensorName(event.ID); name != "" {
+			targets = append(targets, udpFeedbackTarget{loxoneID: sanitizeName(name)})
+		}
+	}
+
+	if len(targets) == 0 {
+		return
+	}
+
+	// Extract sensor data via JSON roundtrip
+	raw, err := json.Marshal(event.Data)
+	if err != nil {
+		return
+	}
+
+	var item hue.EventItem
+	if err := json.Unmarshal(raw, &item); err != nil {
+		return
+	}
+
+	for _, target := range targets {
+		send := func(property string, value interface{}) {
+			if target.miniserverID != "" {
+				h.udpSender.Send(target.miniserverID, target.loxoneID, property, value)
+			} else {
+				h.udpSender.SendToAll(target.loxoneID, property, value)
+			}
+		}
+
+		switch event.Type {
+		case "motion":
+			if item.Motion != nil {
+				motion := item.Motion.Motion
+				if item.Motion.MotionReport != nil {
+					motion = item.Motion.MotionReport.Motion
+				}
+				val := 0
+				if motion {
+					val = 1
+				}
+				send("motion", val)
+			}
+
+		case "temperature":
+			if item.Temperature != nil {
+				temp := item.Temperature.Temperature
+				if item.Temperature.TemperatureReport != nil {
+					temp = item.Temperature.TemperatureReport.Temperature
+				}
+				send("temperature", fmt.Sprintf("%.1f", temp))
+			}
+
+		case "light_level":
+			if item.LightSensor != nil {
+				level := item.LightSensor.LightLevel
+				if item.LightSensor.LightLevelReport != nil {
+					level = item.LightSensor.LightLevelReport.LightLevel
+				}
+				send("light_level", level)
+			}
+
+		case "button":
+			if item.Button != nil {
+				event := item.Button.LastEvent
+				if item.Button.ButtonReport != nil {
+					event = item.Button.ButtonReport.Event
+				}
+				if event != "" {
+					// Convert button event to numeric code for Loxone
+					// initial_press=0, repeat=1, short_release=2, long_release=3, long_press=4
+					buttonCode := buttonEventToCode(event)
+					send("button", buttonCode)
+				}
+			}
+
+		case "contact":
+			if item.ContactReport != nil {
+				val := 0
+				if item.ContactReport.State == "no_contact" {
+					val = 1
+				}
+				send("contact", val)
+			}
+
+		case "relative_rotary":
+			if item.RelativeRotary != nil && item.RelativeRotary.RotaryReport != nil {
+				steps := item.RelativeRotary.RotaryReport.Rotation.Steps
+				if item.RelativeRotary.RotaryReport.Rotation.Direction == "counter_clockwise" {
+					steps = -steps
+				}
+				send("rotary", steps)
+			}
+
+		case "device_power":
+			if item.PowerState != nil {
+				send("battery", item.PowerState.BatteryLevel)
+			}
+		}
+	}
+}
+
+// buttonEventToCode converts a HUE button event string to a numeric code
+func buttonEventToCode(event string) int {
+	switch event {
+	case "initial_press":
+		return 0
+	case "repeat":
+		return 1
+	case "short_release":
+		return 2
+	case "long_release":
+		return 3
+	case "long_press":
+		return 4
+	default:
+		return -1
 	}
 }
 
