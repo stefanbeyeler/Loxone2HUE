@@ -81,6 +81,8 @@ export interface Mapping {
   hue_id: string;
   hue_type: string;
   enabled: boolean;
+  feedback_udp?: boolean;
+  feedback_http?: boolean;
   description?: string;
   miniserver_id?: string;
 }
@@ -108,3 +110,10 @@ export interface StatusMessage {
   device: string;
   state: LightState;
 }
+
+export interface SensorUpdateMessage {
+  type: 'sensor_update';
+  sensor: Sensor;
+}
+
+export type WSMessage = StatusMessage | SensorUpdateMessage;

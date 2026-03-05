@@ -783,6 +783,9 @@ func convertHueSensor(raw json.RawMessage, sensorType string, deviceNames map[st
 			motion := m.Motion.Motion
 			sensor.State.Motion = &motion
 			sensor.State.Enabled = m.Enabled
+			if m.Motion.MotionReport != nil {
+				sensor.State.LastUpdated = m.Motion.MotionReport.Changed
+			}
 			sensor.Name = sensor.Name + " Motion"
 		}
 
@@ -802,6 +805,9 @@ func convertHueSensor(raw json.RawMessage, sensorType string, deviceNames map[st
 			temp := t.Temperature.Temperature
 			sensor.State.Temperature = &temp
 			sensor.State.Enabled = t.Enabled
+			if t.Temperature.TemperatureReport != nil {
+				sensor.State.LastUpdated = t.Temperature.TemperatureReport.Changed
+			}
 			sensor.Name = sensor.Name + " Temperature"
 		}
 
@@ -821,6 +827,9 @@ func convertHueSensor(raw json.RawMessage, sensorType string, deviceNames map[st
 			level := l.Light.LightLevel
 			sensor.State.LightLevel = &level
 			sensor.State.Enabled = l.Enabled
+			if l.Light.LightLevelReport != nil {
+				sensor.State.LastUpdated = l.Light.LightLevelReport.Changed
+			}
 			sensor.Name = sensor.Name + " Light Level"
 		}
 
@@ -843,6 +852,7 @@ func convertHueSensor(raw json.RawMessage, sensorType string, deviceNames map[st
 			event := b.Button.LastEvent
 			if b.Button.ButtonReport != nil {
 				event = b.Button.ButtonReport.Event
+				sensor.State.LastUpdated = b.Button.ButtonReport.Updated
 			}
 			if event != "" {
 				sensor.State.ButtonEvent = &event
@@ -862,6 +872,7 @@ func convertHueSensor(raw json.RawMessage, sensorType string, deviceNames map[st
 			sensor.State.Enabled = ct.Enabled
 			if ct.ContactReport != nil {
 				sensor.State.ContactState = &ct.ContactReport.State
+				sensor.State.LastUpdated = ct.ContactReport.Changed
 			}
 			sensor.Name = sensor.Name + " Contact"
 		}
@@ -895,6 +906,7 @@ func convertHueSensor(raw json.RawMessage, sensorType string, deviceNames map[st
 					steps = -steps
 				}
 				sensor.State.RotarySteps = &steps
+				sensor.State.LastUpdated = rr.RelativeRotary.RotaryReport.Updated
 			}
 			sensor.Name = sensor.Name + " Rotary"
 		}

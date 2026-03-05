@@ -143,6 +143,10 @@ export interface MiniserverConfig {
   ip: string;
   port: number;
   udp_enabled: boolean;
+  http_enabled: boolean;
+  http_url: string;
+  http_user: string;
+  http_password: string;
   send_all: boolean;
 }
 

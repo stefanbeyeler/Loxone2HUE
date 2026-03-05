@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.3.1
+
+- HTTP-Feedback: Neues Feedback-Protokoll neben UDP — Status-Updates koennen per HTTP an Loxone gesendet werden
+  - Konfigurierbares HTTP-Ziel (Virtueller HTTP-Eingang) pro Miniserver mit eigener URL, User und Passwort
+  - HTTPS mit selbstsignierten Zertifikaten wird unterstuetzt
+- Pro-Mapping Protokollwahl: Jedes Mapping kann individuell auf UDP, HTTP oder beides eingestellt werden
+- Sensor-Anleitung: Unterscheidung zwischen Aktoren und Sensoren — Sensoren zeigen Feedback-Formate (UDP/HTTP) statt Steuerungsbefehle
+- Sensor-Feedback: Anzeige der UDP- und/oder HTTP-Formate je nach Mapping-Einstellung
+
+## 1.3.0
+
+- Sensoren & Taster: Vollstaendige Unterstuetzung fuer HUE Sensoren, Taster und Zubehoer
+  - Bewegungsmelder, Temperatursensoren, Helligkeitssensoren
+  - Taster (Hue Dimmer Switch, Hue Tap, etc.)
+  - Kontaktsensoren, Drehregler (Hue Tap Dial)
+  - Batteriestand-Anzeige
+- Neuer Sensoren-Tab im Dashboard mit Live-Status und Geraete-Gruppierung
+- Sensor-Mappings: Sensoren koennen als HUE-Ressource in Mappings verwendet werden
+- UDP-Feedback fuer Sensoren: Automatische Weiterleitung von Sensor-Events an Loxone
+- API: Neuer GET /api/sensors Endpoint
+- SSE Event Stream: Sensor-Events werden erkannt und verarbeitet
+
 ## 1.2.3
 
 - Anleitung: Architektur-Diagramm mit UDP-Feedback erweitert, Multi-Miniserver und Auto-ID-Generierung dokumentiert
