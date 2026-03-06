@@ -85,6 +85,14 @@ func (s *Server) setupRoutes() {
 	api.HandleFunc("/config", s.handlers.GetConfig).Methods("GET")
 	api.HandleFunc("/config", s.handlers.UpdateConfig).Methods("PUT")
 
+	// Backup endpoints
+	api.HandleFunc("/backups", s.handlers.ListBackups).Methods("GET")
+	api.HandleFunc("/backups", s.handlers.CreateBackup).Methods("POST")
+	api.HandleFunc("/backups/upload", s.handlers.UploadBackup).Methods("POST")
+	api.HandleFunc("/backups/{id}", s.handlers.DeleteBackup).Methods("DELETE")
+	api.HandleFunc("/backups/{id}/download", s.handlers.DownloadBackup).Methods("GET")
+	api.HandleFunc("/backups/{id}/restore", s.handlers.RestoreBackup).Methods("POST")
+
 	// UDP test endpoint
 	api.HandleFunc("/udp/test", s.handlers.TestUDP).Methods("POST")
 

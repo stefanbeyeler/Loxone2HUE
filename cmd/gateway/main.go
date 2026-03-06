@@ -34,6 +34,9 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Set version for backup metadata
+	config.SetVersion(version)
+
 	// Load configuration
 	cfg, err := config.Load(*configPath)
 	if err != nil {

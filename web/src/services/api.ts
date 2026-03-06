@@ -215,6 +215,52 @@ export async function testUDP(loxoneId: string, property: string, value: string,
   });
 }
 
+// Backup types
+export interface ConfigBackup {
+  id: string;
+  version: string;
+  created_at: string;
+  remark: string;
+  config: {
+    server: { host: string; port: number };
+    hue: { bridge_ip: string; application_key: string };
+    loxone: LoxoneConfig;
+    logging: { level: string };
+    mappings: Mapping[];
+  };
+}
+
+// Backup endpoints
+export async function listBackups(): Promise<{ backups: ConfigBackup[] }> {
+  return fetchJSON(`${API_BASE}/backups`);
+}
+
+export async function createBackup(remark: string): Promise<ConfigBackup> {
+  return fetchJSON(`${API_BASE}/backups`, {
+    method: 'POST',
+    body: JSON.stringify({ remark }),
+  });
+}
+
+export async function deleteBackup(id: string): Promise<void> {
+  await fetchJSON(`${API_BASE}/backups/${id}`, { method: 'DELETE' });
+}
+
+export async function uploadBackup(backup: ConfigBackup): Promise<ConfigBackup> {
+  return fetchJSON(`${API_BASE}/backups/upload`, {
+    method: 'POST',
+    body: JSON.stringify(backup),
+  });
+}
+
+export async function restoreBackup(id: string): Promise<{ status: string; backup: string; remark: string }> {
+  return fetchJSON(`${API_BASE}/backups/${id}/restore`, { method: 'POST' });
+}
+
+export function getBackupDownloadUrl(id: string): string {
+  return `${API_BASE}/backups/${id}/download`;
+}
+
 // Health check
 export async function getHealth(): Promise<{ status: string; hue_configured: boolean }> {
   return fetchJSON(`${API_BASE}/health`);
