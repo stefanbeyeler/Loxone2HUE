@@ -26,7 +26,7 @@ const openAPISpec = `{
   "info": {
     "title": "Loxone2HUE Gateway API",
     "description": "Gateway Service zur bidirektionalen Kommunikation zwischen Loxone und Philips HUE.",
-    "version": "1.0.0",
+    "version": "1.3.1",
     "contact": {
       "name": "Loxone2HUE Gateway"
     }
@@ -61,6 +61,10 @@ const openAPISpec = `{
     {
       "name": "Scenes",
       "description": "HUE Szenen verwalten"
+    },
+    {
+      "name": "Sensors",
+      "description": "HUE Sensoren, Taster und Zubehör (Bewegungsmelder, Temperatur, Helligkeit, Taster, Kontakt, Drehregler, Batterie)"
     },
     {
       "name": "Mappings",
@@ -595,6 +599,25 @@ const openAPISpec = `{
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sensors": {
+      "get": {
+        "tags": ["Sensors"],
+        "summary": "Alle Sensoren abrufen",
+        "description": "Gibt eine Liste aller HUE Sensoren zurück, gruppiert nach Gerät. Unterstützte Sensortypen: motion (Bewegung), temperature (Temperatur), light_level (Helligkeit), button (Taster), contact (Kontakt), relative_rotary (Drehregler), device_power (Batterie).",
+        "responses": {
+          "200": {
+            "description": "Liste der Sensoren",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SensorsResponse"
                 }
               }
             }
@@ -1223,11 +1246,21 @@ const openAPISpec = `{
           },
           "hue_type": {
             "type": "string",
-            "enum": ["light", "group", "scene"],
+            "enum": ["light", "group", "scene", "sensor"],
             "description": "Typ der HUE Ressource"
           },
           "enabled": {
             "type": "boolean"
+          },
+          "feedback_udp": {
+            "type": "boolean",
+            "description": "UDP-Feedback für dieses Mapping aktivieren. Standard: true (wenn nicht gesetzt).",
+            "nullable": true
+          },
+          "feedback_http": {
+            "type": "boolean",
+            "description": "HTTP-Feedback für dieses Mapping aktivieren. Standard: true (wenn nicht gesetzt).",
+            "nullable": true
           },
           "description": {
             "type": "string"
@@ -1254,7 +1287,17 @@ const openAPISpec = `{
           },
           "hue_type": {
             "type": "string",
-            "enum": ["light", "group", "scene"]
+            "enum": ["light", "group", "scene", "sensor"]
+          },
+          "feedback_udp": {
+            "type": "boolean",
+            "description": "UDP-Feedback aktivieren. Standard: true.",
+            "nullable": true
+          },
+          "feedback_http": {
+            "type": "boolean",
+            "description": "HTTP-Feedback aktivieren. Standard: true.",
+            "nullable": true
           },
           "description": {
             "type": "string"
@@ -1397,7 +1440,7 @@ const openAPISpec = `{
       },
       "MiniserverConfig": {
         "type": "object",
-        "description": "Konfiguration eines einzelnen Loxone Miniservers. Mehrere Miniserver können gleichzeitig konfiguriert werden, jeweils mit eigenen UDP-Feedback-Einstellungen.",
+        "description": "Konfiguration eines einzelnen Loxone Miniservers. Mehrere Miniserver können gleichzeitig konfiguriert werden, jeweils mit eigenen UDP- und HTTP-Feedback-Einstellungen.",
         "properties": {
           "id": {
             "type": "string",
@@ -1410,7 +1453,7 @@ const openAPISpec = `{
           },
           "ip": {
             "type": "string",
-            "description": "IP-Adresse des Miniservers",
+            "description": "IP-Adresse des Miniservers (für UDP-Feedback)",
             "example": "10.1.19.40"
           },
           "port": {
@@ -1424,9 +1467,26 @@ const openAPISpec = `{
             "type": "boolean",
             "description": "UDP Status-Feedback für diesen Miniserver aktivieren"
           },
+          "http_enabled": {
+            "type": "boolean",
+            "description": "HTTP Status-Feedback für diesen Miniserver aktivieren"
+          },
+          "http_url": {
+            "type": "string",
+            "description": "Ziel-URL für HTTP-Feedback (Virtueller HTTP-Eingang). Falls leer, wird http://<ip> verwendet.",
+            "example": "https://192.168.1.7:443/request.php"
+          },
+          "http_user": {
+            "type": "string",
+            "description": "Benutzername für HTTP Basic Auth"
+          },
+          "http_password": {
+            "type": "string",
+            "description": "Passwort für HTTP Basic Auth"
+          },
           "send_all": {
             "type": "boolean",
-            "description": "UDP Feedback für alle Geräte senden (auch ohne Mapping). Der Gerätename wird als Loxone-ID verwendet."
+            "description": "Feedback für alle Geräte senden (auch ohne Mapping). Der Gerätename wird als Loxone-ID verwendet."
           }
         }
       },
@@ -1473,8 +1533,119 @@ const openAPISpec = `{
           "hue_type": {
             "type": "string",
             "description": "Der Typ der HUE Ressource",
-            "enum": ["light", "group", "scene"],
+            "enum": ["light", "group", "scene", "sensor"],
             "example": "light"
+          }
+        }
+      },
+      "SensorsResponse": {
+        "type": "object",
+        "properties": {
+          "sensors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Sensor"
+            }
+          }
+        }
+      },
+      "Sensor": {
+        "type": "object",
+        "description": "HUE Sensor (Bewegung, Temperatur, Helligkeit, Taster, Kontakt, Drehregler, Batterie)",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Eindeutige Sensor-ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name des Sensors"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["motion", "temperature", "light_level", "button", "contact", "relative_rotary", "device_power"],
+            "description": "Sensortyp"
+          },
+          "device_id": {
+            "type": "string",
+            "description": "ID des übergeordneten HUE-Geräts"
+          },
+          "owner": {
+            "type": "string",
+            "description": "Name des übergeordneten Geräts"
+          },
+          "state": {
+            "$ref": "#/components/schemas/SensorState"
+          }
+        }
+      },
+      "SensorState": {
+        "type": "object",
+        "description": "Aktueller Zustand eines Sensors. Je nach Sensortyp sind unterschiedliche Felder gefüllt.",
+        "properties": {
+          "motion": {
+            "type": "boolean",
+            "description": "Bewegung erkannt (motion sensor)",
+            "nullable": true
+          },
+          "temperature": {
+            "type": "number",
+            "description": "Temperatur in Celsius (temperature sensor)",
+            "nullable": true
+          },
+          "light_level": {
+            "type": "integer",
+            "description": "Helligkeit in Lux (light_level sensor)",
+            "nullable": true
+          },
+          "button_event": {
+            "type": "string",
+            "enum": ["initial_press", "repeat", "short_release", "long_release", "long_press"],
+            "description": "Letztes Taster-Event (button sensor)",
+            "nullable": true
+          },
+          "control_id": {
+            "type": "integer",
+            "description": "Taster-Index, 1-basiert (button sensor)",
+            "nullable": true
+          },
+          "contact_state": {
+            "type": "string",
+            "enum": ["contact", "no_contact"],
+            "description": "Kontaktzustand (contact sensor)",
+            "nullable": true
+          },
+          "rotary_action": {
+            "type": "string",
+            "enum": ["start", "repeat"],
+            "description": "Dreh-Aktion (relative_rotary sensor)",
+            "nullable": true
+          },
+          "rotary_steps": {
+            "type": "integer",
+            "description": "Schritte: positiv=Uhrzeigersinn, negativ=Gegenuhrzeiger (relative_rotary sensor)",
+            "nullable": true
+          },
+          "battery_level": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Batteriestand in Prozent (device_power sensor)",
+            "nullable": true
+          },
+          "battery_state": {
+            "type": "string",
+            "enum": ["normal", "low", "critical"],
+            "description": "Batteriestatus (device_power sensor)",
+            "nullable": true
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Sensor ist aktiviert"
+          },
+          "last_updated": {
+            "type": "string",
+            "description": "Zeitpunkt der letzten Aktualisierung"
           }
         }
       },
