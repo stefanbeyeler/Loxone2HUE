@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Mapping, Light, Group, Scene } from '../types';
+import { Mapping, Light, Group, Scene, Sensor } from '../types';
 import * as api from '../services/api';
-import { Link2, Plus, Trash2, Edit2, Save, X, Lightbulb, Home, Play, Copy, Check, Terminal, ExternalLink, Download, Upload, AlertCircle, FileDown, ChevronUp, ChevronDown, Power, Layers } from 'lucide-react';
+import { Link2, Plus, Trash2, Edit2, Save, X, Lightbulb, Home, Play, Copy, Check, Terminal, ExternalLink, Download, Upload, AlertCircle, FileDown, ChevronUp, ChevronDown, Power, Layers, WifiOff, Sun, SunDim, PowerOff, Activity } from 'lucide-react';
 import { Tooltip } from './Tooltip';
 
 interface MappingConfigProps {
   lights: Light[];
   groups: Group[];
   scenes: Scene[];
+  sensors?: Sensor[];
   onNavigateToHueElement?: (hueId: string, hueType: string) => void;
 }
 
-export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }: MappingConfigProps) {
+export function MappingConfig({ lights, groups, scenes, sensors = [], onNavigateToHueElement }: MappingConfigProps) {
   const [mappings, setMappings] = useState<Mapping[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -34,6 +35,10 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
   const [moodOrder, setMoodOrder] = useState<string[]>([]);
   const [addingMoodToParent, setAddingMoodToParent] = useState<string | null>(null);
   const [miniservers, setMiniservers] = useState<api.MiniserverConfig[]>([]);
+
+  const hasUDP = miniservers.some((ms) => ms.udp_enabled);
+  const hasHTTP = miniservers.some((ms) => ms.http_enabled);
+  const hasAnyFeedback = hasUDP || hasHTTP;
 
   useEffect(() => {
     loadMappings();
@@ -166,6 +171,8 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
         hue_id: formData.hue_id,
         hue_type: formData.hue_type || 'light',
         enabled: true,
+        feedback_udp: formData.feedback_udp,
+        feedback_http: formData.feedback_http,
         description: formData.description,
         miniserver_id: formData.miniserver_id,
       });
@@ -182,6 +189,8 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
             hue_type: 'group',
             enabled: true,
             description: `Mood 0 für ${formData.name} (Gruppe ausschalten)`,
+            feedback_udp: formData.feedback_udp,
+            feedback_http: formData.feedback_http,
             miniserver_id: formData.miniserver_id,
           });
           newMappings.push(mood0Mapping);
@@ -201,6 +210,8 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
               hue_type: 'scene',
               enabled: true,
               description: `Mood ${i + 1} für ${formData.name}`,
+              feedback_udp: formData.feedback_udp,
+              feedback_http: formData.feedback_http,
               miniserver_id: formData.miniserver_id,
             });
             newMappings.push(moodMapping);
@@ -346,6 +357,8 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
         hue_type: 'scene',
         enabled: true,
         description: `Mood ${nextNum} für ${parentMapping.name}`,
+        feedback_udp: parentMapping.feedback_udp,
+        feedback_http: parentMapping.feedback_http,
         miniserver_id: parentMapping.miniserver_id,
       });
       setAddingMoodToParent(null);
@@ -456,6 +469,10 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
       }
       return hueId;
     }
+    if (hueType === 'sensor') {
+      const sensor = sensors.find((s) => s.id === hueId);
+      return sensor?.name || hueId;
+    }
     const light = lights.find((l) => l.id === hueId);
     return light?.name || hueId;
   };
@@ -466,6 +483,8 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
         return <Home size={20} className="text-hue-orange" />;
       case 'scene':
         return <Play size={20} className="text-hue-orange" />;
+      case 'sensor':
+        return <Activity size={20} className="text-hue-orange" />;
       default:
         return <Lightbulb size={20} className="text-hue-orange" />;
     }
@@ -477,6 +496,8 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
         return 'Gruppe';
       case 'scene':
         return 'Szene';
+      case 'sensor':
+        return 'Sensor';
       default:
         return 'Licht';
     }
@@ -485,6 +506,31 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
   const getGroupNameForScene = (scene: Scene) => {
     const group = groups.find((g) => g.id === scene.group_id);
     return group?.name || '';
+  };
+
+  const getHueResourceStatus = (hueId: string, hueType: string): { icon: React.ReactNode; label: string } | null => {
+    if (hueType === 'light') {
+      const light = lights.find((l) => l.id === hueId);
+      if (!light) return null;
+      if (!light.state.reachable) return { icon: <WifiOff size={14} className="text-gray-500" />, label: 'Nicht erreichbar' };
+      if (light.state.on) return { icon: <Sun size={14} className="text-green-400" />, label: `An (${light.state.brightness}%)` };
+      return { icon: <PowerOff size={14} className="text-red-400/70" />, label: 'Aus' };
+    }
+    if (hueType === 'group') {
+      const group = groups.find((g) => g.id === hueId);
+      if (!group) return null;
+      if (group.state.all_on) return { icon: <Sun size={14} className="text-green-400" />, label: `Alle an${group.state.brightness != null ? ` (${group.state.brightness}%)` : ''}` };
+      if (group.state.any_on) return { icon: <SunDim size={14} className="text-yellow-400" />, label: 'Teilweise an' };
+      return { icon: <PowerOff size={14} className="text-red-400/70" />, label: 'Aus' };
+    }
+    if (hueType === 'sensor') {
+      const sensor = sensors.find((s) => s.id === hueId);
+      if (!sensor) return null;
+      if (sensor.state.enabled) return { icon: <Activity size={14} className="text-green-400" />, label: 'Aktiv' };
+      return { icon: <PowerOff size={14} className="text-gray-500" />, label: 'Deaktiviert' };
+    }
+    // Scenes don't have a persistent active state
+    return null;
   };
 
   const getScenesWithGroupName = () => {
@@ -562,6 +608,11 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
     const loxoneId = mapping.loxone_id;
     const hueType = mapping.hue_type;
 
+    // Sensors don't have test URLs — they send data TO Loxone, not receive commands
+    if (hueType === 'sensor') {
+      return [];
+    }
+
     if (hueType === 'scene') {
       return [
         {
@@ -633,9 +684,69 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
     ];
   };
 
+  const getSensorFeedbackInfo = (sensorType: string): { property: string; range: string; example: string }[] => {
+    switch (sensorType) {
+      case 'motion':
+        return [{ property: 'motion', range: '0 / 1', example: 'motion:1' }];
+      case 'temperature':
+        return [{ property: 'temperature', range: 'z.B. 21.5 (°C)', example: 'temperature:21.5' }];
+      case 'light_level':
+        return [{ property: 'light_level', range: '0–100000 (Lux)', example: 'light_level:12500' }];
+      case 'button':
+        return [{ property: 'button', range: '0=press, 2=short, 3=long_release, 4=long_press', example: 'button:2' }];
+      case 'contact':
+        return [{ property: 'contact', range: '0=geschlossen, 1=offen', example: 'contact:0' }];
+      case 'relative_rotary':
+        return [{ property: 'rotary', range: 'Schritte (positiv/negativ)', example: 'rotary:3' }];
+      case 'device_power':
+        return [{ property: 'battery', range: '0–100 (%)', example: 'battery:85' }];
+      default:
+        return [{ property: sensorType, range: 'variabel', example: `${sensorType}:<wert>` }];
+    }
+  };
+
   const getLoxoneGuide = (mapping: Mapping) => {
     const loxoneId = mapping.loxone_id;
     const hueType = mapping.hue_type;
+
+    if (hueType === 'sensor') {
+      const sensor = sensors.find((s) => s.id === mapping.hue_id);
+      const sensorType = sensor?.type || 'unknown';
+      const feedbackProps = getSensorFeedbackInfo(sensorType);
+      const showUDP = hasUDP && mapping.feedback_udp !== false;
+      const showHTTP = hasHTTP && mapping.feedback_http !== false;
+
+      const commands: { label: string; value: string; description: string }[] = [];
+      for (const fp of feedbackProps) {
+        const exampleValue = fp.example.split(':')[1];
+        if (showUDP) {
+          commands.push({
+            label: `UDP: ${loxoneId}/${fp.property}:<wert>`,
+            value: `${loxoneId}/${fp.property}:${exampleValue}`,
+            description: `Wertebereich: ${fp.range}`
+          });
+        }
+        if (showHTTP) {
+          commands.push({
+            label: `HTTP: /dev/sps/io/${loxoneId}_${fp.property}/<wert>`,
+            value: `/dev/sps/io/${loxoneId}_${fp.property}/${exampleValue}`,
+            description: `Wertebereich: ${fp.range}`
+          });
+        }
+      }
+
+      const protocols = [showUDP && 'UDP', showHTTP && 'HTTP'].filter(Boolean).join(' & ');
+      const noteLines = [`Sensoren senden Werte automatisch per ${protocols || 'UDP/HTTP'} an Loxone.`];
+      if (showUDP) noteLines.push('Erstelle einen Virtuellen UDP-Eingang mit passender Befehls-Erkennung.');
+      if (showHTTP) noteLines.push('Erstelle einen Virtuellen HTTP-Eingang.');
+      noteLines.push('Es werden keine Befehle an den Sensor gesendet.');
+
+      return {
+        title: `Sensor-Feedback (${sensorType})`,
+        commands,
+        note: noteLines.join(' ')
+      };
+    }
 
     if (hueType === 'scene') {
       // Check if this is a mood scene mapping
@@ -1045,8 +1156,8 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
             {wizardMode === 'single' && wizardStep === 1 && (
               <div className="space-y-3">
                 <p className="text-sm text-gray-400">Wähle den Typ und die HUE-Ressource:</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['light', 'group', 'scene'] as const).map((type) => (
+                <div className="grid grid-cols-4 gap-2">
+                  {(['light', 'group', 'scene', 'sensor'] as const).map((type) => (
                     <button
                       key={type}
                       type="button"
@@ -1060,6 +1171,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                       {type === 'light' && <Lightbulb size={20} className="mx-auto mb-1" />}
                       {type === 'group' && <Home size={20} className="mx-auto mb-1" />}
                       {type === 'scene' && <Play size={20} className="mx-auto mb-1" />}
+                      {type === 'sensor' && <Activity size={20} className="mx-auto mb-1" />}
                       <span className="text-sm block">{getTypeLabel(type)}</span>
                     </button>
                   ))}
@@ -1080,6 +1192,8 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                         const gn = getGroupNameForScene(sc);
                         name = gn ? `${gn} - ${sc.name}` : sc.name;
                       }
+                    } else if (formData.hue_type === 'sensor') {
+                      name = sensors.find((s) => s.id === hueId)?.name || '';
                     }
                     setFormData((prev) => {
                       const finalName = prev.name || name;
@@ -1102,7 +1216,11 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                     getScenesWithGroupName().map((s) => (
                       <option key={s.id} value={s.id}>{s.groupName ? `${s.groupName} - ${s.name}` : s.name}</option>
                     ))}
-                  {formData.hue_type !== 'group' && formData.hue_type !== 'scene' &&
+                  {formData.hue_type === 'sensor' &&
+                    [...sensors].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((s) => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.type})</option>
+                    ))}
+                  {formData.hue_type !== 'group' && formData.hue_type !== 'scene' && formData.hue_type !== 'sensor' &&
                     [...lights].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((l) => (
                       <option key={l.id} value={l.id}>{l.name}</option>
                     ))}
@@ -1162,6 +1280,35 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                 {miniservers.length === 1 && (
                   <div className="text-xs text-gray-500">
                     Miniserver: <span className="text-gray-300">{miniservers[0].name || miniservers[0].ip}</span>
+                  </div>
+                )}
+                {hasAnyFeedback && (
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Feedback-Protokoll</label>
+                    <div className="flex items-center gap-4">
+                      {hasUDP && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.feedback_udp !== false}
+                            onChange={(e) => setFormData({ ...formData, feedback_udp: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-600 text-hue-orange focus:ring-hue-orange bg-gray-700"
+                          />
+                          <span className="text-gray-300 text-sm">UDP</span>
+                        </label>
+                      )}
+                      {hasHTTP && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.feedback_http !== false}
+                            onChange={(e) => setFormData({ ...formData, feedback_http: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-600 text-hue-orange focus:ring-hue-orange bg-gray-700"
+                          />
+                          <span className="text-gray-300 text-sm">HTTP</span>
+                        </label>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1288,6 +1435,35 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                 {miniservers.length === 1 && (
                   <div className="text-xs text-gray-500">
                     Miniserver: <span className="text-gray-300">{miniservers[0].name || miniservers[0].ip}</span>
+                  </div>
+                )}
+                {hasAnyFeedback && (
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Feedback-Protokoll</label>
+                    <div className="flex items-center gap-4">
+                      {hasUDP && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.feedback_udp !== false}
+                            onChange={(e) => setFormData({ ...formData, feedback_udp: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-600 text-hue-orange focus:ring-hue-orange bg-gray-700"
+                          />
+                          <span className="text-gray-300 text-sm">UDP</span>
+                        </label>
+                      )}
+                      {hasHTTP && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.feedback_http !== false}
+                            onChange={(e) => setFormData({ ...formData, feedback_http: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-600 text-hue-orange focus:ring-hue-orange bg-gray-700"
+                          />
+                          <span className="text-gray-300 text-sm">HTTP</span>
+                        </label>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1456,6 +1632,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                     <option value="light">Licht</option>
                     <option value="group">Gruppe/Raum</option>
                     <option value="scene">Szene</option>
+                    <option value="sensor">Sensor</option>
                   </select>
                   <select
                     title="HUE Ressource"
@@ -1476,7 +1653,13 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                           {s.groupName ? `${s.groupName} - ${s.name}` : s.name}
                         </option>
                       ))}
-                    {formData.hue_type !== 'group' && formData.hue_type !== 'scene' &&
+                    {formData.hue_type === 'sensor' &&
+                      [...sensors].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.type})
+                        </option>
+                      ))}
+                    {formData.hue_type !== 'group' && formData.hue_type !== 'scene' && formData.hue_type !== 'sensor' &&
                       [...lights].sort((a, b) => a.name.localeCompare(b.name, 'de')).map((l) => (
                         <option key={l.id} value={l.id}>
                           {l.name}
@@ -1509,6 +1692,35 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                     Miniserver: <span className="text-gray-300">{miniservers[0].name || miniservers[0].ip}</span>
                   </div>
                 )}
+                {hasAnyFeedback && (
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Feedback-Protokoll</label>
+                    <div className="flex items-center gap-4">
+                      {hasUDP && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.feedback_udp !== false}
+                            onChange={(e) => setFormData({ ...formData, feedback_udp: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-600 text-hue-orange focus:ring-hue-orange bg-gray-700"
+                          />
+                          <span className="text-gray-300 text-sm">UDP</span>
+                        </label>
+                      )}
+                      {hasHTTP && (
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.feedback_http !== false}
+                            onChange={(e) => setFormData({ ...formData, feedback_http: e.target.checked })}
+                            className="w-4 h-4 rounded border-gray-600 text-hue-orange focus:ring-hue-orange bg-gray-700"
+                          />
+                          <span className="text-gray-300 text-sm">HTTP</span>
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -1534,8 +1746,18 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
+                    <div className="relative w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center">
                       {getTypeIcon(mapping.hue_type)}
+                      {(() => {
+                        const status = getHueResourceStatus(mapping.hue_id, mapping.hue_type);
+                        return status ? (
+                          <Tooltip content={status.label} position="top">
+                            <span className="absolute -top-1 -right-1 bg-gray-800 rounded-full p-0.5 border border-gray-700">
+                              {status.icon}
+                            </span>
+                          </Tooltip>
+                        ) : null;
+                      })()}
                     </div>
                     <div>
                       <h3 className="font-medium text-white flex items-center gap-2">
@@ -1545,6 +1767,12 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                             {moodChildren.length} Moods
                           </span>
                         )}
+                        {(() => {
+                          const status = getHueResourceStatus(mapping.hue_id, mapping.hue_type);
+                          return status ? (
+                            <span className="text-[10px] text-gray-500 font-normal">{status.label}</span>
+                          ) : null;
+                        })()}
                       </h3>
                       <p className="text-xs text-gray-400">
                         {mapping.loxone_id} →{' '}
@@ -1566,6 +1794,12 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                           const ms = miniservers.find((m) => m.id === mapping.miniserver_id);
                           return ms ? <> &bull; Miniserver: {ms.name || ms.ip}</> : null;
                         })()}
+                        {hasAnyFeedback && (mapping.feedback_udp === false || mapping.feedback_http === false) && (
+                          <> &bull; Feedback: {[
+                            mapping.feedback_udp !== false && hasUDP ? 'UDP' : '',
+                            mapping.feedback_http !== false && hasHTTP ? 'HTTP' : '',
+                          ].filter(Boolean).join(', ') || 'keins'}</>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1634,7 +1868,8 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                       </p>
                     </div>
 
-                    {/* Test URLs */}
+                    {/* Test URLs — only for actuators (not sensors) */}
+                    {getTestUrls(mapping).length > 0 && (
                     <div className="mt-4 border-t border-gray-700 pt-3">
                       <div className="flex items-center gap-2 mb-3">
                         <ExternalLink size={16} className="text-green-500" />
@@ -1668,6 +1903,7 @@ export function MappingConfig({ lights, groups, scenes, onNavigateToHueElement }
                         ))}
                       </div>
                     </div>
+                    )}
                   </div>
                 )}
               </div>

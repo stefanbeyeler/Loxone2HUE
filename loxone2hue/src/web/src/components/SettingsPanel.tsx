@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Settings, Radio, Save, CheckCircle, AlertCircle, ScrollText, Search, RefreshCw, Plus, Trash2 } from 'lucide-react';
+import { Settings, Radio, Globe, Save, CheckCircle, AlertCircle, ScrollText, Search, RefreshCw, Plus, Trash2 } from 'lucide-react';
 import * as api from '../services/api';
 import type { MiniserverConfig, LoxoneConfig, LogEntry } from '../services/api';
 
@@ -117,6 +117,10 @@ export function SettingsPanel() {
           ip: '',
           port: 7777,
           udp_enabled: false,
+          http_enabled: false,
+          http_url: '',
+          http_user: '',
+          http_password: '',
           send_all: false,
         },
       ],
@@ -260,11 +264,28 @@ export function SettingsPanel() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Radio size={14} className="text-hue-orange" />
-                  <span className="text-gray-300 text-sm">UDP Feedback aktivieren</span>
+                  <span className="text-gray-300 text-sm">UDP Feedback</span>
                 </div>
               </label>
 
-              {ms.udp_enabled && (
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={ms.http_enabled}
+                    onChange={(e) => updateMiniserver(ms.id, { http_enabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-6 bg-gray-600 rounded-full peer-checked:bg-hue-orange transition-colors"></div>
+                  <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Globe size={14} className="text-hue-orange" />
+                  <span className="text-gray-300 text-sm">HTTP Feedback</span>
+                </div>
+              </label>
+
+              {(ms.udp_enabled || ms.http_enabled) && (
                 <label className="flex items-center gap-3 cursor-pointer">
                   <div className="relative">
                     <input
@@ -284,7 +305,47 @@ export function SettingsPanel() {
               )}
             </div>
 
-            {ms.udp_enabled && !ms.ip && (
+            {ms.http_enabled && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Ziel-URL (Virtueller HTTP Eingang)</label>
+                  <input
+                    type="text"
+                    value={ms.http_url}
+                    onChange={(e) => updateMiniserver(ms.id, { http_url: e.target.value })}
+                    placeholder="https://192.168.1.7:443/request.php"
+                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-hue-orange focus:outline-none placeholder-gray-500 text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    URL aus der Loxone-Config für virtuelle HTTP-Eingänge. Ohne Angabe wird http://&lt;IP&gt; verwendet.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">HTTP Benutzer</label>
+                  <input
+                    type="text"
+                    value={ms.http_user}
+                    onChange={(e) => updateMiniserver(ms.id, { http_user: e.target.value })}
+                    placeholder="admin"
+                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-hue-orange focus:outline-none placeholder-gray-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">HTTP Passwort</label>
+                  <input
+                    type="password"
+                    value={ms.http_password}
+                    onChange={(e) => updateMiniserver(ms.id, { http_password: e.target.value })}
+                    placeholder="********"
+                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-hue-orange focus:outline-none placeholder-gray-500 text-sm"
+                  />
+                </div>
+              </div>
+              </div>
+            )}
+
+            {(ms.udp_enabled || (ms.http_enabled && !ms.http_url)) && !ms.ip && (
               <div className="flex items-center gap-2 text-yellow-400 text-sm">
                 <AlertCircle size={16} />
                 <span>Bitte eine IP-Adresse eingeben</span>

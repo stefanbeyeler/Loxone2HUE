@@ -50,6 +50,30 @@ export interface Scene {
   type: string;
 }
 
+export interface Sensor {
+  id: string;
+  name: string;
+  type: string; // "motion", "temperature", "light_level", "button", "contact", "relative_rotary", "device_power"
+  device_id?: string;
+  owner?: string;
+  state: SensorState;
+}
+
+export interface SensorState {
+  motion?: boolean;
+  temperature?: number;
+  light_level?: number;
+  button_event?: string;
+  control_id?: number;
+  contact_state?: string;
+  rotary_action?: string;
+  rotary_steps?: number;
+  battery_level?: number;
+  battery_state?: string;
+  enabled: boolean;
+  last_updated?: string;
+}
+
 export interface Mapping {
   id: string;
   name: string;
@@ -57,6 +81,8 @@ export interface Mapping {
   hue_id: string;
   hue_type: string;
   enabled: boolean;
+  feedback_udp?: boolean;
+  feedback_http?: boolean;
   description?: string;
   miniserver_id?: string;
 }
@@ -84,3 +110,10 @@ export interface StatusMessage {
   device: string;
   state: LightState;
 }
+
+export interface SensorUpdateMessage {
+  type: 'sensor_update';
+  sensor: Sensor;
+}
+
+export type WSMessage = StatusMessage | SensorUpdateMessage;

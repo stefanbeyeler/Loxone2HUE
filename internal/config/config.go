@@ -33,12 +33,16 @@ type HueConfig struct {
 
 // MiniserverConfig holds settings for a single Loxone Miniserver
 type MiniserverConfig struct {
-	ID         string `yaml:"id" json:"id"`
-	Name       string `yaml:"name" json:"name"`
-	IP         string `yaml:"ip" json:"ip"`
-	Port       int    `yaml:"port" json:"port"`
-	UDPEnabled bool   `yaml:"udp_enabled" json:"udp_enabled"`
-	SendAll    bool   `yaml:"send_all" json:"send_all"`
+	ID           string `yaml:"id" json:"id"`
+	Name         string `yaml:"name" json:"name"`
+	IP           string `yaml:"ip" json:"ip"`
+	Port         int    `yaml:"port" json:"port"`
+	UDPEnabled   bool   `yaml:"udp_enabled" json:"udp_enabled"`
+	HTTPEnabled  bool   `yaml:"http_enabled" json:"http_enabled"`
+	HTTPURL      string `yaml:"http_url" json:"http_url"`
+	HTTPUser     string `yaml:"http_user" json:"http_user"`
+	HTTPPassword string `yaml:"http_password" json:"http_password"`
+	SendAll      bool   `yaml:"send_all" json:"send_all"`
 }
 
 // LoxoneConfig holds Loxone integration settings
@@ -53,11 +57,35 @@ type LoggingConfig struct {
 }
 
 var (
-	cfg     *Config
-	cfgOnce sync.Once
-	cfgPath string
-	mu      sync.RWMutex
+	cfg        *Config
+	cfgOnce    sync.Once
+	cfgPath    string
+	mu         sync.RWMutex
+	appVersion string
 )
+
+// SetVersion sets the application version for use in backups
+func SetVersion(v string) {
+	appVersion = v
+}
+
+// GetVersion returns the application version
+func GetVersion() string {
+	if appVersion == "" {
+		return "dev"
+	}
+	return appVersion
+}
+
+// GetPath returns the current config file path
+func GetPath() string {
+	mu.RLock()
+	defer mu.RUnlock()
+	if cfgPath == "" {
+		return "configs/config.yaml"
+	}
+	return cfgPath
+}
 
 // DefaultConfig returns a configuration with default values
 func DefaultConfig() *Config {
@@ -296,4 +324,17 @@ func GetMappings() []models.Mapping {
 	result := make([]models.Mapping, len(cfg.Mappings))
 	copy(result, cfg.Mappings)
 	return result
+}
+
+// RestoreFromBackup restores all configuration from a backup
+func RestoreFromBackup(server ServerConfig, bridgeIP, appKey string, loxone LoxoneConfig, logging LoggingConfig, mappings []models.Mapping) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	cfg.Server = server
+	cfg.Hue.BridgeIP = bridgeIP
+	cfg.Hue.ApplicationKey = appKey
+	cfg.Loxone = loxone
+	cfg.Logging = logging
+	cfg.Mappings = mappings
 }

@@ -8,8 +8,28 @@ type Mapping struct {
 	HueID        string `json:"hue_id" yaml:"hue_id"`             // HUE resource ID
 	HueType      string `json:"hue_type" yaml:"hue_type"`         // "light", "group", "scene"
 	Enabled      bool   `json:"enabled" yaml:"enabled"`
+	FeedbackUDP  *bool  `json:"feedback_udp,omitempty" yaml:"feedback_udp,omitempty"`
+	FeedbackHTTP *bool  `json:"feedback_http,omitempty" yaml:"feedback_http,omitempty"`
 	Description  string `json:"description,omitempty" yaml:"description,omitempty"`
 	MiniserverID string `json:"miniserver_id,omitempty" yaml:"miniserver_id,omitempty"`
+}
+
+// ShouldFeedbackUDP returns true if UDP feedback should be sent for this mapping.
+// Defaults to true when FeedbackUDP is nil (not explicitly configured).
+func (m *Mapping) ShouldFeedbackUDP() bool {
+	if m.FeedbackUDP == nil {
+		return true
+	}
+	return *m.FeedbackUDP
+}
+
+// ShouldFeedbackHTTP returns true if HTTP feedback should be sent for this mapping.
+// Defaults to true when FeedbackHTTP is nil (not explicitly configured).
+func (m *Mapping) ShouldFeedbackHTTP() bool {
+	if m.FeedbackHTTP == nil {
+		return true
+	}
+	return *m.FeedbackHTTP
 }
 
 // LoxoneCommand represents an incoming command from Loxone

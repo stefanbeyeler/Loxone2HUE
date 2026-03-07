@@ -21,19 +21,21 @@ type Server struct {
 	hueClient      *hue.Client
 	mappingManager *loxone.MappingManager
 	udpSender      *loxone.UDPSender
+	httpSender     *loxone.HTTPSender
 }
 
 // NewServer creates a new API server
-func NewServer(hueClient *hue.Client, mappingManager *loxone.MappingManager, udpSender *loxone.UDPSender) *Server {
+func NewServer(hueClient *hue.Client, mappingManager *loxone.MappingManager, udpSender *loxone.UDPSender, httpSender *loxone.HTTPSender) *Server {
 	s := &Server{
 		router:         mux.NewRouter(),
 		hueClient:      hueClient,
 		mappingManager: mappingManager,
 		udpSender:      udpSender,
+		httpSender:     httpSender,
 	}
 
-	s.wsHub = NewWebSocketHub(hueClient, mappingManager, udpSender)
-	s.handlers = NewHandlers(hueClient, mappingManager, udpSender)
+	s.wsHub = NewWebSocketHub(hueClient, mappingManager, udpSender, httpSender)
+	s.handlers = NewHandlers(hueClient, mappingManager, udpSender, httpSender)
 
 	s.setupRoutes()
 	return s
@@ -67,6 +69,9 @@ func (s *Server) setupRoutes() {
 	// Scene endpoints
 	api.HandleFunc("/scenes", s.handlers.GetScenes).Methods("GET")
 	api.HandleFunc("/scenes/{id}/activate", s.handlers.ActivateScene).Methods("POST")
+
+	// Sensor endpoints
+	api.HandleFunc("/sensors", s.handlers.GetSensors).Methods("GET")
 
 	// Mapping endpoints
 	api.HandleFunc("/mappings", s.handlers.GetMappings).Methods("GET")

@@ -59,6 +59,10 @@ func main() {
 	udpSender := loxone.NewUDPSender()
 	udpSender.Configure(cfg.Loxone.Miniservers)
 
+	// Create HTTP sender for Loxone status feedback
+	httpSender := loxone.NewHTTPSender()
+	httpSender.Configure(cfg.Loxone.Miniservers)
+
 	// If HUE is configured, start event stream
 	if hueClient.IsConfigured() {
 		log.Info().Str("bridge_ip", cfg.Hue.BridgeIP).Msg("HUE Bridge configured, starting event stream")
@@ -68,7 +72,7 @@ func main() {
 	}
 
 	// Create API server
-	server := api.NewServer(hueClient, mappingManager, udpSender)
+	server := api.NewServer(hueClient, mappingManager, udpSender, httpSender)
 
 	// Setup context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())

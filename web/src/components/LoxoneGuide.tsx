@@ -17,11 +17,11 @@ export function LoxoneGuide() {
         </div>
         <p className="text-gray-300 leading-relaxed">
           Der Loxone2HUE Gateway ermöglicht die bidirektionale Kommunikation zwischen deinem
-          Loxone Miniserver und der Philips HUE Bridge. Du kannst HUE Lampen, Gruppen und
-          Szenen direkt aus Loxone steuern.
+          Loxone Miniserver und der Philips HUE Bridge. Du kannst HUE Lampen, Gruppen,
+          Szenen und Sensoren direkt aus Loxone steuern und überwachen.
         </p>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-5">
           <div className="bg-gray-900 rounded-lg p-3 text-center">
             <Lightbulb size={24} className="mx-auto text-hue-orange mb-2" />
             <span className="text-sm text-gray-300">Geräte</span>
@@ -41,6 +41,11 @@ export function LoxoneGuide() {
             <Play size={24} className="mx-auto text-hue-orange mb-2" />
             <span className="text-sm text-gray-300">Szenen</span>
             <p className="text-xs text-gray-500 mt-1">Lichtstimmungen</p>
+          </div>
+          <div className="bg-gray-900 rounded-lg p-3 text-center">
+            <Radio size={24} className="mx-auto text-hue-orange mb-2" />
+            <span className="text-sm text-gray-300">Sensoren</span>
+            <p className="text-xs text-gray-500 mt-1">Taster, Bewegung, etc.</p>
           </div>
         </div>
       </section>
@@ -97,6 +102,17 @@ export function LoxoneGuide() {
                 Raum angezeigt: "Raum - Szenenname".
               </p>
             </div>
+            <div className="bg-gray-900 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Radio size={18} className="text-hue-orange" />
+                <span className="font-medium text-white">Sensoren</span>
+              </div>
+              <p className="text-sm text-gray-400">
+                HUE Sensoren, Taster und Zubehör. Bewegungsmelder, Temperatursensoren,
+                Helligkeitssensoren, Taster (Dimmer Switch, Tap Dial) und Kontaktsensoren.
+                Sensorwerte werden automatisch per UDP/HTTP an Loxone gesendet.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -111,10 +127,10 @@ export function LoxoneGuide() {
           <pre>{`┌─────────────────┐  HTTP   ┌─────────────────────────┐  CLIP  ┌───────────────┐
 │     Loxone      │────────►│    Loxone2HUE Gateway   │◄──────►│   HUE Bridge  │
 │   Miniserver    │◄────────│        (Port 8080)      │  SSE   │               │
-└─────────────────┘   UDP   └─────────────────────────┘        └───────────────┘
+└─────────────────┘UDP/HTTP └─────────────────────────┘        └───────────────┘
                                        │
                   HTTP: Befehle senden  │ WebSocket /ws
-                  UDP:  Status-Feedback │
+                  UDP/HTTP: Feedback    │
                                        ▼
                             ┌─────────────────────────┐
                             │   Frontend (Browser)    │
@@ -141,7 +157,7 @@ export function LoxoneGuide() {
             und kann bei Bedarf manuell angepasst werden.
           </p>
 
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="bg-gray-900 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Lightbulb size={18} className="text-hue-orange" />
@@ -167,6 +183,15 @@ export function LoxoneGuide() {
               </div>
               <p className="text-sm text-gray-400">
                 Vordefinierte Lichtstimmung aktivieren
+              </p>
+            </div>
+            <div className="bg-gray-900 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Radio size={18} className="text-hue-orange" />
+                <span className="font-medium text-white">Sensor</span>
+              </div>
+              <p className="text-sm text-gray-400">
+                Sensorwerte empfangen (Bewegung, Temperatur, Taster)
               </p>
             </div>
           </div>
@@ -597,69 +622,177 @@ export function LoxoneGuide() {
         </div>
       </section>
 
-      {/* UDP Status-Feedback */}
+      {/* Status-Feedback */}
       <section className="bg-gray-800 rounded-xl p-6">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <Radio size={20} className="text-hue-orange" />
-          UDP Status-Feedback
+          Status-Feedback (UDP &amp; HTTP)
         </h3>
         <div className="space-y-4 text-gray-300">
           <p className="text-sm">
-            Der Gateway sendet Status-Änderungen von HUE-Geräten automatisch per UDP an den Loxone Miniserver.
-            So erhält Loxone Echtzeit-Rückmeldungen über den Zustand der Lampen.
+            Der Gateway sendet Status-Änderungen von HUE-Geräten automatisch per <strong>UDP</strong> und/oder <strong>HTTP</strong> an den Loxone Miniserver.
+            So erhält Loxone Echtzeit-Rückmeldungen über den Zustand der Lampen und Sensoren.
           </p>
 
           <div className="bg-gray-900 rounded-lg p-4">
-            <h4 className="font-medium text-hue-orange mb-3">Aktivierung</h4>
+            <h4 className="font-medium text-hue-orange mb-3">Aktivierung (Einstellungen)</h4>
             <ol className="list-decimal list-inside space-y-2 text-sm ml-4">
               <li>Gehe zum Tab <strong>Einstellungen</strong></li>
-              <li>Aktiviere <strong>UDP Feedback</strong></li>
-              <li>Gib die <strong>Miniserver-IP</strong> und den <strong>UDP-Port</strong> ein (Standard: 7777)</li>
+              <li>Aktiviere <strong>UDP Feedback</strong> und/oder <strong>HTTP Feedback</strong> pro Miniserver</li>
+              <li>Für UDP: Gib die <strong>Miniserver-IP</strong> und den <strong>UDP-Port</strong> ein (Standard: 7777)</li>
+              <li>Für HTTP: Gib die <strong>Ziel-URL</strong> ein (z.B. <code>https://192.168.1.7:443/request.php</code>) sowie Benutzer/Passwort</li>
               <li>Klicke auf <strong>Speichern</strong></li>
             </ol>
           </div>
 
           <div className="bg-gray-900 rounded-lg p-4">
-            <h4 className="font-medium text-hue-orange mb-3">Nachrichtenformat</h4>
+            <h4 className="font-medium text-hue-orange mb-3">Pro-Mapping Protokollwahl</h4>
+            <p className="text-sm text-gray-400 mb-2">
+              Beim Erstellen oder Bearbeiten eines Mappings kann das Feedback-Protokoll pro Mapping gewählt werden:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-sm ml-4 text-gray-400">
+              <li><strong>UDP</strong> — Klassisches UDP-Paket an den Miniserver</li>
+              <li><strong>HTTP</strong> — HTTP GET-Request an den virtuellen HTTP-Eingang</li>
+              <li><strong>Beide</strong> — Standard, wenn keine explizite Auswahl getroffen wird</li>
+            </ul>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-3">UDP-Format</h4>
             <p className="text-sm text-gray-400 mb-3">
               Pro Eigenschaftsänderung wird ein UDP-Paket gesendet:
             </p>
             <div className="bg-gray-800 rounded-lg p-3 font-mono text-sm mb-3">
               <code>&lt;loxone_id&gt;/&lt;eigenschaft&gt;:&lt;wert&gt;</code>
             </div>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-3">HTTP-Format</h4>
+            <p className="text-sm text-gray-400 mb-3">
+              Pro Eigenschaftsänderung wird ein HTTP GET-Request gesendet:
+            </p>
+            <div className="bg-gray-800 rounded-lg p-3 font-mono text-sm mb-3">
+              <code>&lt;ziel_url&gt;/dev/sps/io/&lt;loxone_id&gt;_&lt;eigenschaft&gt;/&lt;wert&gt;</code>
+            </div>
+            <p className="text-sm text-gray-400">
+              Beispiel: <code className="text-xs">https://192.168.1.7/dev/sps/io/buero_stefan_on/1</code>
+            </p>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-3">Aktoren — Feedback-Eigenschaften</h4>
+            <p className="text-sm text-gray-400 mb-3">
+              Lampen und Gruppen senden folgende Eigenschaften bei Statusänderungen:
+            </p>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-400 border-b border-gray-700">
                   <th className="pb-2 pr-4">Eigenschaft</th>
                   <th className="pb-2 pr-4">Wertebereich</th>
-                  <th className="pb-2">Beispiel</th>
+                  <th className="pb-2 pr-4">Beispiel (UDP)</th>
+                  <th className="pb-2">Beispiel (HTTP)</th>
                 </tr>
               </thead>
               <tbody>
                 <tr className="border-b border-gray-700/50">
                   <td className="py-2 pr-4 font-mono text-xs text-hue-orange">on</td>
                   <td className="py-2 pr-4">0 / 1</td>
-                  <td className="py-2 font-mono text-xs">buero_stefan/on:1</td>
+                  <td className="py-2 pr-4 font-mono text-xs">buero_stefan/on:1</td>
+                  <td className="py-2 font-mono text-xs">/dev/sps/io/buero_stefan_on/1</td>
                 </tr>
                 <tr className="border-b border-gray-700/50">
                   <td className="py-2 pr-4 font-mono text-xs text-hue-orange">bri</td>
                   <td className="py-2 pr-4">0–100</td>
-                  <td className="py-2 font-mono text-xs">buero_stefan/bri:80</td>
+                  <td className="py-2 pr-4 font-mono text-xs">buero_stefan/bri:80</td>
+                  <td className="py-2 font-mono text-xs">/dev/sps/io/buero_stefan_bri/80</td>
                 </tr>
                 <tr className="border-b border-gray-700/50">
                   <td className="py-2 pr-4 font-mono text-xs text-hue-orange">ct</td>
                   <td className="py-2 pr-4">153–500 (Mirek)</td>
-                  <td className="py-2 font-mono text-xs">buero_stefan/ct:250</td>
+                  <td className="py-2 pr-4 font-mono text-xs">buero_stefan/ct:250</td>
+                  <td className="py-2 font-mono text-xs">/dev/sps/io/buero_stefan_ct/250</td>
                 </tr>
                 <tr className="border-b border-gray-700/50">
                   <td className="py-2 pr-4 font-mono text-xs text-hue-orange">color_x</td>
                   <td className="py-2 pr-4">0–1 (Float)</td>
-                  <td className="py-2 font-mono text-xs">buero_stefan/color_x:0.4573</td>
+                  <td className="py-2 pr-4 font-mono text-xs">buero_stefan/color_x:0.4573</td>
+                  <td className="py-2 font-mono text-xs">/dev/sps/io/buero_stefan_color_x/0.4573</td>
                 </tr>
                 <tr>
                   <td className="py-2 pr-4 font-mono text-xs text-hue-orange">color_y</td>
                   <td className="py-2 pr-4">0–1 (Float)</td>
-                  <td className="py-2 font-mono text-xs">buero_stefan/color_y:0.4100</td>
+                  <td className="py-2 pr-4 font-mono text-xs">buero_stefan/color_y:0.4100</td>
+                  <td className="py-2 font-mono text-xs">/dev/sps/io/buero_stefan_color_y/0.41</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="bg-gray-900 rounded-lg p-4">
+            <h4 className="font-medium text-hue-orange mb-3">Sensoren — Feedback-Eigenschaften</h4>
+            <p className="text-sm text-gray-400 mb-3">
+              Sensoren senden Werte automatisch an Loxone. Es werden keine Befehle an Sensoren gesendet.
+            </p>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-400 border-b border-gray-700">
+                  <th className="pb-2 pr-4">Sensortyp</th>
+                  <th className="pb-2 pr-4">Eigenschaft</th>
+                  <th className="pb-2 pr-4">Wertebereich</th>
+                  <th className="pb-2 pr-4">Beispiel (UDP)</th>
+                  <th className="pb-2">Beispiel (HTTP)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-2 pr-4 text-gray-300">Bewegung</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">motion</td>
+                  <td className="py-2 pr-4">0 / 1</td>
+                  <td className="py-2 pr-4 font-mono text-xs">sensor_flur/motion:1</td>
+                  <td className="py-2 font-mono text-xs">/dev/sps/io/sensor_flur_motion/1</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-2 pr-4 text-gray-300">Temperatur</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">temperature</td>
+                  <td className="py-2 pr-4">z.B. 21.5 (°C)</td>
+                  <td className="py-2 pr-4 font-mono text-xs">sensor_bad/temperature:21.5</td>
+                  <td className="py-2 font-mono text-xs">/dev/sps/io/sensor_bad_temperature/21.5</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-2 pr-4 text-gray-300">Helligkeit</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">light_level</td>
+                  <td className="py-2 pr-4">0–100000 (Lux)</td>
+                  <td className="py-2 pr-4 font-mono text-xs">sensor_flur/light_level:12500</td>
+                  <td className="py-2 font-mono text-xs">/dev/sps/io/sensor_flur_light_level/12500</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-2 pr-4 text-gray-300">Taster</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">button</td>
+                  <td className="py-2 pr-4">0=press, 2=short, 3=long_release, 4=long_press</td>
+                  <td className="py-2 pr-4 font-mono text-xs">smart_button_1/button:2</td>
+                  <td className="py-2 font-mono text-xs">/dev/sps/io/smart_button_1_button/2</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-2 pr-4 text-gray-300">Kontakt</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">contact</td>
+                  <td className="py-2 pr-4">0=geschlossen, 1=offen</td>
+                  <td className="py-2 pr-4 font-mono text-xs">tuer_sensor/contact:0</td>
+                  <td className="py-2 font-mono text-xs">/dev/sps/io/tuer_sensor_contact/0</td>
+                </tr>
+                <tr className="border-b border-gray-700/50">
+                  <td className="py-2 pr-4 text-gray-300">Drehregler</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">rotary</td>
+                  <td className="py-2 pr-4">Schritte (+/-)</td>
+                  <td className="py-2 pr-4 font-mono text-xs">tap_dial/rotary:3</td>
+                  <td className="py-2 font-mono text-xs">/dev/sps/io/tap_dial_rotary/3</td>
+                </tr>
+                <tr>
+                  <td className="py-2 pr-4 text-gray-300">Batterie</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-hue-orange">battery</td>
+                  <td className="py-2 pr-4">0–100 (%)</td>
+                  <td className="py-2 pr-4 font-mono text-xs">smart_button_1/battery:85</td>
+                  <td className="py-2 font-mono text-xs">/dev/sps/io/smart_button_1_battery/85</td>
                 </tr>
               </tbody>
             </table>
@@ -671,7 +804,7 @@ export function LoxoneGuide() {
               Die Loxone ID aus dem Mapping wird als Prefix verwendet.
             </p>
             <p className="text-sm text-blue-300 mt-2">
-              Mit der Option <strong>UDP Feedback für alle Geräte senden</strong> in den Einstellungen werden
+              Mit der Option <strong>Alle Geräte senden</strong> in den Einstellungen werden
               auch Geräte ohne Mapping übertragen. In diesem Fall wird der Gerätename als Loxone-ID verwendet.
             </p>
           </div>
@@ -742,7 +875,7 @@ export function LoxoneGuide() {
             <h4 className="font-medium text-hue-orange mb-2">Empfohlener Workflow</h4>
             <ol className="text-sm text-orange-300 space-y-1 list-decimal list-inside">
               <li>Mappings im Tab "Mappings" erstellen</li>
-              <li>UDP-Feedback in Einstellungen aktivieren</li>
+              <li>Feedback (UDP/HTTP) in Einstellungen aktivieren</li>
               <li>XML-Vorlagen herunterladen (Einstellungen → Loxone Config Export)</li>
               <li>In Loxone Config importieren (Gerätevorlagen → Vorlage importieren)</li>
               <li>Bereich markieren (Virtuelle Eingänge bzw. Virtuelle Ausgänge), dann Vorlage ausführen (Gerätevorlagen → Meine Vorlagen)</li>
@@ -814,23 +947,31 @@ export function LoxoneGuide() {
           </div>
 
           <div className="bg-gray-900 rounded-lg p-4">
-            <h4 className="font-medium text-yellow-400 mb-2">UDP-Feedback kommt nicht an</h4>
+            <h4 className="font-medium text-yellow-400 mb-2">Feedback (UDP/HTTP) kommt nicht an</h4>
             <ul className="text-sm text-gray-300 space-y-2">
               <li className="flex items-start gap-2">
                 <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
-                <span>Prüfe, ob UDP-Feedback in den Einstellungen aktiviert ist</span>
+                <span>Prüfe, ob UDP- und/oder HTTP-Feedback in den Einstellungen aktiviert ist</span>
               </li>
               <li className="flex items-start gap-2">
                 <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
-                <span>Prüfe die Ziel-IP und den Port (Standard: 7777)</span>
+                <span>Für UDP: Prüfe die Ziel-IP und den Port (Standard: 7777)</span>
               </li>
               <li className="flex items-start gap-2">
                 <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
-                <span>Stelle sicher, dass ein Mapping für das Gerät existiert oder <strong>UDP Feedback für alle Geräte senden</strong> aktiviert ist</span>
+                <span>Für HTTP: Prüfe die Ziel-URL und die Zugangsdaten</span>
               </li>
               <li className="flex items-start gap-2">
                 <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
-                <span>Prüfe die Firewall: UDP-Port muss am Miniserver offen sein</span>
+                <span>Prüfe, ob das gewünschte Protokoll im Mapping aktiviert ist (UDP/HTTP Checkboxen)</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Stelle sicher, dass ein Mapping für das Gerät existiert oder <strong>Alle Geräte senden</strong> aktiviert ist</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <HelpCircle size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                <span>Für UDP: Prüfe die Firewall — UDP-Port muss am Miniserver offen sein</span>
               </li>
             </ul>
           </div>
@@ -876,7 +1017,7 @@ export function LoxoneGuide() {
           </li>
           <li className="flex items-start gap-3">
             <div className="w-5 h-5 rounded border-2 border-gray-600 flex-shrink-0 mt-0.5"></div>
-            <span>UDP-Feedback aktiviert (Einstellungen: IP + Port konfiguriert)</span>
+            <span>Feedback aktiviert (Einstellungen: UDP und/oder HTTP konfiguriert)</span>
           </li>
           <li className="flex items-start gap-3">
             <div className="w-5 h-5 rounded border-2 border-gray-600 flex-shrink-0 mt-0.5"></div>
@@ -901,6 +1042,10 @@ export function LoxoneGuide() {
           <li className="flex items-start gap-3">
             <div className="w-5 h-5 rounded border-2 border-gray-600 flex-shrink-0 mt-0.5"></div>
             <span>Test: Licht über Loxone schalten</span>
+          </li>
+          <li className="flex items-start gap-3">
+            <div className="w-5 h-5 rounded border-2 border-gray-600 flex-shrink-0 mt-0.5"></div>
+            <span>Test: Sensor-Feedback prüfen (Logs → UDP/HTTP Filter)</span>
           </li>
         </ul>
       </section>
@@ -935,6 +1080,19 @@ export function LoxoneGuide() {
           <div className="bg-gray-900/50 rounded-lg p-3">
             <h4 className="text-sm font-medium text-hue-orange mb-2">Farbe</h4>
             <code className="text-xs text-gray-300 font-mono">/ws?cmd=SET id COLOR #hex</code>
+          </div>
+        </div>
+        <div className="mt-4">
+          <h4 className="text-sm font-medium text-white mb-3">Sensor-Feedback (automatisch)</h4>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="bg-gray-900/50 rounded-lg p-3">
+              <h4 className="text-sm font-medium text-hue-orange mb-1">UDP-Format</h4>
+              <code className="text-xs text-gray-300 font-mono">id/eigenschaft:wert</code>
+            </div>
+            <div className="bg-gray-900/50 rounded-lg p-3">
+              <h4 className="text-sm font-medium text-hue-orange mb-1">HTTP-Format</h4>
+              <code className="text-xs text-gray-300 font-mono">/dev/sps/io/id_eigenschaft/wert</code>
+            </div>
           </div>
         </div>
       </section>

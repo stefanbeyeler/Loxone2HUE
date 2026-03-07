@@ -36,6 +36,7 @@ type WebSocketHub struct {
 	mappingManager *loxone.MappingManager
 	commandParser  *loxone.CommandParser
 	udpSender      *loxone.UDPSender
+	httpSender     *loxone.HTTPSender
 }
 
 // WebSocketClient represents a connected WebSocket client
@@ -48,7 +49,7 @@ type WebSocketClient struct {
 }
 
 // NewWebSocketHub creates a new WebSocket hub
-func NewWebSocketHub(hueClient *hue.Client, mappingManager *loxone.MappingManager, udpSender *loxone.UDPSender) *WebSocketHub {
+func NewWebSocketHub(hueClient *hue.Client, mappingManager *loxone.MappingManager, udpSender *loxone.UDPSender, httpSender *loxone.HTTPSender) *WebSocketHub {
 	return &WebSocketHub{
 		clients:        make(map[*WebSocketClient]bool),
 		broadcast:      make(chan []byte, 256),
@@ -58,6 +59,7 @@ func NewWebSocketHub(hueClient *hue.Client, mappingManager *loxone.MappingManage
 		mappingManager: mappingManager,
 		commandParser:  loxone.NewCommandParser(),
 		udpSender:      udpSender,
+		httpSender:     httpSender,
 	}
 }
 
@@ -121,22 +123,60 @@ func (h *WebSocketHub) forwardHueEvents(ctx context.Context) {
 
 			h.broadcast <- data
 
-			// Send UDP feedback to Loxone Miniserver
-			if h.udpSender != nil && h.udpSender.IsEnabled() {
-				h.sendUDPFeedback(event)
+			// For sensor events, also broadcast the full updated sensor object
+			if hue.IsSensorType(event.Type) {
+				if sensor := h.hueClient.GetSensor(event.ID); sensor != nil {
+					sensorMsg := map[string]interface{}{
+						"type":   "sensor_update",
+						"sensor": sensor,
+					}
+					if sData, err := json.Marshal(sensorMsg); err == nil {
+						h.broadcast <- sData
+					}
+				}
 			}
+
+			// Send feedback (UDP and/or HTTP) to Loxone Miniserver
+			h.sendFeedback(event)
 		}
 	}
 }
 
-// udpTarget holds a loxoneID and optionally the miniserver to send to
-type udpFeedbackTarget struct {
+// feedbackTarget holds a loxoneID and optionally the miniserver to send to
+type feedbackTarget struct {
 	loxoneID     string
 	miniserverID string // empty = send to all (send_all targets)
+	feedbackUDP  bool   // whether to send UDP feedback
+	feedbackHTTP bool   // whether to send HTTP feedback
 }
 
-// sendUDPFeedback extracts changed properties from a HUE event and sends them via UDP
-func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
+// targetFromMapping creates a feedbackTarget from a mapping, using the mapping's feedback flags.
+func targetFromMapping(m *models.Mapping) feedbackTarget {
+	return feedbackTarget{
+		loxoneID:     m.LoxoneID,
+		miniserverID: m.MiniserverID,
+		feedbackUDP:  m.ShouldFeedbackUDP(),
+		feedbackHTTP: m.ShouldFeedbackHTTP(),
+	}
+}
+
+// targetSendAll creates a feedbackTarget for send_all (no mapping, both protocols enabled).
+func targetSendAll(loxoneID string) feedbackTarget {
+	return feedbackTarget{
+		loxoneID:     loxoneID,
+		feedbackUDP:  true,
+		feedbackHTTP: true,
+	}
+}
+
+// sendFeedback extracts changed properties from a HUE event and sends them via UDP and/or HTTP
+func (h *WebSocketHub) sendFeedback(event hue.Event) {
+	// Handle sensor events separately
+	if hue.IsSensorType(event.Type) {
+		h.sendSensorFeedback(event)
+		return
+	}
+
 	// Extract event data fields via JSON roundtrip
 	type eventData struct {
 		On *struct {
@@ -166,20 +206,26 @@ func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 		return
 	}
 
+	udpEnabled := h.udpSender != nil && h.udpSender.IsEnabled()
+	httpEnabled := h.httpSender != nil && h.httpSender.IsEnabled()
+	if !udpEnabled && !httpEnabled {
+		return
+	}
+
 	// Collect all targets that should receive this update (skip scenes and mood mappings)
-	var targets []udpFeedbackTarget
+	var targets []feedbackTarget
 
 	// Direct lookup: event.ID matches a mapping's hue_id (light or group)
 	if mapping := h.mappingManager.GetByHueID(event.ID); mapping != nil && mapping.HueType != "scene" && !strings.Contains(mapping.LoxoneID, "_mood_") {
-		targets = append(targets, udpFeedbackTarget{loxoneID: mapping.LoxoneID, miniserverID: mapping.MiniserverID})
-	} else if h.udpSender.HasSendAll() {
+		targets = append(targets, targetFromMapping(mapping))
+	} else if (udpEnabled && h.udpSender.HasSendAll()) || (httpEnabled && h.httpSender.HasSendAll()) {
 		// No mapping found — generate LoxoneID from device name, send to all send_all targets
 		if event.Type == "light" {
 			if light, err := h.hueClient.GetLight(event.ID); err == nil {
-				targets = append(targets, udpFeedbackTarget{loxoneID: sanitizeName(light.Name)})
+				targets = append(targets, targetSendAll(sanitizeName(light.Name)))
 			}
 		} else if name := h.hueClient.GetGroupName(event.ID); name != "" {
-			targets = append(targets, udpFeedbackTarget{loxoneID: sanitizeName(name)})
+			targets = append(targets, targetSendAll(sanitizeName(name)))
 		}
 	}
 
@@ -187,10 +233,10 @@ func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 	if event.Type == "light" {
 		for _, groupID := range h.hueClient.GetGroupIDsForLight(event.ID) {
 			if mapping := h.mappingManager.GetByHueID(groupID); mapping != nil && mapping.HueType != "scene" && !strings.Contains(mapping.LoxoneID, "_mood_") {
-				targets = append(targets, udpFeedbackTarget{loxoneID: mapping.LoxoneID, miniserverID: mapping.MiniserverID})
-			} else if h.udpSender.HasSendAll() {
+				targets = append(targets, targetFromMapping(mapping))
+			} else if (udpEnabled && h.udpSender.HasSendAll()) || (httpEnabled && h.httpSender.HasSendAll()) {
 				if name := h.hueClient.GetGroupName(groupID); name != "" {
-					targets = append(targets, udpFeedbackTarget{loxoneID: sanitizeName(name)})
+					targets = append(targets, targetSendAll(sanitizeName(name)))
 				}
 			}
 		}
@@ -200,13 +246,22 @@ func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 		return
 	}
 
-	// Send one UDP packet per changed property per target
+	// Send per changed property per target via UDP and/or HTTP
 	for _, target := range targets {
 		send := func(property string, value interface{}) {
-			if target.miniserverID != "" {
-				h.udpSender.Send(target.miniserverID, target.loxoneID, property, value)
-			} else {
-				h.udpSender.SendToAll(target.loxoneID, property, value)
+			if udpEnabled && target.feedbackUDP {
+				if target.miniserverID != "" {
+					h.udpSender.Send(target.miniserverID, target.loxoneID, property, value)
+				} else {
+					h.udpSender.SendToAll(target.loxoneID, property, value)
+				}
+			}
+			if httpEnabled && target.feedbackHTTP {
+				if target.miniserverID != "" {
+					h.httpSender.Send(target.miniserverID, target.loxoneID, property, value)
+				} else {
+					h.httpSender.SendToAll(target.loxoneID, property, value)
+				}
 			}
 		}
 
@@ -227,6 +282,148 @@ func (h *WebSocketHub) sendUDPFeedback(event hue.Event) {
 			send("color_x", fmt.Sprintf("%.4f", ed.Color.XY.X))
 			send("color_y", fmt.Sprintf("%.4f", ed.Color.XY.Y))
 		}
+	}
+}
+
+// sendSensorFeedback handles feedback for sensor events via UDP and/or HTTP
+func (h *WebSocketHub) sendSensorFeedback(event hue.Event) {
+	udpEnabled := h.udpSender != nil && h.udpSender.IsEnabled()
+	httpEnabled := h.httpSender != nil && h.httpSender.IsEnabled()
+	if !udpEnabled && !httpEnabled {
+		return
+	}
+
+	// Find target for this sensor
+	var targets []feedbackTarget
+
+	if mapping := h.mappingManager.GetByHueID(event.ID); mapping != nil && !strings.Contains(mapping.LoxoneID, "_mood_") {
+		targets = append(targets, targetFromMapping(mapping))
+	} else if (udpEnabled && h.udpSender.HasSendAll()) || (httpEnabled && h.httpSender.HasSendAll()) {
+		if name := h.hueClient.GetSensorName(event.ID); name != "" {
+			targets = append(targets, targetSendAll(sanitizeName(name)))
+		}
+	}
+
+	if len(targets) == 0 {
+		return
+	}
+
+	// Extract sensor data via JSON roundtrip
+	raw, err := json.Marshal(event.Data)
+	if err != nil {
+		return
+	}
+
+	var item hue.EventItem
+	if err := json.Unmarshal(raw, &item); err != nil {
+		return
+	}
+
+	for _, target := range targets {
+		send := func(property string, value interface{}) {
+			if udpEnabled && target.feedbackUDP {
+				if target.miniserverID != "" {
+					h.udpSender.Send(target.miniserverID, target.loxoneID, property, value)
+				} else {
+					h.udpSender.SendToAll(target.loxoneID, property, value)
+				}
+			}
+			if httpEnabled && target.feedbackHTTP {
+				if target.miniserverID != "" {
+					h.httpSender.Send(target.miniserverID, target.loxoneID, property, value)
+				} else {
+					h.httpSender.SendToAll(target.loxoneID, property, value)
+				}
+			}
+		}
+
+		switch event.Type {
+		case "motion":
+			if item.Motion != nil {
+				motion := item.Motion.Motion
+				if item.Motion.MotionReport != nil {
+					motion = item.Motion.MotionReport.Motion
+				}
+				val := 0
+				if motion {
+					val = 1
+				}
+				send("motion", val)
+			}
+
+		case "temperature":
+			if item.Temperature != nil {
+				temp := item.Temperature.Temperature
+				if item.Temperature.TemperatureReport != nil {
+					temp = item.Temperature.TemperatureReport.Temperature
+				}
+				send("temperature", fmt.Sprintf("%.1f", temp))
+			}
+
+		case "light_level":
+			if item.LightSensor != nil {
+				level := item.LightSensor.LightLevel
+				if item.LightSensor.LightLevelReport != nil {
+					level = item.LightSensor.LightLevelReport.LightLevel
+				}
+				send("light_level", level)
+			}
+
+		case "button":
+			if item.Button != nil {
+				event := item.Button.LastEvent
+				if item.Button.ButtonReport != nil {
+					event = item.Button.ButtonReport.Event
+				}
+				if event != "" {
+					// Convert button event to numeric code for Loxone
+					// initial_press=0, repeat=1, short_release=2, long_release=3, long_press=4
+					buttonCode := buttonEventToCode(event)
+					send("button", buttonCode)
+				}
+			}
+
+		case "contact":
+			if item.ContactReport != nil {
+				val := 0
+				if item.ContactReport.State == "no_contact" {
+					val = 1
+				}
+				send("contact", val)
+			}
+
+		case "relative_rotary":
+			if item.RelativeRotary != nil && item.RelativeRotary.RotaryReport != nil {
+				steps := item.RelativeRotary.RotaryReport.Rotation.Steps
+				if item.RelativeRotary.RotaryReport.Rotation.Direction == "counter_clockwise" {
+					steps = -steps
+				}
+				send("rotary", steps)
+			}
+
+		case "device_power":
+			if item.PowerState != nil {
+				send("battery", item.PowerState.BatteryLevel)
+			}
+		}
+	}
+}
+
+// buttonEventToCode converts a HUE button event string to a numeric code
+func buttonEventToCode(event string) int {
+	switch event {
+	case "initial_press":
+		return 0
+	case "repeat":
+		return 1
+	case "short_release":
+		return 2
+	case "long_release":
+		return 3
+	case "long_press":
+		return 4
+	default:
+		return -1
 	}
 }
 
