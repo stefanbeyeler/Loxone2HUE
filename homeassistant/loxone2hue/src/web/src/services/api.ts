@@ -1,4 +1,4 @@
-import { Light, Group, Scene, Mapping, BridgeInfo, DeviceCommand } from '../types';
+import { Light, Group, Scene, Sensor, Mapping, BridgeInfo, DeviceCommand } from '../types';
 export type { Mapping };
 
 const API_BASE = './api';
@@ -75,6 +75,11 @@ export async function activateScene(id: string): Promise<void> {
   });
 }
 
+// Sensor endpoints
+export async function getSensors(): Promise<{ sensors: Sensor[] }> {
+  return fetchJSON(`${API_BASE}/sensors`);
+}
+
 // Mapping endpoints
 export async function getMappings(): Promise<{ mappings: Mapping[] }> {
   return fetchJSON(`${API_BASE}/mappings`);
@@ -138,6 +143,10 @@ export interface MiniserverConfig {
   ip: string;
   port: number;
   udp_enabled: boolean;
+  http_enabled: boolean;
+  http_url: string;
+  http_user: string;
+  http_password: string;
   send_all: boolean;
 }
 

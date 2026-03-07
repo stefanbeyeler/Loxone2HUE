@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Light, Group, Scene, StatusMessage } from '../types';
+import { Light, Group, Scene, Sensor, WSMessage } from '../types';
 import * as api from '../services/api';
 import { useWebSocket } from './useWebSocket';
 
@@ -7,16 +7,23 @@ export function useHueDevices() {
   const [lights, setLights] = useState<Light[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [scenes, setScenes] = useState<Scene[]>([]);
+  const [sensors, setSensors] = useState<Sensor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const handleMessage = useCallback((message: StatusMessage) => {
+  const handleMessage = useCallback((message: WSMessage) => {
     if (message.type === 'status') {
       setLights((prev) =>
         prev.map((light) =>
           light.id === message.device
             ? { ...light, state: { ...light.state, ...message.state } }
             : light
+        )
+      );
+    } else if (message.type === 'sensor_update') {
+      setSensors((prev) =>
+        prev.map((s) =>
+          s.id === message.sensor.id ? message.sensor : s
         )
       );
     }
@@ -29,15 +36,17 @@ export function useHueDevices() {
       if (showLoading) setLoading(true);
       setError(null);
 
-      const [devicesRes, groupsRes, scenesRes] = await Promise.all([
+      const [devicesRes, groupsRes, scenesRes, sensorsRes] = await Promise.all([
         api.getDevices(),
         api.getGroups(),
         api.getScenes(),
+        api.getSensors(),
       ]);
 
       setLights(devicesRes.devices || []);
       setGroups(groupsRes.groups || []);
       setScenes(scenesRes.scenes || []);
+      setSensors(sensorsRes.sensors || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch devices');
     } finally {
@@ -120,6 +129,7 @@ export function useHueDevices() {
     lights,
     groups,
     scenes,
+    sensors,
     loading,
     error,
     isConnected,

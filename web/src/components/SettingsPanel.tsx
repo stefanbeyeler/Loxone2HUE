@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Settings, Radio, Save, CheckCircle, AlertCircle, ScrollText, Search, RefreshCw, Plus, Trash2 } from 'lucide-react';
+import { Settings, Radio, Globe, Save, CheckCircle, AlertCircle, ScrollText, Search, RefreshCw, Plus, Trash2, Download, Upload, RotateCcw, Archive, Clock } from 'lucide-react';
 import * as api from '../services/api';
-import type { MiniserverConfig, LoxoneConfig, LogEntry } from '../services/api';
+import type { MiniserverConfig, LoxoneConfig, LogEntry, ConfigBackup } from '../services/api';
 
 const LEVEL_STYLES: Record<string, string> = {
   DEBUG: 'bg-gray-600 text-gray-200',
@@ -35,6 +35,16 @@ export function SettingsPanel() {
   const [loading, setLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
+  // Backup state
+  const [backups, setBackups] = useState<ConfigBackup[]>([]);
+  const [backupsLoading, setBackupsLoading] = useState(false);
+  const [backupRemark, setBackupRemark] = useState('');
+  const [creatingBackup, setCreatingBackup] = useState(false);
+  const [restoreConfirm, setRestoreConfirm] = useState<string | null>(null);
+  const [backupDeleteConfirm, setBackupDeleteConfirm] = useState<string | null>(null);
+  const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Server logs state
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
   const [logLevel, setLogLevel] = useState<string>('');
@@ -46,6 +56,7 @@ export function SettingsPanel() {
 
   useEffect(() => {
     loadConfig();
+    loadBackups();
   }, []);
 
   const loadLogs = useCallback(async () => {
@@ -91,6 +102,79 @@ export function SettingsPanel() {
     }
   };
 
+  const loadBackups = async () => {
+    try {
+      setBackupsLoading(true);
+      const result = await api.listBackups();
+      setBackups(result.backups || []);
+    } catch (err) {
+      console.error('Failed to load backups:', err);
+    } finally {
+      setBackupsLoading(false);
+    }
+  };
+
+  const handleCreateBackup = async () => {
+    setCreatingBackup(true);
+    setBackupMessage(null);
+    try {
+      await api.createBackup(backupRemark);
+      setBackupRemark('');
+      await loadBackups();
+      setBackupMessage({ type: 'success', text: 'Backup erstellt' });
+      setTimeout(() => setBackupMessage(null), 3000);
+    } catch (err) {
+      setBackupMessage({ type: 'error', text: 'Fehler beim Erstellen des Backups' });
+    } finally {
+      setCreatingBackup(false);
+    }
+  };
+
+  const handleDeleteBackup = async (id: string) => {
+    try {
+      await api.deleteBackup(id);
+      setBackupDeleteConfirm(null);
+      await loadBackups();
+    } catch (err) {
+      setBackupMessage({ type: 'error', text: 'Fehler beim Löschen' });
+    }
+  };
+
+  const handleRestoreBackup = async (id: string) => {
+    setBackupMessage(null);
+    try {
+      await api.restoreBackup(id);
+      setRestoreConfirm(null);
+      await loadConfig();
+      setBackupMessage({ type: 'success', text: 'Konfiguration wiederhergestellt' });
+      setTimeout(() => setBackupMessage(null), 3000);
+    } catch (err) {
+      setBackupMessage({ type: 'error', text: 'Fehler beim Wiederherstellen' });
+    }
+  };
+
+  const handleUploadBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBackupMessage(null);
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text) as ConfigBackup;
+      if (!backup.config) {
+        setBackupMessage({ type: 'error', text: 'Ungültiges Backup-Format' });
+        return;
+      }
+      await api.uploadBackup(backup);
+      await loadBackups();
+      setBackupMessage({ type: 'success', text: 'Backup importiert' });
+      setTimeout(() => setBackupMessage(null), 3000);
+    } catch (err) {
+      setBackupMessage({ type: 'error', text: 'Fehler beim Import der Backup-Datei' });
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setSaveResult(null);
@@ -117,6 +201,10 @@ export function SettingsPanel() {
           ip: '',
           port: 7777,
           udp_enabled: false,
+          http_enabled: false,
+          http_url: '',
+          http_user: '',
+          http_password: '',
           send_all: false,
         },
       ],
@@ -260,11 +348,28 @@ export function SettingsPanel() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Radio size={14} className="text-hue-orange" />
-                  <span className="text-gray-300 text-sm">UDP Feedback aktivieren</span>
+                  <span className="text-gray-300 text-sm">UDP Feedback</span>
                 </div>
               </label>
 
-              {ms.udp_enabled && (
+              <label className="flex items-center gap-3 cursor-pointer">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={ms.http_enabled}
+                    onChange={(e) => updateMiniserver(ms.id, { http_enabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-10 h-6 bg-gray-600 rounded-full peer-checked:bg-hue-orange transition-colors"></div>
+                  <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-4"></div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Globe size={14} className="text-hue-orange" />
+                  <span className="text-gray-300 text-sm">HTTP Feedback</span>
+                </div>
+              </label>
+
+              {(ms.udp_enabled || ms.http_enabled) && (
                 <label className="flex items-center gap-3 cursor-pointer">
                   <div className="relative">
                     <input
@@ -284,7 +389,47 @@ export function SettingsPanel() {
               )}
             </div>
 
-            {ms.udp_enabled && !ms.ip && (
+            {ms.http_enabled && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">Ziel-URL (Virtueller HTTP Eingang)</label>
+                  <input
+                    type="text"
+                    value={ms.http_url}
+                    onChange={(e) => updateMiniserver(ms.id, { http_url: e.target.value })}
+                    placeholder="https://192.168.1.7:443/request.php"
+                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-hue-orange focus:outline-none placeholder-gray-500 text-sm"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    URL aus der Loxone-Config für virtuelle HTTP-Eingänge. Ohne Angabe wird http://&lt;IP&gt; verwendet.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">HTTP Benutzer</label>
+                  <input
+                    type="text"
+                    value={ms.http_user}
+                    onChange={(e) => updateMiniserver(ms.id, { http_user: e.target.value })}
+                    placeholder="admin"
+                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-hue-orange focus:outline-none placeholder-gray-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-400 mb-1">HTTP Passwort</label>
+                  <input
+                    type="password"
+                    value={ms.http_password}
+                    onChange={(e) => updateMiniserver(ms.id, { http_password: e.target.value })}
+                    placeholder="********"
+                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-hue-orange focus:outline-none placeholder-gray-500 text-sm"
+                  />
+                </div>
+              </div>
+              </div>
+            )}
+
+            {(ms.udp_enabled || (ms.http_enabled && !ms.http_url)) && !ms.ip && (
               <div className="flex items-center gap-2 text-yellow-400 text-sm">
                 <AlertCircle size={16} />
                 <span>Bitte eine IP-Adresse eingeben</span>
@@ -315,6 +460,157 @@ export function SettingsPanel() {
           <div className="flex items-center gap-2 text-red-400 text-sm">
             <AlertCircle size={16} />
             <span>Fehler beim Speichern</span>
+          </div>
+        )}
+      </div>
+
+      {/* Backup & Restore */}
+      <div className="bg-gray-800 rounded-xl p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Archive size={20} className="text-hue-orange" />
+          <h3 className="text-lg font-medium text-white">Backup & Restore</h3>
+        </div>
+
+        <p className="text-sm text-gray-400">
+          Erstelle Sicherungen der gesamten Konfiguration (Server, HUE-Bridge, Miniserver, Mappings) und stelle sie bei Bedarf wieder her.
+        </p>
+
+        {/* Create Backup */}
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-sm text-gray-400 mb-1">Bemerkung</label>
+            <input
+              type="text"
+              value={backupRemark}
+              onChange={(e) => setBackupRemark(e.target.value)}
+              placeholder="z.B. Vor Update auf v2.0"
+              className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-hue-orange focus:outline-none placeholder-gray-500 text-sm"
+            />
+          </div>
+          <button
+            onClick={handleCreateBackup}
+            disabled={creatingBackup}
+            className="flex items-center gap-1.5 bg-hue-orange hover:bg-hue-orange/90 text-gray-900 font-medium px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
+          >
+            <Archive size={16} />
+            {creatingBackup ? 'Erstelle...' : 'Backup erstellen'}
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+          >
+            <Upload size={16} />
+            Datei importieren
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleUploadBackup}
+            className="hidden"
+          />
+        </div>
+
+        {backupMessage && (
+          <div className={`flex items-center gap-2 text-sm ${backupMessage.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+            {backupMessage.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+            <span>{backupMessage.text}</span>
+          </div>
+        )}
+
+        {/* Backup List */}
+        {backupsLoading ? (
+          <div className="text-gray-500 text-center py-4 text-sm">Lade Backups...</div>
+        ) : backups.length === 0 ? (
+          <div className="text-gray-500 text-center py-4 text-sm">Keine Backups vorhanden</div>
+        ) : (
+          <div className="space-y-2">
+            {backups.map((backup) => (
+              <div
+                key={backup.id}
+                className="bg-gray-700/30 border border-gray-700 rounded-lg px-4 py-3 flex flex-wrap items-center gap-3"
+              >
+                <div className="flex-1 min-w-[200px]">
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} className="text-gray-500 shrink-0" />
+                    <span className="text-sm text-gray-300">
+                      {new Date(backup.created_at).toLocaleString('de-CH')}
+                    </span>
+                    <span className="text-xs bg-gray-600 text-gray-300 px-1.5 py-0.5 rounded">
+                      v{backup.version}
+                    </span>
+                  </div>
+                  {backup.remark && (
+                    <p className="text-sm text-gray-400 mt-0.5 ml-5">{backup.remark}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-0.5 ml-5">
+                    {backup.config.mappings?.length ?? 0} Mappings &bull; {backup.config.loxone?.miniservers?.length ?? 0} Miniserver
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {restoreConfirm === backup.id ? (
+                    <>
+                      <span className="text-xs text-yellow-400 mr-1">Wiederherstellen?</span>
+                      <button
+                        onClick={() => handleRestoreBackup(backup.id)}
+                        className="px-2 py-1 bg-hue-orange hover:bg-hue-orange/90 text-gray-900 text-xs font-medium rounded transition-colors"
+                      >
+                        Ja
+                      </button>
+                      <button
+                        onClick={() => setRestoreConfirm(null)}
+                        className="px-2 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors"
+                      >
+                        Nein
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setRestoreConfirm(backup.id)}
+                      title="Wiederherstellen"
+                      className="p-1.5 text-gray-400 hover:text-hue-orange hover:bg-gray-700 rounded transition-colors"
+                    >
+                      <RotateCcw size={16} />
+                    </button>
+                  )}
+
+                  <a
+                    href={api.getBackupDownloadUrl(backup.id)}
+                    download
+                    title="Herunterladen"
+                    className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded transition-colors"
+                  >
+                    <Download size={16} />
+                  </a>
+
+                  {backupDeleteConfirm === backup.id ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleDeleteBackup(backup.id)}
+                        className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors"
+                      >
+                        Löschen
+                      </button>
+                      <button
+                        onClick={() => setBackupDeleteConfirm(null)}
+                        className="px-2 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors"
+                      >
+                        Abbrechen
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setBackupDeleteConfirm(backup.id)}
+                      title="Löschen"
+                      className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-gray-700 rounded transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
