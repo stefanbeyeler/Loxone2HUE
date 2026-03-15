@@ -88,7 +88,7 @@ func (h *WebSocketHub) Run(ctx context.Context) {
 			log.Info().Str("client", client.clientID).Msg("Client disconnected")
 
 		case message := <-h.broadcast:
-			h.mu.RLock()
+			h.mu.Lock()
 			for client := range h.clients {
 				select {
 				case client.send <- message:
@@ -97,7 +97,7 @@ func (h *WebSocketHub) Run(ctx context.Context) {
 					delete(h.clients, client)
 				}
 			}
-			h.mu.RUnlock()
+			h.mu.Unlock()
 		}
 	}
 }

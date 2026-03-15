@@ -3,6 +3,7 @@ package loxone
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -209,17 +210,17 @@ func hexToXY(hex string) *[2]float64 {
 
 	// Apply gamma correction
 	if rNorm > 0.04045 {
-		rNorm = pow((rNorm+0.055)/(1.0+0.055), 2.4)
+		rNorm = math.Pow((rNorm+0.055)/(1.0+0.055), 2.4)
 	} else {
 		rNorm = rNorm / 12.92
 	}
 	if gNorm > 0.04045 {
-		gNorm = pow((gNorm+0.055)/(1.0+0.055), 2.4)
+		gNorm = math.Pow((gNorm+0.055)/(1.0+0.055), 2.4)
 	} else {
 		gNorm = gNorm / 12.92
 	}
 	if bNorm > 0.04045 {
-		bNorm = pow((bNorm+0.055)/(1.0+0.055), 2.4)
+		bNorm = math.Pow((bNorm+0.055)/(1.0+0.055), 2.4)
 	} else {
 		bNorm = bNorm / 12.92
 	}
@@ -239,17 +240,4 @@ func hexToXY(hex string) *[2]float64 {
 	y := Y / sum
 
 	return &[2]float64{x, y}
-}
-
-func pow(base, exp float64) float64 {
-	result := 1.0
-	for i := 0; i < int(exp); i++ {
-		result *= base
-	}
-	// Handle fractional exponent with simple approximation
-	if exp != float64(int(exp)) {
-		frac := exp - float64(int(exp))
-		result *= (1 + frac*(base-1))
-	}
-	return result
 }
