@@ -57,11 +57,35 @@ type LoggingConfig struct {
 }
 
 var (
-	cfg     *Config
-	cfgOnce sync.Once
-	cfgPath string
-	mu      sync.RWMutex
+	cfg        *Config
+	cfgOnce    sync.Once
+	cfgPath    string
+	mu         sync.RWMutex
+	appVersion string
 )
+
+// SetVersion sets the application version for use in backups
+func SetVersion(v string) {
+	appVersion = v
+}
+
+// GetVersion returns the application version
+func GetVersion() string {
+	if appVersion == "" {
+		return "dev"
+	}
+	return appVersion
+}
+
+// GetPath returns the current config file path
+func GetPath() string {
+	mu.RLock()
+	defer mu.RUnlock()
+	if cfgPath == "" {
+		return "configs/config.yaml"
+	}
+	return cfgPath
+}
 
 // DefaultConfig returns a configuration with default values
 func DefaultConfig() *Config {
@@ -300,4 +324,17 @@ func GetMappings() []models.Mapping {
 	result := make([]models.Mapping, len(cfg.Mappings))
 	copy(result, cfg.Mappings)
 	return result
+}
+
+// RestoreFromBackup restores all configuration from a backup
+func RestoreFromBackup(server ServerConfig, bridgeIP, appKey string, loxone LoxoneConfig, logging LoggingConfig, mappings []models.Mapping) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	cfg.Server = server
+	cfg.Hue.BridgeIP = bridgeIP
+	cfg.Hue.ApplicationKey = appKey
+	cfg.Loxone = loxone
+	cfg.Logging = logging
+	cfg.Mappings = mappings
 }

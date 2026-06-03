@@ -11,8 +11,10 @@ web/node_modules/
 web/dist/
 dist/
 
-# Config (contains secrets)
-configs/config.yaml
+# Config (contains secrets) — matches root configs/ and any synced src/configs/
+# Note: does NOT match the Home-Assistant addon metadata file `config.yaml`,
+# which lives at the addon root (not under a configs/ directory).
+**/configs/config.yaml
 .env
 
 # IDE

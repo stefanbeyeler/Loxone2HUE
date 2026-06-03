@@ -13,6 +13,9 @@ for TARGET in $DIRS; do
   cp -r cmd "$TARGET/"
   cp -r internal "$TARGET/"
   cp -r configs "$TARGET/"
+  # Never propagate a real (secret-bearing) config into the add-on trees;
+  # only the example is shipped.
+  rm -f "$TARGET/configs/config.yaml"
   cp go.mod go.sum VERSION "$TARGET/"
 
   # Copy web source (without node_modules/dist)

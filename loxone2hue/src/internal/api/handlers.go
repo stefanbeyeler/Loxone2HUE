@@ -466,9 +466,23 @@ func (h *Handlers) DeleteMapping(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
+// maskedPasswordSentinel is returned in place of a stored Loxone HTTP password.
+// A client that submits this value back in UpdateConfig signals "keep unchanged".
+const maskedPasswordSentinel = "__unchanged__"
+
 // GetConfig returns the current configuration
 func (h *Handlers) GetConfig(w http.ResponseWriter, r *http.Request) {
 	cfg := config.Get()
+
+	// Mask Loxone HTTP passwords so they are never sent to clients in clear text.
+	safeLoxone := cfg.Loxone
+	safeLoxone.Miniservers = make([]config.MiniserverConfig, len(cfg.Loxone.Miniservers))
+	copy(safeLoxone.Miniservers, cfg.Loxone.Miniservers)
+	for i := range safeLoxone.Miniservers {
+		if safeLoxone.Miniservers[i].HTTPPassword != "" {
+			safeLoxone.Miniservers[i].HTTPPassword = maskedPasswordSentinel
+		}
+	}
 
 	// Don't expose sensitive data
 	safeConfig := map[string]interface{}{
@@ -477,7 +491,7 @@ func (h *Handlers) GetConfig(w http.ResponseWriter, r *http.Request) {
 			"bridge_ip":  cfg.Hue.BridgeIP,
 			"configured": cfg.Hue.ApplicationKey != "",
 		},
-		"loxone":  cfg.Loxone,
+		"loxone":  safeLoxone,
 		"logging": cfg.Logging,
 	}
 
@@ -501,6 +515,19 @@ func (h *Handlers) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		if update.Loxone.Miniservers == nil {
 			update.Loxone.Miniservers = []config.MiniserverConfig{}
 		}
+
+		// Restore masked passwords: if a client sends back the sentinel, keep the
+		// previously stored password instead of wiping it.
+		existing := make(map[string]string, len(cfg.Loxone.Miniservers))
+		for _, ms := range cfg.Loxone.Miniservers {
+			existing[ms.ID] = ms.HTTPPassword
+		}
+		for i := range update.Loxone.Miniservers {
+			if update.Loxone.Miniservers[i].HTTPPassword == maskedPasswordSentinel {
+				update.Loxone.Miniservers[i].HTTPPassword = existing[update.Loxone.Miniservers[i].ID]
+			}
+		}
+
 		cfg.Loxone = *update.Loxone
 
 		// Reconfigure UDP sender on the fly
