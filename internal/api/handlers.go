@@ -210,7 +210,6 @@ func (h *Handlers) PairBridge(w http.ResponseWriter, r *http.Request) {
 	// feedback to Loxone starts without restarting the gateway.
 	h.hueClient.Configure(req.BridgeIP, appKey)
 
-
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"success":         true,
 		"application_key": appKey,
@@ -489,9 +488,15 @@ func (h *Handlers) GetConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	auth := config.GetAuth()
+
 	// Don't expose sensitive data
 	safeConfig := map[string]interface{}{
 		"server": cfg.Server,
+		"auth": map[string]interface{}{
+			"enabled":  auth.Enabled(),
+			"username": auth.User(),
+		},
 		"hue": map[string]interface{}{
 			"bridge_ip":  cfg.Hue.BridgeIP,
 			"configured": cfg.Hue.ApplicationKey != "",

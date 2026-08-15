@@ -470,34 +470,14 @@ func (h *Handlers) DeleteMapping(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
-<<<<<<< HEAD
 // maskedPasswordSentinel is returned in place of a stored Loxone HTTP password.
 // A client that submits this value back in UpdateConfig signals "keep unchanged".
-const maskedPasswordSentinel = "__unchanged__"
-=======
-// safeMiniserver is a MiniserverConfig with the HTTP password redacted.
-// http_password is always empty on the wire; http_password_set tells the UI
-// whether one is stored. Sending an empty password back keeps it unchanged.
-type safeMiniserver struct {
-	ID              string `json:"id"`
-	Name            string `json:"name"`
-	IP              string `json:"ip"`
-	Port            int    `json:"port"`
-	UDPEnabled      bool   `json:"udp_enabled"`
-	HTTPEnabled     bool   `json:"http_enabled"`
-	HTTPURL         string `json:"http_url"`
-	HTTPUser        string `json:"http_user"`
-	HTTPPassword    string `json:"http_password"`
-	HTTPPasswordSet bool   `json:"http_password_set"`
-	SendAll         bool   `json:"send_all"`
-}
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
+const maskedPasswordSentinel = config.MaskedPassword
 
 // GetConfig returns the current configuration
 func (h *Handlers) GetConfig(w http.ResponseWriter, r *http.Request) {
 	cfg := config.Get()
 
-<<<<<<< HEAD
 	// Mask Loxone HTTP passwords so they are never sent to clients in clear text.
 	safeLoxone := cfg.Loxone
 	safeLoxone.Miniservers = make([]config.MiniserverConfig, len(cfg.Loxone.Miniservers))
@@ -508,42 +488,20 @@ func (h *Handlers) GetConfig(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Don't expose sensitive data
-=======
-	// Don't expose sensitive data: neither the HUE application key nor the
-	// Miniserver passwords leave the process.
-	loxone := config.GetLoxone()
-	miniservers := make([]safeMiniserver, 0, len(loxone.Miniservers))
-	for _, ms := range loxone.Miniservers {
-		miniservers = append(miniservers, safeMiniserver{
-			ID:              ms.ID,
-			Name:            ms.Name,
-			IP:              ms.IP,
-			Port:            ms.Port,
-			UDPEnabled:      ms.UDPEnabled,
-			HTTPEnabled:     ms.HTTPEnabled,
-			HTTPURL:         ms.HTTPURL,
-			HTTPUser:        ms.HTTPUser,
-			HTTPPassword:    "",
-			HTTPPasswordSet: ms.HTTPPassword != "",
-			SendAll:         ms.SendAll,
-		})
-	}
+	auth := config.GetAuth()
 
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
+	// Don't expose sensitive data
 	safeConfig := map[string]interface{}{
 		"server": cfg.Server,
+		"auth": map[string]interface{}{
+			"enabled":  auth.Enabled(),
+			"username": auth.User(),
+		},
 		"hue": map[string]interface{}{
 			"bridge_ip":  cfg.Hue.BridgeIP,
 			"configured": cfg.Hue.ApplicationKey != "",
 		},
-<<<<<<< HEAD
 		"loxone":  safeLoxone,
-=======
-		"loxone": map[string]interface{}{
-			"miniservers": miniservers,
-		},
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
 		"logging": cfg.Logging,
 	}
 
@@ -562,32 +520,12 @@ func (h *Handlers) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if update.Loxone != nil {
-<<<<<<< HEAD
-		if update.Loxone.Miniservers == nil {
-			update.Loxone.Miniservers = []config.MiniserverConfig{}
-		}
-
-		// Restore masked passwords: if a client sends back the sentinel, keep the
-		// previously stored password instead of wiping it.
-		existing := make(map[string]string, len(cfg.Loxone.Miniservers))
-		for _, ms := range cfg.Loxone.Miniservers {
-			existing[ms.ID] = ms.HTTPPassword
-		}
-		for i := range update.Loxone.Miniservers {
-			if update.Loxone.Miniservers[i].HTTPPassword == maskedPasswordSentinel {
-				update.Loxone.Miniservers[i].HTTPPassword = existing[update.Loxone.Miniservers[i].ID]
-			}
-		}
-
-		cfg.Loxone = *update.Loxone
-=======
-		// Merges under the config lock and restores redacted passwords
+		// Merges under the config lock and restores masked passwords
 		config.UpdateLoxone(*update.Loxone)
 
-		// Reconfigure the senders from the merged config, so they get the
-		// real passwords rather than the redacted ones from the request.
+		// Reconfigure the senders from the merged config, so they get the real
+		// passwords rather than the sentinel from the request.
 		merged := config.GetLoxone()
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
 
 		if h.udpSender != nil {
 			h.udpSender.Configure(merged.Miniservers)

@@ -2,6 +2,7 @@
 
 ## 1.3.2
 
+- Authentifizierung: Optionales Passwort (auth.password) schuetzt Web-UI, API und WebSocket. Leer gelassen bleibt alles wie bisher, damit Bestandsinstallationen und das Home-Assistant-Ingress-Setup unveraendert laufen. /api/health bleibt offen fuer den Container-Healthcheck
 - Sicherheit: Backup-IDs werden validiert — ein praeparierter Backup-Upload konnte zuvor Dateien ausserhalb des Backup-Verzeichnisses anlegen, ein Download mit kurzer ID liess die Anfrage abstuerzen
 - Sicherheit: Miniserver-Passwort wird von der Konfigurations-API nicht mehr im Klartext ausgeliefert; ein leeres Feld behaelt beim Speichern das gespeicherte Passwort
 - Sicherheit: Backups und Konfiguration liegen auf 0600 statt 0644

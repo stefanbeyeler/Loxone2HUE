@@ -14,6 +14,7 @@ import (
 // Config represents the application configuration
 type Config struct {
 	Server   ServerConfig     `yaml:"server" json:"server"`
+	Auth     AuthConfig       `yaml:"auth" json:"auth"`
 	Hue      HueConfig        `yaml:"hue" json:"hue"`
 	Loxone   LoxoneConfig     `yaml:"loxone" json:"loxone"`
 	Logging  LoggingConfig    `yaml:"logging" json:"logging"`
@@ -55,6 +56,27 @@ type LoxoneConfig struct {
 type LoggingConfig struct {
 	Level  string `yaml:"level" json:"level"`
 	Format string `yaml:"format" json:"format"`
+}
+
+// AuthConfig holds the credentials guarding the web UI and API.
+// An empty password disables authentication, which keeps existing
+// installations — and the Home Assistant Ingress setup — working unchanged.
+type AuthConfig struct {
+	Username string `yaml:"username" json:"username"`
+	Password string `yaml:"password" json:"password"`
+}
+
+// Enabled reports whether authentication is configured.
+func (a AuthConfig) Enabled() bool {
+	return a.Password != ""
+}
+
+// User returns the configured username, defaulting to "admin".
+func (a AuthConfig) User() string {
+	if a.Username == "" {
+		return "admin"
+	}
+	return a.Username
 }
 
 var (
@@ -335,6 +357,20 @@ func UpdateHue(bridgeIP, applicationKey string) {
 	cfg.Hue.ApplicationKey = applicationKey
 }
 
+// GetAuth returns the authentication settings.
+func GetAuth() AuthConfig {
+	mu.RLock()
+	defer mu.RUnlock()
+	return cfg.Auth
+}
+
+// UpdateAuth replaces the authentication settings.
+func UpdateAuth(auth AuthConfig) {
+	mu.Lock()
+	defer mu.Unlock()
+	cfg.Auth = auth
+}
+
 // GetLoxone returns a copy of the Loxone configuration, including passwords.
 func GetLoxone() LoxoneConfig {
 	mu.RLock()
@@ -345,11 +381,17 @@ func GetLoxone() LoxoneConfig {
 	return LoxoneConfig{Miniservers: miniservers}
 }
 
+// MaskedPassword stands in for a stored Loxone HTTP password whenever the
+// configuration is handed to a client. Sending it back means "keep unchanged".
+const MaskedPassword = "__unchanged__"
+
 // UpdateLoxone replaces the Loxone configuration.
 //
-// A miniserver arriving with an empty http_password keeps the password already
-// stored for that ID. The API redacts passwords when it hands the config to the
-// UI, so a plain round-trip would otherwise wipe them.
+// A miniserver whose http_password is the MaskedPassword sentinel keeps the
+// password already stored for that ID, so a plain round-trip through the UI
+// does not wipe credentials. The merge happens under the write lock: reading
+// the stored passwords in the caller and assigning afterwards left a window in
+// which a concurrent save could observe a half-updated configuration.
 func UpdateLoxone(loxone LoxoneConfig) {
 	mu.Lock()
 	defer mu.Unlock()
@@ -363,7 +405,7 @@ func UpdateLoxone(loxone LoxoneConfig) {
 		loxone.Miniservers = []MiniserverConfig{}
 	}
 	for i := range loxone.Miniservers {
-		if loxone.Miniservers[i].HTTPPassword == "" {
+		if loxone.Miniservers[i].HTTPPassword == MaskedPassword {
 			loxone.Miniservers[i].HTTPPassword = stored[loxone.Miniservers[i].ID]
 		}
 	}

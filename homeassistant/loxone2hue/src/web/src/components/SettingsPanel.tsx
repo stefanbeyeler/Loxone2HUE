@@ -421,14 +421,9 @@ export function SettingsPanel() {
                     type="password"
                     value={ms.http_password}
                     onChange={(e) => updateMiniserver(ms.id, { http_password: e.target.value })}
-                    placeholder={ms.http_password_set ? 'Gespeichert – zum Ändern neu eingeben' : '********'}
+                    placeholder="********"
                     className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 focus:border-hue-orange focus:outline-none placeholder-gray-500 text-sm"
                   />
-                  {ms.http_password_set && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      Passwort ist gespeichert und wird aus Sicherheitsgründen nicht angezeigt. Leer lassen, um es beizubehalten.
-                    </p>
-                  )}
                 </div>
               </div>
               </div>

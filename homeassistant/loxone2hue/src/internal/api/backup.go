@@ -6,10 +6,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-<<<<<<< HEAD
-=======
-	"regexp"
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
 	"sort"
 	"strings"
 	"time"
@@ -51,7 +47,6 @@ func backupsDir() string {
 	return filepath.Join(filepath.Dir(cfgPath), "backups")
 }
 
-<<<<<<< HEAD
 // backupPath validates a backup id and returns the absolute path to its file.
 // The id must be a valid UUID so that no path-traversal sequences (".." etc.)
 // can escape the backups directory via the generated filename.
@@ -68,31 +63,11 @@ func backupPath(id string) (string, bool) {
 	return path, true
 }
 
-// ensureBackupsDir creates the backups directory if it doesn't exist
-func ensureBackupsDir() error {
-	return os.MkdirAll(backupsDir(), 0755)
-=======
-// validBackupID reports whether id is a canonical UUID as produced by
-// uuid.New().String(). Backup IDs are interpolated into file paths, so any
-// other shape (path separators, "..", short strings) must be rejected before
-// it reaches the filesystem.
-func validBackupID(id string) bool {
-	return backupIDPattern.MatchString(id)
-}
-
-var backupIDPattern = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-
-// backupPath returns the on-disk path for a validated backup ID.
-func backupPath(id string) string {
-	return filepath.Join(backupsDir(), fmt.Sprintf("backup-%s.json", id))
-}
-
 // ensureBackupsDir creates the backups directory if it doesn't exist.
 // Backups contain the HUE application key and Loxone credentials, so the
 // directory and its files stay owner-only.
 func ensureBackupsDir() error {
 	return os.MkdirAll(backupsDir(), 0700)
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
 }
 
 // ListBackups returns all stored backups
@@ -175,12 +150,8 @@ func (h *Handlers) CreateBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-<<<<<<< HEAD
 	filename := fmt.Sprintf("backup-%s.json", backup.ID)
-	if err := os.WriteFile(filepath.Join(backupsDir(), filename), data, 0644); err != nil {
-=======
-	if err := os.WriteFile(backupPath(backup.ID), data, 0600); err != nil {
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
+	if err := os.WriteFile(filepath.Join(backupsDir(), filename), data, 0600); err != nil {
 		errorResponse(w, http.StatusInternalServerError, "failed to write backup file")
 		return
 	}
@@ -194,21 +165,12 @@ func (h *Handlers) DeleteBackup(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-<<<<<<< HEAD
 	path, ok := backupPath(id)
 	if !ok {
-=======
-	if !validBackupID(id) {
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
 		errorResponse(w, http.StatusBadRequest, "invalid backup id")
 		return
 	}
 
-<<<<<<< HEAD
-=======
-	path := backupPath(id)
-
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		errorResponse(w, http.StatusNotFound, "backup not found")
 		return
@@ -228,21 +190,13 @@ func (h *Handlers) DownloadBackup(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-<<<<<<< HEAD
 	path, ok := backupPath(id)
 	if !ok {
-=======
-	if !validBackupID(id) {
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
 		errorResponse(w, http.StatusBadRequest, "invalid backup id")
 		return
 	}
 
-<<<<<<< HEAD
 	data, err := os.ReadFile(path)
-=======
-	data, err := os.ReadFile(backupPath(id))
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
 	if err != nil {
 		if os.IsNotExist(err) {
 			errorResponse(w, http.StatusNotFound, "backup not found")
@@ -252,10 +206,6 @@ func (h *Handlers) DownloadBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-<<<<<<< HEAD
-=======
-	// Safe to slice: validBackupID guarantees a 36-character UUID.
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=loxone2hue-backup-%s.json", id[:8]))
 	w.WriteHeader(http.StatusOK)
@@ -275,15 +225,9 @@ func (h *Handlers) UploadBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-<<<<<<< HEAD
 	// Assign a fresh, validated ID so a client-supplied id cannot be used for
 	// path traversal in the generated filename.
 	if _, err := uuid.Parse(backup.ID); err != nil {
-=======
-	// The ID comes from an uploaded file and ends up in a file path, so accept
-	// it only in canonical UUID form; anything else gets a fresh ID.
-	if !validBackupID(backup.ID) {
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
 		backup.ID = uuid.New().String()
 	}
 
@@ -298,16 +242,12 @@ func (h *Handlers) UploadBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-<<<<<<< HEAD
 	path, ok := backupPath(backup.ID)
 	if !ok {
 		errorResponse(w, http.StatusInternalServerError, "failed to build backup path")
 		return
 	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
-=======
-	if err := os.WriteFile(backupPath(backup.ID), data, 0600); err != nil {
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
+	if err := os.WriteFile(path, data, 0600); err != nil {
 		errorResponse(w, http.StatusInternalServerError, "failed to write backup file")
 		return
 	}
@@ -321,21 +261,13 @@ func (h *Handlers) RestoreBackup(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-<<<<<<< HEAD
 	path, ok := backupPath(id)
 	if !ok {
-=======
-	if !validBackupID(id) {
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
 		errorResponse(w, http.StatusBadRequest, "invalid backup id")
 		return
 	}
 
-<<<<<<< HEAD
 	data, err := os.ReadFile(path)
-=======
-	data, err := os.ReadFile(backupPath(id))
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
 	if err != nil {
 		if os.IsNotExist(err) {
 			errorResponse(w, http.StatusNotFound, "backup not found")
@@ -376,13 +308,10 @@ func (h *Handlers) RestoreBackup(w http.ResponseWriter, r *http.Request) {
 	}
 	h.mappingManager.Load(backup.Config.Mappings)
 
-<<<<<<< HEAD
-=======
 	// Point the HUE client at the restored bridge; without this the event
 	// stream keeps talking to the bridge configured before the restore.
 	h.hueClient.Configure(backup.Config.Hue.BridgeIP, backup.Config.Hue.ApplicationKey)
 
->>>>>>> a6b6dbe (fix: entferne Live-Konfiguration aus den Add-on-Baeumen, synchronisiere auf 1.3.2)
 	log.Info().Str("id", id).Str("remark", backup.Remark).Msg("Configuration restored from backup")
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"status":  "restored",

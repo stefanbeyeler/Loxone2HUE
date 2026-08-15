@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rs/zerolog/log"
+	"github.com/sbeyeler/loxone2hue/internal/config"
 	"github.com/sbeyeler/loxone2hue/internal/hue"
 	"github.com/sbeyeler/loxone2hue/internal/loxone"
 )
@@ -44,8 +45,10 @@ func NewServer(hueClient *hue.Client, mappingManager *loxone.MappingManager, udp
 
 // setupRoutes configures all API routes
 func (s *Server) setupRoutes() {
-	// Middleware
+	// Middleware. Auth runs after CORS so preflights still get their headers,
+	// and before everything else so no handler is reachable unauthenticated.
 	s.router.Use(corsMiddleware)
+	s.router.Use(authMiddleware)
 	s.router.Use(loggingMiddleware)
 
 	// API routes
@@ -134,7 +137,15 @@ func (s *Server) Start(ctx context.Context, host string, port int) error {
 	// Start WebSocket hub
 	go s.wsHub.Run(ctx)
 
-	log.Info().Str("addr", addr).Msg("Starting HTTP server")
+	log.Info().Str("addr", addr).Str("auth", authStatus()).Msg("Starting HTTP server")
+
+	if !config.GetAuth().Enabled() && !isLoopback(host) {
+		log.Warn().
+			Str("host", host).
+			Msg("No password configured: the API, the device control and the backup download " +
+				"(which contains the HUE application key) are reachable by anyone on this network. " +
+				"Set auth.password in the configuration to require a login.")
+	}
 
 	errChan := make(chan error, 1)
 	go func() {

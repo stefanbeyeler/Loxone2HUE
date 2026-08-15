@@ -14,6 +14,7 @@ import (
 // Config represents the application configuration
 type Config struct {
 	Server   ServerConfig     `yaml:"server" json:"server"`
+	Auth     AuthConfig       `yaml:"auth" json:"auth"`
 	Hue      HueConfig        `yaml:"hue" json:"hue"`
 	Loxone   LoxoneConfig     `yaml:"loxone" json:"loxone"`
 	Logging  LoggingConfig    `yaml:"logging" json:"logging"`
@@ -57,6 +58,26 @@ type LoggingConfig struct {
 	Format string `yaml:"format" json:"format"`
 }
 
+// AuthConfig holds the credentials guarding the web UI and API.
+// An empty password disables authentication, which keeps existing
+// installations — and the Home Assistant Ingress setup — working unchanged.
+type AuthConfig struct {
+	Username string `yaml:"username" json:"username"`
+	Password string `yaml:"password" json:"password"`
+}
+
+// Enabled reports whether authentication is configured.
+func (a AuthConfig) Enabled() bool {
+	return a.Password != ""
+}
+
+// User returns the configured username, defaulting to "admin".
+func (a AuthConfig) User() string {
+	if a.Username == "" {
+		return "admin"
+	}
+	return a.Username
+}
 
 var (
 	cfg        *Config
@@ -336,7 +357,19 @@ func UpdateHue(bridgeIP, applicationKey string) {
 	cfg.Hue.ApplicationKey = applicationKey
 }
 
+// GetAuth returns the authentication settings.
+func GetAuth() AuthConfig {
+	mu.RLock()
+	defer mu.RUnlock()
+	return cfg.Auth
+}
 
+// UpdateAuth replaces the authentication settings.
+func UpdateAuth(auth AuthConfig) {
+	mu.Lock()
+	defer mu.Unlock()
+	cfg.Auth = auth
+}
 
 // GetLoxone returns a copy of the Loxone configuration, including passwords.
 func GetLoxone() LoxoneConfig {

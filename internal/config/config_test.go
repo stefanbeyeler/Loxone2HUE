@@ -111,9 +111,9 @@ func TestUpdateLoxonePreservesRedactedPassword(t *testing.T) {
 		{ID: "m1", Name: "MS", IP: "192.168.1.10", HTTPUser: "admin", HTTPPassword: "secret"},
 	}})
 
-	// Coming back from the UI: same miniserver, password blanked out.
+	// Coming back from the UI: same miniserver, password still the sentinel.
 	UpdateLoxone(LoxoneConfig{Miniservers: []MiniserverConfig{
-		{ID: "m1", Name: "MS umbenannt", IP: "192.168.1.10", HTTPUser: "admin", HTTPPassword: ""},
+		{ID: "m1", Name: "MS umbenannt", IP: "192.168.1.10", HTTPUser: "admin", HTTPPassword: MaskedPassword},
 	}})
 
 	got := GetLoxone().Miniservers

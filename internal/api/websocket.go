@@ -20,6 +20,8 @@ import (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	// Reject handshakes carrying a foreign Origin, so a random web page cannot
+	// open a control channel to the gateway.
 	CheckOrigin: isSameOriginRequest,
 }
 
