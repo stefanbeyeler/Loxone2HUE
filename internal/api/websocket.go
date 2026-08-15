@@ -37,13 +37,43 @@ type WebSocketHub struct {
 	httpSender     *loxone.HTTPSender
 }
 
-// WebSocketClient represents a connected WebSocket client
+// WebSocketClient represents a connected WebSocket client.
+//
+// send is never closed: both the hub and the client's own readPump produce
+// messages for it, so closing it would race with an in-flight send. Teardown
+// is signalled by closing done instead, which writePump selects on.
 type WebSocketClient struct {
-	hub      *WebSocketHub
-	conn     *websocket.Conn
-	send     chan []byte
-	clientID string
-	isLoxone bool
+	hub       *WebSocketHub
+	conn      *websocket.Conn
+	send      chan []byte
+	done      chan struct{}
+	closeOnce sync.Once
+	clientID  string
+	isLoxone  bool
+}
+
+// close signals that the client is gone and wakes writePump.
+// Safe to call more than once and from any goroutine.
+func (c *WebSocketClient) close() {
+	c.closeOnce.Do(func() { close(c.done) })
+}
+
+// trySend queues a message without ever blocking. It reports false when the
+// client is gone or cannot keep up, in which case the message is dropped.
+func (c *WebSocketClient) trySend(message []byte) bool {
+	select {
+	case <-c.done:
+		return false
+	default:
+	}
+
+	select {
+	case c.send <- message:
+		return true
+	default:
+		// Buffer full — the client is too slow for the event rate.
+		return false
+	}
 }
 
 // NewWebSocketHub creates a new WebSocket hub
@@ -78,24 +108,39 @@ func (h *WebSocketHub) Run(ctx context.Context) {
 
 		case client := <-h.unregister:
 			h.mu.Lock()
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
-				close(client.send)
-			}
+			delete(h.clients, client)
 			h.mu.Unlock()
+			client.close()
 			log.Info().Str("client", client.clientID).Msg("Client disconnected")
 
 		case message := <-h.broadcast:
+			// Snapshot under the read lock, then send outside it, so the map is
+			// never mutated while only holding RLock.
 			h.mu.RLock()
+			clients := make([]*WebSocketClient, 0, len(h.clients))
 			for client := range h.clients {
-				select {
-				case client.send <- message:
-				default:
-					close(client.send)
-					delete(h.clients, client)
-				}
+				clients = append(clients, client)
 			}
 			h.mu.RUnlock()
+
+			var slow []*WebSocketClient
+			for _, client := range clients {
+				if !client.trySend(message) {
+					slow = append(slow, client)
+				}
+			}
+
+			if len(slow) > 0 {
+				h.mu.Lock()
+				for _, client := range slow {
+					delete(h.clients, client)
+				}
+				h.mu.Unlock()
+				for _, client := range slow {
+					log.Warn().Str("client", client.clientID).Msg("Dropping client that cannot keep up")
+					client.close()
+				}
+			}
 		}
 	}
 }
@@ -451,6 +496,7 @@ func (h *WebSocketHub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		hub:      h,
 		conn:     conn,
 		send:     make(chan []byte, 256),
+		done:     make(chan struct{}),
 		clientID: clientID,
 		isLoxone: isLoxone,
 	}
@@ -609,6 +655,9 @@ func (h *WebSocketHub) BroadcastStatus(deviceID string, state interface{}) {
 // readPump reads messages from the WebSocket connection
 func (c *WebSocketClient) readPump() {
 	defer func() {
+		// Close first so writePump exits even if the hub is already shutting
+		// down and never drains unregister.
+		c.close()
 		c.hub.unregister <- c
 		c.conn.Close()
 	}()
@@ -767,7 +816,7 @@ func (c *WebSocketClient) handleMessage(message []byte) {
 		}
 
 		data, _ := json.Marshal(status)
-		c.send <- data
+		c.trySend(data)
 	}
 }
 
@@ -777,7 +826,7 @@ func (c *WebSocketClient) sendAck(target string) {
 		"target": target,
 	}
 	data, _ := json.Marshal(msg)
-	c.send <- data
+	c.trySend(data)
 }
 
 func (c *WebSocketClient) sendError(message string) {
@@ -786,7 +835,7 @@ func (c *WebSocketClient) sendError(message string) {
 		"message": message,
 	}
 	data, _ := json.Marshal(msg)
-	c.send <- data
+	c.trySend(data)
 }
 
 // writePump writes messages to the WebSocket connection
@@ -799,12 +848,13 @@ func (c *WebSocketClient) writePump() {
 
 	for {
 		select {
-		case message, ok := <-c.send:
+		case <-c.done:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if !ok {
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
+			c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+			return
+
+		case message := <-c.send:
+			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
