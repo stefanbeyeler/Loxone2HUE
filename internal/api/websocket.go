@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -569,7 +570,7 @@ func (h *WebSocketHub) handleHTTPCommand(w http.ResponseWriter, r *http.Request,
 		}
 
 	case "mood":
-		moodNum, ok := cmd.Params["mood_number"].(int)
+		moodNum, ok := cmd.IntParam("mood_number")
 		if !ok {
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(map[string]string{"error": "mood_number required"})
@@ -583,7 +584,7 @@ func (h *WebSocketHub) handleHTTPCommand(w http.ResponseWriter, r *http.Request,
 			json.NewEncoder(w).Encode(map[string]string{
 				"error":       "no mapping found for mood",
 				"target":      cmd.Target,
-				"mood_number": string(rune('0' + moodNum)),
+				"mood_number": strconv.Itoa(moodNum),
 			})
 			return
 		}
@@ -757,7 +758,7 @@ func (c *WebSocketClient) handleMessage(message []byte) {
 		c.sendAck(cmd.Target)
 
 	case "mood":
-		moodNum, ok := cmd.Params["mood_number"].(int)
+		moodNum, ok := cmd.IntParam("mood_number")
 		if !ok {
 			c.sendError("mood_number required")
 			return
