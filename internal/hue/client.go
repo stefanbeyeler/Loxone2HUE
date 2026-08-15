@@ -609,9 +609,10 @@ func (c *Client) GetSensors() ([]*models.Sensor, error) {
 		{"/clip/v2/resource/device_power", "device_power"},
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
+	// Fetch everything before touching the cache. Holding the write lock across
+	// these seven sequential requests blocked every reader — GetSensorName and
+	// friends are called from the event stream — for as long as the bridge took
+	// to answer, up to the full request timeout per endpoint.
 	for _, ep := range endpoints {
 		resp, err := c.request("GET", ep.path, nil)
 		if err != nil {
@@ -627,13 +628,17 @@ func (c *Client) GetSensors() ([]*models.Sensor, error) {
 		}
 
 		for _, raw := range result.Data {
-			sensor := convertHueSensor(raw, ep.sensorType, deviceNames)
-			if sensor != nil {
-				c.sensors[sensor.ID] = sensor
+			if sensor := convertHueSensor(raw, ep.sensorType, deviceNames); sensor != nil {
 				sensors = append(sensors, sensor)
 			}
 		}
 	}
+
+	c.mu.Lock()
+	for _, sensor := range sensors {
+		c.sensors[sensor.ID] = sensor
+	}
+	c.mu.Unlock()
 
 	log.Debug().Int("count", len(sensors)).Msg("Fetched sensors from bridge")
 	return sensors, nil
