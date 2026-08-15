@@ -30,34 +30,90 @@ func IsSensorType(resourceType string) bool {
 	return sensorTypes[resourceType]
 }
 
-// StartEventStream connects to the HUE Bridge SSE event stream
-func (c *Client) StartEventStream(ctx context.Context) error {
-	if !c.IsConfigured() {
-		return fmt.Errorf("client not configured")
-	}
+// reconnectDelay is how long to wait before re-opening the event stream.
+const reconnectDelay = 5 * time.Second
 
-	go c.eventStreamLoop(ctx)
-	return nil
-}
-
-func (c *Client) eventStreamLoop(ctx context.Context) {
+// RunEventStream supervises the HUE Bridge SSE event stream for the lifetime of
+// ctx. It blocks, so call it in its own goroutine.
+//
+// Unlike a one-shot connect, this survives the states the gateway actually goes
+// through: it waits when no bridge is configured yet (pairing happens later via
+// the Web UI), reconnects after errors, and drops the current connection as
+// soon as Configure points the client at a different bridge.
+func (c *Client) RunEventStream(ctx context.Context) {
 	for {
+		if !c.IsConfigured() {
+			log.Debug().Msg("HUE Bridge not configured, event stream idle")
+			if !c.waitForRestart(ctx, 0) {
+				return
+			}
+			continue
+		}
+
+		streamCtx, cancel := context.WithCancel(ctx)
+		done := make(chan error, 1)
+		go func() { done <- c.connectEventStream(streamCtx) }()
+
 		select {
 		case <-ctx.Done():
+			cancel()
+			<-done
 			return
+
 		case <-c.stopChan:
+			cancel()
+			<-done
 			return
-		default:
-			if err := c.connectEventStream(ctx); err != nil {
+
+		case <-c.restart:
+			// Configuration changed: abandon this connection and start over
+			// against the new bridge.
+			log.Info().Msg("HUE Bridge configuration changed, restarting event stream")
+			cancel()
+			<-done
+
+		case err := <-done:
+			cancel()
+			if err != nil {
 				log.Error().Err(err).Msg("Event stream error, reconnecting...")
-				time.Sleep(5 * time.Second)
+			} else {
+				log.Info().Msg("Event stream closed by bridge, reconnecting...")
+			}
+			// Back off on a clean end too, otherwise a bridge that closes the
+			// stream immediately spins this loop at full speed.
+			if !c.waitForRestart(ctx, reconnectDelay) {
+				return
 			}
 		}
 	}
 }
 
+// waitForRestart blocks until the configuration changes, delay elapses, or the
+// client shuts down. A delay of 0 waits indefinitely for a configuration
+// change. It reports whether the caller should keep running.
+func (c *Client) waitForRestart(ctx context.Context, delay time.Duration) bool {
+	var timeout <-chan time.Time
+	if delay > 0 {
+		timer := time.NewTimer(delay)
+		defer timer.Stop()
+		timeout = timer.C
+	}
+
+	select {
+	case <-ctx.Done():
+		return false
+	case <-c.stopChan:
+		return false
+	case <-c.restart:
+		return true
+	case <-timeout:
+		return true
+	}
+}
+
 func (c *Client) connectEventStream(ctx context.Context) error {
-	url := fmt.Sprintf("%s/eventstream/clip/v2", c.baseURL)
+	baseURL, applicationKey := c.endpoint()
+	url := fmt.Sprintf("%s/eventstream/clip/v2", baseURL)
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -70,7 +126,7 @@ func (c *Client) connectEventStream(ctx context.Context) error {
 	}
 
 	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("hue-application-key", c.applicationKey)
+	req.Header.Set("hue-application-key", applicationKey)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -82,7 +138,7 @@ func (c *Client) connectEventStream(ctx context.Context) error {
 		return fmt.Errorf("unexpected status: %s", resp.Status)
 	}
 
-	log.Info().Str("bridge", c.bridgeIP).Msg("Connected to HUE event stream")
+	log.Info().Str("bridge", c.BridgeIP()).Msg("Connected to HUE event stream")
 
 	scanner := bufio.NewScanner(resp.Body)
 	var eventData strings.Builder

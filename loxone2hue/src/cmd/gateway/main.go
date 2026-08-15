@@ -66,20 +66,22 @@ func main() {
 	httpSender := loxone.NewHTTPSender()
 	httpSender.Configure(cfg.Loxone.Miniservers)
 
-	// If HUE is configured, start event stream
-	if hueClient.IsConfigured() {
-		log.Info().Str("bridge_ip", cfg.Hue.BridgeIP).Msg("HUE Bridge configured, starting event stream")
-		go hueClient.StartEventStream(context.Background())
-	} else {
-		log.Info().Msg("HUE Bridge not configured, waiting for pairing via Web UI")
-	}
-
 	// Create API server
 	server := api.NewServer(hueClient, mappingManager, udpSender, httpSender)
 
 	// Setup context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Supervise the HUE event stream for the whole process lifetime. It idles
+	// until a bridge is configured, so pairing through the Web UI takes effect
+	// without a restart.
+	if hueClient.IsConfigured() {
+		log.Info().Str("bridge_ip", cfg.Hue.BridgeIP).Msg("HUE Bridge configured, starting event stream")
+	} else {
+		log.Info().Msg("HUE Bridge not configured, waiting for pairing via Web UI")
+	}
+	go hueClient.RunEventStream(ctx)
 
 	// Handle shutdown signals
 	sigChan := make(chan os.Signal, 1)

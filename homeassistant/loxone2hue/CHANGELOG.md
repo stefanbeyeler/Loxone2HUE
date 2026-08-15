@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.3.2
+
+- Sicherheit: Backup-IDs werden validiert — ein praeparierter Backup-Upload konnte zuvor Dateien ausserhalb des Backup-Verzeichnisses anlegen, ein Download mit kurzer ID liess die Anfrage abstuerzen
+- Sicherheit: Miniserver-Passwort wird von der Konfigurations-API nicht mehr im Klartext ausgeliefert; ein leeres Feld behaelt beim Speichern das gespeicherte Passwort
+- Sicherheit: Backups und Konfiguration liegen auf 0600 statt 0644
+- Stabilitaet: Zwei Abstuerze im WebSocket-Hub behoben, die den gesamten Dienst beenden konnten
+- Stabilitaet: Pairing gegen eine unerwartete Bridge-Antwort fuehrt nicht mehr zum Absturz
+- Event-Stream startet jetzt direkt nach dem Pairing ueber die Web-UI und nach dem Wiederherstellen eines Backups — bisher war dafuer ein Neustart noetig
+- Event-Stream wartet nach einem Verbindungsende, statt in einer Endlosschleife neu zu verbinden
+- MOOD- und Farbtemperatur-Befehle funktionieren jetzt auch ueber JSON/WebSocket
+- Farbumrechnung: fehlerhafte Gammakorrektur ersetzt, Mischfarben werden korrekt uebertragen
+- Konfiguration wird atomar geschrieben (temporaere Datei + Rename) und ueberlebt einen Absturz waehrend des Speicherns
+- Backup- und Restore-Funktion ist jetzt auch im Add-on enthalten
+
 ## 1.3.1
 
 - HTTP-Feedback: Neues Feedback-Protokoll neben UDP — Status-Updates koennen per HTTP an Loxone gesendet werden

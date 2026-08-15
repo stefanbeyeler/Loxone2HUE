@@ -146,7 +146,10 @@ export interface MiniserverConfig {
   http_enabled: boolean;
   http_url: string;
   http_user: string;
+  /** Always empty when read from the server. Leave empty on save to keep the stored password. */
   http_password: string;
+  /** Read-only: whether a password is stored on the server. */
+  http_password_set?: boolean;
   send_all: boolean;
 }
 

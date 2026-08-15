@@ -12,11 +12,13 @@ for TARGET in $DIRS; do
   # Copy Go source
   cp -r cmd "$TARGET/"
   cp -r internal "$TARGET/"
-  cp -r configs "$TARGET/"
-  # Never propagate a real (secret-bearing) config into the add-on trees;
-  # only the example is shipped.
-  rm -f "$TARGET/configs/config.yaml"
   cp go.mod go.sum VERSION "$TARGET/"
+
+  # Only the example config. Copying configs/ wholesale used to drag the
+  # developer's live config.yaml — HUE application key included — into both
+  # add-on trees, where the root .gitignore did not cover it.
+  mkdir -p "$TARGET/configs"
+  cp configs/config.example.yaml "$TARGET/configs/"
 
   # Copy web source (without node_modules/dist)
   cp -r web "$TARGET/"

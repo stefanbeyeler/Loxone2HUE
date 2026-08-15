@@ -11,10 +11,13 @@ web/node_modules/
 web/dist/
 dist/
 
-# Config (contains secrets) — matches root configs/ and any synced src/configs/
-# Note: does NOT match the Home-Assistant addon metadata file `config.yaml`,
-# which lives at the addon root (not under a configs/ directory).
+# Config (contains secrets)
+# Leading **/ so this also catches the copies under loxone2hue/src and
+# homeassistant/loxone2hue/src — a plain "configs/config.yaml" is anchored to
+# the repository root and let the live config through into both add-on trees.
 **/configs/config.yaml
+# Backups carry the HUE application key and the Miniserver passwords
+**/configs/backups/
 .env
 
 # IDE

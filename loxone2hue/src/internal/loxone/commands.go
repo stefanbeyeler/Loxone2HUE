@@ -3,6 +3,7 @@ package loxone
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -152,15 +153,15 @@ func (p *CommandParser) ParseText(text string) (*models.LoxoneCommand, error) {
 func (p *CommandParser) ToDeviceCommand(cmd *models.LoxoneCommand) models.DeviceCommand {
 	dc := models.DeviceCommand{}
 
-	if on, ok := cmd.Params["on"].(bool); ok {
+	if on, ok := cmd.BoolParam("on"); ok {
 		dc.On = &on
 	}
 
-	if bri, ok := cmd.Params["brightness"].(float64); ok {
+	if bri, ok := cmd.FloatParam("brightness"); ok {
 		dc.Brightness = &bri
 	}
 
-	if ct, ok := cmd.Params["color_temp"].(int); ok {
+	if ct, ok := cmd.IntParam("color_temp"); ok {
 		// Convert Kelvin to Mirek if needed
 		mirek := ct
 		if ct > 1000 {
@@ -208,21 +209,9 @@ func hexToXY(hex string) *[2]float64 {
 	bNorm := float64(b) / 255.0
 
 	// Apply gamma correction
-	if rNorm > 0.04045 {
-		rNorm = pow((rNorm+0.055)/(1.0+0.055), 2.4)
-	} else {
-		rNorm = rNorm / 12.92
-	}
-	if gNorm > 0.04045 {
-		gNorm = pow((gNorm+0.055)/(1.0+0.055), 2.4)
-	} else {
-		gNorm = gNorm / 12.92
-	}
-	if bNorm > 0.04045 {
-		bNorm = pow((bNorm+0.055)/(1.0+0.055), 2.4)
-	} else {
-		bNorm = bNorm / 12.92
-	}
+	rNorm = gammaExpand(rNorm)
+	gNorm = gammaExpand(gNorm)
+	bNorm = gammaExpand(bNorm)
 
 	// Convert to XYZ
 	X := rNorm*0.664511 + gNorm*0.154324 + bNorm*0.162028
@@ -241,15 +230,10 @@ func hexToXY(hex string) *[2]float64 {
 	return &[2]float64{x, y}
 }
 
-func pow(base, exp float64) float64 {
-	result := 1.0
-	for i := 0; i < int(exp); i++ {
-		result *= base
+// gammaExpand converts an sRGB channel value to linear light.
+func gammaExpand(v float64) float64 {
+	if v > 0.04045 {
+		return math.Pow((v+0.055)/1.055, 2.4)
 	}
-	// Handle fractional exponent with simple approximation
-	if exp != float64(int(exp)) {
-		frac := exp - float64(int(exp))
-		result *= (1 + frac*(base-1))
-	}
-	return result
+	return v / 12.92
 }

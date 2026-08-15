@@ -7,11 +7,20 @@ hue:
   application_key: ""     # Will be set during pairing
 
 loxone:
-  enabled: true
-  miniserver_ip: ""       # Optional: Loxone Miniserver IP
-  udp_feedback:
-    enabled: false        # Send HUE status changes via UDP to Loxone (uses miniserver_ip as target)
-    port: 7777            # UDP target port
+  # One entry per Loxone Miniserver. Normally managed through the web frontend.
+  miniservers: []
+  # Example:
+  # miniservers:
+  #   - id: "generated-uuid"      # Stable ID, referenced by mappings
+  #     name: "Miniserver"
+  #     ip: "192.168.1.10"
+  #     port: 7777                # UDP target port
+  #     udp_enabled: true         # Send status updates via UDP
+  #     http_enabled: false       # Send status updates via HTTP (virtual HTTP input)
+  #     http_url: ""              # Optional, defaults to http://<ip>
+  #     http_user: ""
+  #     http_password: ""
+  #     send_all: false           # Also send updates for unmapped devices
 
 logging:
   level: "info"           # debug, info, warn, error
