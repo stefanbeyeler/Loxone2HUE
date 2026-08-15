@@ -49,8 +49,18 @@ COPY --from=web-builder /app/web/dist ./web/dist
 # Copy example config
 COPY configs/config.example.yaml ./config.example.yaml
 
-# Create config directory
-RUN mkdir -p /app/configs
+# Create config directory and drop root.
+#
+# UID/GID 1000 is the usual first non-root account on Linux, so a bind-mounted
+# ./configs owned by the host user stays writable. If the gateway cannot write
+# its configuration after an update, adjust the host directory:
+#   sudo chown -R 1000:1000 ./configs
+RUN mkdir -p /app/configs \
+    && addgroup -g 1000 loxone2hue \
+    && adduser -D -u 1000 -G loxone2hue loxone2hue \
+    && chown -R loxone2hue:loxone2hue /app
+
+USER loxone2hue
 
 # Expose port
 EXPOSE 8080

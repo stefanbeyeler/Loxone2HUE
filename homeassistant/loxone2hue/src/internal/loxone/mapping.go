@@ -1,6 +1,7 @@
 package loxone
 
 import (
+	"strconv"
 	"sync"
 
 	"github.com/sbeyeler/loxone2hue/internal/models"
@@ -147,33 +148,10 @@ func (m *MappingManager) ResolveMood(target string, moodNumber int) (hueID, hueT
 	}
 
 	// For mood > 0, look for scene mapping: <target>_mood_<number>
-	moodKey := target + "_mood_" + itoa(moodNumber)
+	moodKey := target + "_mood_" + strconv.Itoa(moodNumber)
 	if mapping, exists := m.mappings[moodKey]; exists && mapping.Enabled {
 		return mapping.HueID, mapping.HueType, true
 	}
 
 	return "", "", false
-}
-
-// itoa converts int to string (simple implementation to avoid import)
-func itoa(i int) string {
-	if i == 0 {
-		return "0"
-	}
-	neg := i < 0
-	if neg {
-		i = -i
-	}
-	var b [20]byte
-	bp := len(b) - 1
-	for i > 0 {
-		b[bp] = byte('0' + i%10)
-		bp--
-		i /= 10
-	}
-	if neg {
-		b[bp] = '-'
-		bp--
-	}
-	return string(b[bp+1:])
 }

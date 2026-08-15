@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -52,8 +53,8 @@ func errorResponse(w http.ResponseWriter, status int, message string) {
 // Health returns the service health status
 func (h *Handlers) Health(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
-		"status":    "healthy",
-		"timestamp": time.Now().UTC(),
+		"status":         "healthy",
+		"timestamp":      time.Now().UTC(),
 		"hue_configured": h.hueClient.IsConfigured(),
 	})
 }
@@ -364,11 +365,25 @@ func (h *Handlers) GetMappings(w http.ResponseWriter, r *http.Request) {
 
 // CreateMapping creates a new mapping
 func (h *Handlers) CreateMapping(w http.ResponseWriter, r *http.Request) {
-	var mapping models.Mapping
-	if err := json.NewDecoder(r.Body).Decode(&mapping); err != nil {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
 		errorResponse(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+
+	var mapping models.Mapping
+	if err := json.Unmarshal(body, &mapping); err != nil {
+		errorResponse(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// A missing "enabled" decodes to false, which is indistinguishable from an
+	// explicit false. Probe the raw body so a client can create a disabled
+	// mapping while omitting the field still means enabled.
+	var probe struct {
+		Enabled *bool `json:"enabled"`
+	}
+	_ = json.Unmarshal(body, &probe)
 
 	mappings := config.GetMappings()
 	for _, m := range mappings {
@@ -379,7 +394,9 @@ func (h *Handlers) CreateMapping(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mapping.ID = uuid.New().String()
-	mapping.Enabled = true
+	if probe.Enabled == nil {
+		mapping.Enabled = true
+	}
 
 	// Auto-assign miniserver if only one is configured and none was provided
 	if mapping.MiniserverID == "" {
@@ -662,6 +679,13 @@ func (h *Handlers) ExportMappings(w http.ResponseWriter, r *http.Request) {
 	encoder.Encode(backup)
 }
 
+// isUsableMapping reports whether an imported entry carries the fields a
+// mapping needs to do anything. Entries failing this are counted as skipped
+// instead of being written into the configuration as dead weight.
+func isUsableMapping(m models.Mapping) bool {
+	return m.LoxoneID != "" && m.HueID != "" && m.HueType != ""
+}
+
 // ImportMappings imports mappings from a JSON backup
 func (h *Handlers) ImportMappings(w http.ResponseWriter, r *http.Request) {
 	var req struct {
@@ -690,13 +714,18 @@ func (h *Handlers) ImportMappings(w http.ResponseWriter, r *http.Request) {
 	switch req.Mode {
 	case "replace":
 		// Replace all existing mappings
-		for i := range importedMappings {
-			if importedMappings[i].ID == "" {
-				importedMappings[i].ID = uuid.New().String()
+		resultMappings = make([]models.Mapping, 0, len(importedMappings))
+		for _, m := range importedMappings {
+			if !isUsableMapping(m) {
+				skipped++
+				continue
 			}
+			if m.ID == "" {
+				m.ID = uuid.New().String()
+			}
+			resultMappings = append(resultMappings, m)
+			imported++
 		}
-		resultMappings = importedMappings
-		imported = len(importedMappings)
 
 	case "merge":
 		// Merge with existing mappings (skip duplicates by loxone_id)
@@ -709,6 +738,10 @@ func (h *Handlers) ImportMappings(w http.ResponseWriter, r *http.Request) {
 		resultMappings = existingMappings
 
 		for _, newMapping := range importedMappings {
+			if !isUsableMapping(newMapping) {
+				skipped++
+				continue
+			}
 			if idx, exists := existingByLoxoneID[newMapping.LoxoneID]; exists {
 				// Update existing mapping
 				newMapping.ID = resultMappings[idx].ID

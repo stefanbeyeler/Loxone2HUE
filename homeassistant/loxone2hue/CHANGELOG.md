@@ -14,6 +14,11 @@
 - Farbumrechnung: fehlerhafte Gammakorrektur ersetzt, Mischfarben werden korrekt uebertragen
 - Konfiguration wird atomar geschrieben (temporaere Datei + Rename) und ueberlebt einen Absturz waehrend des Speicherns
 - Backup- und Restore-Funktion ist jetzt auch im Add-on enthalten
+- Web-UI: Reconnect-Schleife nach dem Schliessen der Seite behoben (der WebSocket baute im Hintergrund immer wieder neue Verbindungen auf)
+- Import von Mappings: unvollstaendige Eintraege werden nicht mehr uebernommen, sondern als "uebersprungen" gezaehlt
+- Anlegen eines Mappings respektiert jetzt ein explizit gesetztes enabled: false
+- Container laeuft nicht mehr als root (UID 1000). Bei Schreibfehlern auf ein gemountetes configs-Verzeichnis: sudo chown -R 1000:1000 ./configs
+- Add-on-Start: Aktualisierung der Konfiguration aus den HA-Optionen ist auf den jeweiligen YAML-Block begrenzt und vertraegt Sonderzeichen
 
 ## 1.3.1
 

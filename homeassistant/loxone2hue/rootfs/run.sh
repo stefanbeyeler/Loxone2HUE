@@ -37,19 +37,34 @@ EOF
 else
     bashio::log.info "Using existing config from ${PERSISTENT_CONFIG_PATH}"
 
+    # Replace a single key inside one top-level YAML block.
+    #
+    # The previous version matched the bare key anywhere in the file, so an
+    # unrelated line (a mapping description, a nested "level:") was rewritten
+    # too. The address range confines the substitution to the block, and the
+    # replacement is escaped so a value containing / & or \ cannot corrupt the
+    # command. The | delimiter keeps URLs readable.
+    set_yaml_key() {
+        local block="$1" key="$2" value="$3"
+        local escaped
+        escaped=$(printf '%s' "${value}" | sed -e 's/[\\&|]/\\&/g')
+        sed -i "/^${block}:/,/^[^[:space:]]/ s|^\( *${key}:\).*|\1 \"${escaped}\"|" \
+            "${PERSISTENT_CONFIG_PATH}"
+    }
+
     # Update log level from HA options if set
     if [ -n "${LOG_LEVEL}" ]; then
-        sed -i "s/level:.*/level: \"${LOG_LEVEL}\"/" ${PERSISTENT_CONFIG_PATH}
+        set_yaml_key logging level "${LOG_LEVEL}"
     fi
 
     # Only override HUE credentials if explicitly set in HA options (not empty)
     if [ -n "${HUE_BRIDGE_IP}" ]; then
         bashio::log.info "Updating bridge_ip from HA options"
-        sed -i "s/bridge_ip:.*/bridge_ip: \"${HUE_BRIDGE_IP}\"/" ${PERSISTENT_CONFIG_PATH}
+        set_yaml_key hue bridge_ip "${HUE_BRIDGE_IP}"
     fi
     if [ -n "${HUE_APPLICATION_KEY}" ]; then
         bashio::log.info "Updating application_key from HA options"
-        sed -i "s/application_key:.*/application_key: \"${HUE_APPLICATION_KEY}\"/" ${PERSISTENT_CONFIG_PATH}
+        set_yaml_key hue application_key "${HUE_APPLICATION_KEY}"
     fi
 fi
 

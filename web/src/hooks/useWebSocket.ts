@@ -12,7 +12,21 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number>();
 
+  // Closing a socket fires onclose asynchronously, after the cleanup has
+  // already run. Without this flag that late onclose scheduled a reconnect
+  // nobody would ever clear, so an unmounted hook kept re-opening sockets.
+  const teardownRef = useRef(false);
+
+  // Held in a ref so a caller passing an inline callback does not change the
+  // identity of connect() and tear the socket down on every render.
+  const onMessageRef = useRef(onMessage);
+  useEffect(() => {
+    onMessageRef.current = onMessage;
+  }, [onMessage]);
+
   const connect = useCallback(() => {
+    if (teardownRef.current) return;
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const basePath = new URL('.', window.location.href).pathname.replace(/\/+$/, '');
     const wsUrl = `${protocol}//${window.location.host}${basePath}/ws`;
@@ -29,6 +43,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       console.log('WebSocket disconnected');
       setIsConnected(false);
 
+      if (teardownRef.current) return;
+
       // Reconnect after delay
       reconnectTimeoutRef.current = window.setTimeout(() => {
         connect();
@@ -42,22 +58,27 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data) as WSMessage;
-        onMessage?.(message);
+        onMessageRef.current?.(message);
       } catch (error) {
         console.error('Failed to parse WebSocket message:', error);
       }
     };
-  }, [onMessage, reconnectInterval]);
+  }, [reconnectInterval]);
 
   useEffect(() => {
+    teardownRef.current = false;
     connect();
 
     return () => {
+      teardownRef.current = true;
+
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = undefined;
       }
       if (wsRef.current) {
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, [connect]);
