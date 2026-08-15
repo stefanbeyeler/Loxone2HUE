@@ -105,6 +105,7 @@ func main() {
 
 	// Cleanup
 	udpSender.Close()
+	httpSender.Close()
 	hueClient.Close()
 	log.Info().Msg("Loxone2HUE Gateway stopped")
 }

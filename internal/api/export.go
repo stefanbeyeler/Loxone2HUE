@@ -82,16 +82,23 @@ func (h *Handlers) ExportVirtualInputs(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		for _, light := range lights {
-			mapping := h.mappingManager.GetByHueID(light.ID)
-			if mapping != nil && mapping.HueType != "scene" {
-				devices = append(devices, inputDevice{
-					Name:     mapping.Name,
-					LoxoneID: mapping.LoxoneID,
-				})
-			} else if mapping == nil {
+			mappings := h.mappingManager.GetAllByHueID(light.ID)
+			if len(mappings) == 0 {
 				devices = append(devices, inputDevice{
 					Name:     light.Name,
 					LoxoneID: sanitizeName(light.Name),
+				})
+				continue
+			}
+			// A light may be wired to several Loxone IDs; each needs its own
+			// set of command recognition entries.
+			for _, mapping := range mappings {
+				if mapping.HueType == "scene" {
+					continue
+				}
+				devices = append(devices, inputDevice{
+					Name:     mapping.Name,
+					LoxoneID: mapping.LoxoneID,
 				})
 			}
 		}

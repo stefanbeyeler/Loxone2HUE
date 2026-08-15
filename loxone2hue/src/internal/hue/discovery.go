@@ -2,6 +2,7 @@ package hue
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/grandcat/zeroconf"
@@ -23,26 +24,44 @@ func DiscoverBridges(timeout time.Duration) ([]BridgeInfo, error) {
 	}
 
 	entries := make(chan *zeroconf.ServiceEntry)
-	bridges := make([]BridgeInfo, 0)
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
+	// The collector owns the slice and hands it over when the resolver closes
+	// the channel. Appending from the goroutine while the caller returned the
+	// same slice was a data race.
+	results := make(chan []BridgeInfo, 1)
+
 	go func() {
+		bridges := make([]BridgeInfo, 0)
+		seen := make(map[string]bool)
+
 		for entry := range entries {
-			if len(entry.AddrIPv4) > 0 {
-				bridge := BridgeInfo{
-					ID:   entry.Instance,
-					IP:   entry.AddrIPv4[0].String(),
-					Name: entry.Instance,
-				}
-				bridges = append(bridges, bridge)
-				log.Info().
-					Str("id", bridge.ID).
-					Str("ip", bridge.IP).
-					Msg("Discovered HUE bridge")
+			if len(entry.AddrIPv4) == 0 {
+				continue
 			}
+
+			bridge := BridgeInfo{
+				ID:   entry.Instance,
+				IP:   entry.AddrIPv4[0].String(),
+				Name: entry.Instance,
+			}
+
+			// The same bridge is announced once per interface.
+			if seen[bridge.IP] {
+				continue
+			}
+			seen[bridge.IP] = true
+
+			bridges = append(bridges, bridge)
+			log.Info().
+				Str("id", bridge.ID).
+				Str("ip", bridge.IP).
+				Msg("Discovered HUE bridge")
 		}
+
+		results <- bridges
 	}()
 
 	// Look for HUE bridges using mDNS
@@ -53,7 +72,14 @@ func DiscoverBridges(timeout time.Duration) ([]BridgeInfo, error) {
 
 	<-ctx.Done()
 
-	return bridges, nil
+	select {
+	case bridges := <-results:
+		return bridges, nil
+	case <-time.After(2 * time.Second):
+		// The resolver should close entries once the context is done. Do not
+		// hang an API request on it if it does not.
+		return nil, fmt.Errorf("bridge discovery did not finish")
+	}
 }
 
 // DiscoverFirstBridge discovers and returns the first HUE bridge found

@@ -94,6 +94,15 @@ func (s *HTTPSender) HasSendAll() bool {
 	return false
 }
 
+// Close drops all targets and releases the pooled connections.
+func (s *HTTPSender) Close() {
+	s.mu.Lock()
+	s.targets = make(map[string]*httpTarget)
+	s.mu.Unlock()
+
+	s.client.CloseIdleConnections()
+}
+
 // Send sends a single property update to a specific Miniserver via HTTP.
 // Uses Loxone Virtual HTTP Input format: GET /dev/sps/io/<loxone_id>/<value>
 func (s *HTTPSender) Send(miniserverID, loxoneID, property string, value interface{}) {
@@ -129,7 +138,10 @@ func (s *HTTPSender) SendToAll(loxoneID, property string, value interface{}) {
 func (s *HTTPSender) sendHTTP(t *httpTarget, loxoneID, property string, value interface{}) {
 	viName := fmt.Sprintf("%s_%s", loxoneID, property)
 	base := strings.TrimRight(t.baseURL, "/")
-	reqURL := fmt.Sprintf("%s/dev/sps/io/%s/%v", base, url.PathEscape(viName), value)
+	// Escape the value as well: sensor payloads such as a contact state are
+	// free-form strings and a "/" would otherwise change the request path.
+	reqURL := fmt.Sprintf("%s/dev/sps/io/%s/%s", base,
+		url.PathEscape(viName), url.PathEscape(fmt.Sprintf("%v", value)))
 
 	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {

@@ -204,6 +204,20 @@ func targetFromMapping(m *models.Mapping) feedbackTarget {
 	}
 }
 
+// feedbackTargets turns the mappings of one HUE resource into feedback targets,
+// skipping scenes and mood entries — those are inputs to the gateway, not
+// destinations for a status update.
+func feedbackTargets(mappings []*models.Mapping) []feedbackTarget {
+	var targets []feedbackTarget
+	for _, m := range mappings {
+		if m.HueType == "scene" || strings.Contains(m.LoxoneID, "_mood_") {
+			continue
+		}
+		targets = append(targets, targetFromMapping(m))
+	}
+	return targets
+}
+
 // targetSendAll creates a feedbackTarget for send_all (no mapping, both protocols enabled).
 func targetSendAll(loxoneID string) feedbackTarget {
 	return feedbackTarget{
@@ -259,9 +273,10 @@ func (h *WebSocketHub) sendFeedback(event hue.Event) {
 	// Collect all targets that should receive this update (skip scenes and mood mappings)
 	var targets []feedbackTarget
 
-	// Direct lookup: event.ID matches a mapping's hue_id (light or group)
-	if mapping := h.mappingManager.GetByHueID(event.ID); mapping != nil && mapping.HueType != "scene" && !strings.Contains(mapping.LoxoneID, "_mood_") {
-		targets = append(targets, targetFromMapping(mapping))
+	// Direct lookup: event.ID matches a mapping's hue_id (light or group).
+	// A HUE resource can carry several mappings, and each one is a target.
+	if direct := feedbackTargets(h.mappingManager.GetAllByHueID(event.ID)); len(direct) > 0 {
+		targets = append(targets, direct...)
 	} else if (udpEnabled && h.udpSender.HasSendAll()) || (httpEnabled && h.httpSender.HasSendAll()) {
 		// No mapping found — generate LoxoneID from device name, send to all send_all targets
 		if event.Type == "light" {
@@ -276,8 +291,8 @@ func (h *WebSocketHub) sendFeedback(event hue.Event) {
 	// For light events: also send to group mappings that contain this light
 	if event.Type == "light" {
 		for _, groupID := range h.hueClient.GetGroupIDsForLight(event.ID) {
-			if mapping := h.mappingManager.GetByHueID(groupID); mapping != nil && mapping.HueType != "scene" && !strings.Contains(mapping.LoxoneID, "_mood_") {
-				targets = append(targets, targetFromMapping(mapping))
+			if groupTargets := feedbackTargets(h.mappingManager.GetAllByHueID(groupID)); len(groupTargets) > 0 {
+				targets = append(targets, groupTargets...)
 			} else if (udpEnabled && h.udpSender.HasSendAll()) || (httpEnabled && h.httpSender.HasSendAll()) {
 				if name := h.hueClient.GetGroupName(groupID); name != "" {
 					targets = append(targets, targetSendAll(sanitizeName(name)))
@@ -340,8 +355,8 @@ func (h *WebSocketHub) sendSensorFeedback(event hue.Event) {
 	// Find target for this sensor
 	var targets []feedbackTarget
 
-	if mapping := h.mappingManager.GetByHueID(event.ID); mapping != nil && !strings.Contains(mapping.LoxoneID, "_mood_") {
-		targets = append(targets, targetFromMapping(mapping))
+	if sensorTargets := feedbackTargets(h.mappingManager.GetAllByHueID(event.ID)); len(sensorTargets) > 0 {
+		targets = append(targets, sensorTargets...)
 	} else if (udpEnabled && h.udpSender.HasSendAll()) || (httpEnabled && h.httpSender.HasSendAll()) {
 		if name := h.hueClient.GetSensorName(event.ID); name != "" {
 			targets = append(targets, targetSendAll(sanitizeName(name)))
