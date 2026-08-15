@@ -146,10 +146,18 @@ func (c *Client) Pair(appName, instanceName string) (string, error) {
 		return "", fmt.Errorf("empty response from bridge")
 	}
 
+	// The response comes from whatever host bridge_ip points at, so every field
+	// is untrusted: assert types instead of assuming the HUE schema.
 	if errInfo, ok := result[0]["error"]; ok {
-		errMap := errInfo.(map[string]interface{})
-		errType := int(errMap["type"].(float64))
-		errDesc := errMap["description"].(string)
+		errMap, _ := errInfo.(map[string]interface{})
+		errType := 0
+		if t, ok := errMap["type"].(float64); ok {
+			errType = int(t)
+		}
+		errDesc := "unknown error"
+		if d, ok := errMap["description"].(string); ok {
+			errDesc = d
+		}
 		log.Warn().Int("error_type", errType).Str("description", errDesc).Msg("Bridge pairing error")
 		// Error type 101 = link button not pressed
 		if errType == 101 {
@@ -159,11 +167,12 @@ func (c *Client) Pair(appName, instanceName string) (string, error) {
 	}
 
 	if success, ok := result[0]["success"]; ok {
-		successMap := success.(map[string]interface{})
-		if username, ok := successMap["username"]; ok {
-			c.applicationKey = username.(string)
-			log.Info().Msg("Successfully paired with HUE Bridge")
-			return c.applicationKey, nil
+		if successMap, ok := success.(map[string]interface{}); ok {
+			if username, ok := successMap["username"].(string); ok && username != "" {
+				c.applicationKey = username
+				log.Info().Msg("Successfully paired with HUE Bridge")
+				return c.applicationKey, nil
+			}
 		}
 	}
 
@@ -927,7 +936,11 @@ func convertHueSensor(raw json.RawMessage, sensorType string, deviceNames map[st
 
 	// Fallback name if device not found
 	if sensor.Name == "" {
-		sensor.Name = fmt.Sprintf("Sensor %s", sensor.ID[:8])
+		shortID := sensor.ID
+		if len(shortID) > 8 {
+			shortID = shortID[:8]
+		}
+		sensor.Name = fmt.Sprintf("Sensor %s", shortID)
 	}
 
 	return sensor

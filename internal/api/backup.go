@@ -63,9 +63,11 @@ func backupPath(id string) (string, bool) {
 	return path, true
 }
 
-// ensureBackupsDir creates the backups directory if it doesn't exist
+// ensureBackupsDir creates the backups directory if it doesn't exist.
+// Backups contain the HUE application key and Loxone credentials, so the
+// directory and its files stay owner-only.
 func ensureBackupsDir() error {
-	return os.MkdirAll(backupsDir(), 0755)
+	return os.MkdirAll(backupsDir(), 0700)
 }
 
 // ListBackups returns all stored backups
@@ -149,7 +151,7 @@ func (h *Handlers) CreateBackup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filename := fmt.Sprintf("backup-%s.json", backup.ID)
-	if err := os.WriteFile(filepath.Join(backupsDir(), filename), data, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(backupsDir(), filename), data, 0600); err != nil {
 		errorResponse(w, http.StatusInternalServerError, "failed to write backup file")
 		return
 	}
@@ -245,7 +247,7 @@ func (h *Handlers) UploadBackup(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, http.StatusInternalServerError, "failed to build backup path")
 		return
 	}
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0600); err != nil {
 		errorResponse(w, http.StatusInternalServerError, "failed to write backup file")
 		return
 	}
@@ -305,6 +307,7 @@ func (h *Handlers) RestoreBackup(w http.ResponseWriter, r *http.Request) {
 		h.httpSender.Configure(backup.Config.Loxone.Miniservers)
 	}
 	h.mappingManager.Load(backup.Config.Mappings)
+
 
 	log.Info().Str("id", id).Str("remark", backup.Remark).Msg("Configuration restored from backup")
 	jsonResponse(w, http.StatusOK, map[string]interface{}{

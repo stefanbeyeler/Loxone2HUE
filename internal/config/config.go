@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/google/uuid"
@@ -55,6 +56,7 @@ type LoggingConfig struct {
 	Level  string `yaml:"level" json:"level"`
 	Format string `yaml:"format" json:"format"`
 }
+
 
 var (
 	cfg        *Config
@@ -228,14 +230,14 @@ func migrateMappingFields(data []byte, cfg *Config) {
 
 // Load reads the configuration from a YAML file
 func Load(path string) (*Config, error) {
-	cfgPath = path
-
 	cfgOnce.Do(func() {
 		cfg = DefaultConfig()
 	})
 
 	mu.Lock()
 	defer mu.Unlock()
+
+	cfgPath = path
 
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -282,10 +284,15 @@ func Get() *Config {
 	return cfg
 }
 
-// Save writes the current configuration to the file
+// Save writes the current configuration to the file.
+//
+// The write goes to a temporary file in the same directory and is then renamed
+// into place, so an interrupted write cannot leave a truncated config behind.
+// A full write lock is held because two concurrent saves would otherwise race
+// for the same destination.
 func Save() error {
-	mu.RLock()
-	defer mu.RUnlock()
+	mu.Lock()
+	defer mu.Unlock()
 
 	if cfgPath == "" {
 		cfgPath = "config.yaml"
@@ -296,7 +303,28 @@ func Save() error {
 		return err
 	}
 
-	return os.WriteFile(cfgPath, data, 0644)
+	// The config holds the HUE application key and Miniserver passwords, so
+	// CreateTemp's 0600 is exactly what the final file should have too.
+	tmp, err := os.CreateTemp(filepath.Dir(cfgPath), ".config-*.yaml")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName) // no-op once the rename succeeded
+
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+
+	return os.Rename(tmpName, cfgPath)
 }
 
 // UpdateHue updates the HUE configuration
@@ -306,6 +334,50 @@ func UpdateHue(bridgeIP, applicationKey string) {
 
 	cfg.Hue.BridgeIP = bridgeIP
 	cfg.Hue.ApplicationKey = applicationKey
+}
+
+
+
+// GetLoxone returns a copy of the Loxone configuration, including passwords.
+func GetLoxone() LoxoneConfig {
+	mu.RLock()
+	defer mu.RUnlock()
+
+	miniservers := make([]MiniserverConfig, len(cfg.Loxone.Miniservers))
+	copy(miniservers, cfg.Loxone.Miniservers)
+	return LoxoneConfig{Miniservers: miniservers}
+}
+
+// MaskedPassword stands in for a stored Loxone HTTP password whenever the
+// configuration is handed to a client. Sending it back means "keep unchanged".
+const MaskedPassword = "__unchanged__"
+
+// UpdateLoxone replaces the Loxone configuration.
+//
+// A miniserver whose http_password is the MaskedPassword sentinel keeps the
+// password already stored for that ID, so a plain round-trip through the UI
+// does not wipe credentials. The merge happens under the write lock: reading
+// the stored passwords in the caller and assigning afterwards left a window in
+// which a concurrent save could observe a half-updated configuration.
+func UpdateLoxone(loxone LoxoneConfig) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	stored := make(map[string]string, len(cfg.Loxone.Miniservers))
+	for _, ms := range cfg.Loxone.Miniservers {
+		stored[ms.ID] = ms.HTTPPassword
+	}
+
+	if loxone.Miniservers == nil {
+		loxone.Miniservers = []MiniserverConfig{}
+	}
+	for i := range loxone.Miniservers {
+		if loxone.Miniservers[i].HTTPPassword == MaskedPassword {
+			loxone.Miniservers[i].HTTPPassword = stored[loxone.Miniservers[i].ID]
+		}
+	}
+
+	cfg.Loxone = loxone
 }
 
 // UpdateMappings updates the mappings configuration

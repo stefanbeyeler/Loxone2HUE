@@ -206,6 +206,7 @@ func (h *Handlers) PairBridge(w http.ResponseWriter, r *http.Request) {
 		log.Error().Err(err).Msg("Failed to save config")
 	}
 
+
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"success":         true,
 		"application_key": appKey,
@@ -468,7 +469,7 @@ func (h *Handlers) DeleteMapping(w http.ResponseWriter, r *http.Request) {
 
 // maskedPasswordSentinel is returned in place of a stored Loxone HTTP password.
 // A client that submits this value back in UpdateConfig signals "keep unchanged".
-const maskedPasswordSentinel = "__unchanged__"
+const maskedPasswordSentinel = config.MaskedPassword
 
 // GetConfig returns the current configuration
 func (h *Handlers) GetConfig(w http.ResponseWriter, r *http.Request) {
@@ -509,35 +510,20 @@ func (h *Handlers) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg := config.Get()
-
 	if update.Loxone != nil {
-		if update.Loxone.Miniservers == nil {
-			update.Loxone.Miniservers = []config.MiniserverConfig{}
-		}
+		// Merges under the config lock and restores masked passwords
+		config.UpdateLoxone(*update.Loxone)
 
-		// Restore masked passwords: if a client sends back the sentinel, keep the
-		// previously stored password instead of wiping it.
-		existing := make(map[string]string, len(cfg.Loxone.Miniservers))
-		for _, ms := range cfg.Loxone.Miniservers {
-			existing[ms.ID] = ms.HTTPPassword
-		}
-		for i := range update.Loxone.Miniservers {
-			if update.Loxone.Miniservers[i].HTTPPassword == maskedPasswordSentinel {
-				update.Loxone.Miniservers[i].HTTPPassword = existing[update.Loxone.Miniservers[i].ID]
-			}
-		}
+		// Reconfigure the senders from the merged config, so they get the real
+		// passwords rather than the sentinel from the request.
+		merged := config.GetLoxone()
 
-		cfg.Loxone = *update.Loxone
-
-		// Reconfigure UDP sender on the fly
 		if h.udpSender != nil {
-			h.udpSender.Configure(update.Loxone.Miniservers)
+			h.udpSender.Configure(merged.Miniservers)
 		}
 
-		// Reconfigure HTTP sender on the fly
 		if h.httpSender != nil {
-			h.httpSender.Configure(update.Loxone.Miniservers)
+			h.httpSender.Configure(merged.Miniservers)
 		}
 	}
 
