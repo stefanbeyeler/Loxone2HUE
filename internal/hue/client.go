@@ -16,19 +16,29 @@ import (
 
 // Client represents a HUE Bridge API client
 type Client struct {
+	// cfgMu guards the bridge coordinates. It is deliberately separate from mu:
+	// cache readers such as GetSensors hold mu while issuing requests, and a
+	// single mutex for both would deadlock.
+	cfgMu          sync.RWMutex
 	bridgeIP       string
 	applicationKey string
-	httpClient     *http.Client
 	baseURL        string
 
-	lights   map[string]*models.Light
-	groups   map[string]*models.Group
-	scenes   map[string]*models.Scene
-	sensors  map[string]*models.Sensor
-	mu       sync.RWMutex
+	httpClient *http.Client
+
+	lights  map[string]*models.Light
+	groups  map[string]*models.Group
+	scenes  map[string]*models.Scene
+	sensors map[string]*models.Sensor
+	mu      sync.RWMutex
 
 	eventChan chan Event
 	stopChan  chan struct{}
+	closeOnce sync.Once
+
+	// restart carries a nudge to the event stream supervisor whenever the
+	// bridge configuration changes. Buffered so Configure never blocks.
+	restart chan struct{}
 }
 
 // Event represents a HUE event from the SSE stream
@@ -61,22 +71,62 @@ func NewClient(bridgeIP, applicationKey string) *Client {
 		sensors:   make(map[string]*models.Sensor),
 		eventChan: make(chan Event, 100),
 		stopChan:  make(chan struct{}),
+		restart:   make(chan struct{}, 1),
 	}
 }
 
-// SetBridgeIP updates the bridge IP address
+// SetBridgeIP updates the bridge IP address.
+// Used during pairing, before an application key exists.
 func (c *Client) SetBridgeIP(ip string) {
+	c.cfgMu.Lock()
+	defer c.cfgMu.Unlock()
+
 	c.bridgeIP = ip
 	c.baseURL = fmt.Sprintf("https://%s", ip)
 }
 
 // SetApplicationKey updates the application key
 func (c *Client) SetApplicationKey(key string) {
+	c.cfgMu.Lock()
+	defer c.cfgMu.Unlock()
+
 	c.applicationKey = key
+}
+
+// Configure points the client at a bridge and makes the event stream pick up
+// the change. Call it after pairing or after restoring a backup, otherwise the
+// stream keeps talking to the previously configured bridge.
+func (c *Client) Configure(bridgeIP, applicationKey string) {
+	c.cfgMu.Lock()
+	c.bridgeIP = bridgeIP
+	c.applicationKey = applicationKey
+	c.baseURL = fmt.Sprintf("https://%s", bridgeIP)
+	c.cfgMu.Unlock()
+
+	select {
+	case c.restart <- struct{}{}:
+	default: // a restart is already pending
+	}
+}
+
+// endpoint returns the current base URL and application key.
+func (c *Client) endpoint() (baseURL, applicationKey string) {
+	c.cfgMu.RLock()
+	defer c.cfgMu.RUnlock()
+	return c.baseURL, c.applicationKey
+}
+
+// BridgeIP returns the configured bridge address
+func (c *Client) BridgeIP() string {
+	c.cfgMu.RLock()
+	defer c.cfgMu.RUnlock()
+	return c.bridgeIP
 }
 
 // IsConfigured returns true if the client has bridge IP and application key
 func (c *Client) IsConfigured() bool {
+	c.cfgMu.RLock()
+	defer c.cfgMu.RUnlock()
 	return c.bridgeIP != "" && c.applicationKey != ""
 }
 
@@ -91,15 +141,17 @@ func (c *Client) request(method, path string, body interface{}) ([]byte, error) 
 		reqBody = bytes.NewBuffer(jsonBody)
 	}
 
-	url := fmt.Sprintf("%s%s", c.baseURL, path)
+	baseURL, applicationKey := c.endpoint()
+
+	url := fmt.Sprintf("%s%s", baseURL, path)
 	req, err := http.NewRequest(method, url, reqBody)
 	if err != nil {
 		return nil, err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	if c.applicationKey != "" {
-		req.Header.Set("hue-application-key", c.applicationKey)
+	if applicationKey != "" {
+		req.Header.Set("hue-application-key", applicationKey)
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -127,11 +179,11 @@ func (c *Client) Pair(appName, instanceName string) (string, error) {
 		"generateclientkey": true,
 	}
 
-	log.Info().Str("bridge_ip", c.bridgeIP).Msg("Attempting to pair with HUE Bridge")
+	log.Info().Str("bridge_ip", c.BridgeIP()).Msg("Attempting to pair with HUE Bridge")
 
 	resp, err := c.request("POST", "/api", body)
 	if err != nil {
-		log.Error().Err(err).Str("bridge_ip", c.bridgeIP).Msg("Failed to connect to HUE Bridge")
+		log.Error().Err(err).Str("bridge_ip", c.BridgeIP()).Msg("Failed to connect to HUE Bridge")
 		return "", fmt.Errorf("connection to bridge failed: %v", err)
 	}
 
@@ -169,9 +221,9 @@ func (c *Client) Pair(appName, instanceName string) (string, error) {
 	if success, ok := result[0]["success"]; ok {
 		if successMap, ok := success.(map[string]interface{}); ok {
 			if username, ok := successMap["username"].(string); ok && username != "" {
-				c.applicationKey = username
+				c.SetApplicationKey(username)
 				log.Info().Msg("Successfully paired with HUE Bridge")
-				return c.applicationKey, nil
+				return username, nil
 			}
 		}
 	}
@@ -609,9 +661,9 @@ func (c *Client) Events() <-chan Event {
 	return c.eventChan
 }
 
-// Close stops the client and closes all connections
+// Close stops the client and closes all connections. Safe to call more than once.
 func (c *Client) Close() {
-	close(c.stopChan)
+	c.closeOnce.Do(func() { close(c.stopChan) })
 }
 
 // Internal HUE API response types

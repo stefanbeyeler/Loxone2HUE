@@ -308,6 +308,10 @@ func (h *Handlers) RestoreBackup(w http.ResponseWriter, r *http.Request) {
 	}
 	h.mappingManager.Load(backup.Config.Mappings)
 
+	// Point the HUE client at the restored bridge; without this the event
+	// stream keeps talking to the bridge configured before the restore.
+	h.hueClient.Configure(backup.Config.Hue.BridgeIP, backup.Config.Hue.ApplicationKey)
+
 
 	log.Info().Str("id", id).Str("remark", backup.Remark).Msg("Configuration restored from backup")
 	jsonResponse(w, http.StatusOK, map[string]interface{}{

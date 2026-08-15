@@ -206,6 +206,10 @@ func (h *Handlers) PairBridge(w http.ResponseWriter, r *http.Request) {
 		log.Error().Err(err).Msg("Failed to save config")
 	}
 
+	// Bring the event stream up against the freshly paired bridge, so status
+	// feedback to Loxone starts without restarting the gateway.
+	h.hueClient.Configure(req.BridgeIP, appKey)
+
 
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"success":         true,
